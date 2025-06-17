@@ -23,9 +23,9 @@ class SelectMainSongFrom(forms.Form):
 @admin.register(Songs)
 class SongsAdmin(admin.ModelAdmin):
     list_display = ('song_name_display','singer_display', 'last_performed_display', 'perform_count_display' )
-    search_fields = ["song_name","perform_count"]
+    search_fields = ["song_name","perform_count","singer"]
     actions = ['merge_songs_action']
-    list_per_page = 20  # 每页30条
+    list_per_page = 25  # 每页30条
     """
         后台管理界面的显示方式
     """
