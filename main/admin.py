@@ -118,13 +118,15 @@ class SongsAdmin(admin.ModelAdmin):
     
     merge_songs_action.short_description = "合并选中的歌曲"
 
-
+class BVImportForm(forms.Form):
+        bvid = forms.CharField(label="BV号", max_length=20)
 @admin.register(SongRecord)
 class SongReccordAdmin(admin.ModelAdmin):
     list_display = ("song", "performed_at", "url", "notes")
     actions = ["import_from_bv"]
     search_fields = ["song__song_name", "notes", "url"]
 
+    
 
     def get_urls(self):
         urls = super().get_urls()
