@@ -1,0 +1,9 @@
+{% extends "admin/base_site.html" %}
+{% block content %}
+<h1> 歌切BV号 </h1>
+<form method="post" style="max-width: 400px;">{% csrf_token %}
+    {{ form.as_p }}
+    <button type="submit" class="default">导入</button>
+</form>
+<a href="{% url 'admin:main_songrecord_changelist' %}">← 返回歌曲记录列表</a>
+{% endblock %}
