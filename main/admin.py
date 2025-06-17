@@ -15,7 +15,24 @@ admin.site.register(SongStyle)
 
 @admin.register(Songs)
 class SongsAdmin(admin.ModelAdmin):
-    list_display = ('song_name', 'last_performed', 'perform_count' )
+    list_display = ('song_name_display','singer_display', 'last_performed_display', 'perform_count_display' )
+    search_fields = ["song_name","perform_count"]
+
+    @admin.display(description="歌手",ordering="singer")
+    def singer_display(self,obj):
+        return obj.singer
+
+    @admin.display(description="最近演唱时间", ordering="last_performed")
+    def last_performed_display(self, obj):
+        return obj.last_performed
+
+    @admin.display(description="歌名", ordering="song_name")
+    def song_name_display(self, obj):
+        return obj.song_name
+
+    @admin.display(description="演唱次数",ordering="perform_count")
+    def perform_count_display(self, obj):
+        return obj.perform_count
 
 
 class BVImportForm(forms.Form):
@@ -25,6 +42,8 @@ class BVImportForm(forms.Form):
 class SongReccordAdmin(admin.ModelAdmin):
     list_display = ("song", "performed_at", "url", "notes")
     actions = ["import_from_bv"]
+    search_fields = ["song__song_name", "notes", "url"]
+
 
     def get_urls(self):
         urls = super().get_urls()
