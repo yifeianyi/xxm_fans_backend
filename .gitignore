@@ -1,0 +1,62 @@
+# Python 缓存
+__pycache__/
+*.py[cod]
+*$py.class
+
+# 虚拟环境（如果放在项目内）
+venv/
+env/
+.myenv/
+
+# # Django 本地数据库文件
+# db.sqlite3
+
+# 本地日志文件
+*.log
+
+# 本地配置或开发使用的数据文件
+*.json
+!happy_data.json  # 如果你希望保留它，请取消注释
+
+# VSCode 配置
+.vscode/
+
+# PyCharm 配置
+.idea/
+
+# # 系统文件
+# .DS_Store
+# Thumbs.db
+
+# 编译生成的文件
+*.so
+
+# migrations 缓存
+**/migrations/__pycache__/
+**/migrations/*.pyc
+
+# 管理命令编译文件
+**/management/commands/__pycache__/
+
+# 临时备份文件
+*~
+*.bak
+
+# pytest 缓存
+.pytest_cache/
+
+# 测试覆盖率报告
+htmlcov/
+.coverage
+*.cover
+coverage.xml
+
+# Django collectstatic 生成的静态文件（如果你用了 collectstatic）
+staticfiles/
+
+# 文件上传目录（如果有的话）
+media/
+uploads/
+
+# 本地运行生成的临时文件（如 manage.py runserver 创建的 pid 文件等）
+*.pid
