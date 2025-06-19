@@ -45,7 +45,7 @@ def import_bv_song(bvid):
                     performed_date = None
                     song_name = title.strip()
 
-                part_url = f"https://www.bilibili.com/video/{bvid}?p={page}"
+                part_url = f"https://player.bilibili.com/player.html?bvid={bvid}&p={page}"
 
                 if performed_date is None:
                     results.append({
