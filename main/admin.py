@@ -22,9 +22,12 @@ class SelectMainSongFrom(forms.Form):
 
 @admin.register(Songs)
 class SongsAdmin(admin.ModelAdmin):
-    list_display = ('song_name_display','singer_display', 'last_performed_display', 'perform_count_display' )
+    list_display = ['song_name_display','singer_display', 'last_performed_display', 'perform_count_display' ]
+    list_filter = ['language','last_performed']
     search_fields = ["song_name","perform_count","singer"]
     actions = ['merge_songs_action']
+    
+
     list_per_page = 25  # 每页30条
     """
         后台管理界面的显示方式
@@ -71,7 +74,6 @@ class SongsAdmin(admin.ModelAdmin):
             master_song = Songs.objects.get(id=master_id)
             other_songs = selected_songs.exclude(id=master_id)
 
-            # TODO: 你可以在这里合并信息，例如：汇总演唱次数
             for song in other_songs:
                 master_song.perform_count += song.perform_count
                 # 如果需要合并其他字段也可以加上，比如备注、历史时间等
@@ -109,13 +111,6 @@ class SongsAdmin(admin.ModelAdmin):
         # print("merge_songs_action current_path:", current_path)
         next_url = quote(current_path)
         return HttpResponseRedirect(f"./merge_songs/?ids={','.join(selected)}&next={next_url}")
-
-        # ids_str = ",".join(selected)
-        # # 取当前请求的完整路径，作为返回页地址
-        # current_path = request.get_full_path()
-        # encoded_path = quote(current_path, safe='')
-        # return HttpResponseRedirect(f"./merge_songs/?ids={ids_str}&next={encoded_path}")
-    
     merge_songs_action.short_description = "合并选中的歌曲"
 
 class BVImportForm(forms.Form):
@@ -124,7 +119,7 @@ class BVImportForm(forms.Form):
 class SongReccordAdmin(admin.ModelAdmin):
     list_display = ("song", "performed_at", "url", "notes")
     actions = ["import_from_bv"]
-    search_fields = ["song__song_name", "notes", "url"]
+    search_fields = ["song__song_name", "notes"]
 
     
 
