@@ -30,3 +30,28 @@ def song_records_api(request, song_id):
         return JsonResponse(list(records), safe=False)
     except Songs.DoesNotExist:
         return JsonResponse({"error": "Song not found."}, status=404)
+    
+
+from rest_framework.decorators import api_view
+from rest_framework.response import Response
+
+@api_view(['GET'])
+def song_list_api(request):
+    query = request.GET.get("q", "")
+    page_num = request.GET.get("page", 1)
+    page_size = request.GET.get("limit", 50)
+
+    songs = Songs.objects.all().order_by("-perform_count")
+    if query:
+        songs = songs.filter(song_name__icontains=query)
+
+    paginator = Paginator(songs, page_size)
+    page = paginator.get_page(page_num)
+
+    # 返回结构包含总数、当前页、数据列表
+    return Response({
+        "total": paginator.count,
+        "page": page.number,
+        "page_size": page.paginator.per_page,
+        "results": list(page.object_list.values("id", "song_name", "singer", "last_performed","perform_count"))
+    })
