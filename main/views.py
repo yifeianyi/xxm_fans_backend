@@ -1,7 +1,7 @@
 from django.http import HttpResponse
 from django.core.paginator import Paginator
 from django.http import JsonResponse
-from .models import Songs, SongStyle
+from .models import Songs, SongStyle, Style
 from django.shortcuts import render
 
 # Create your views here.
@@ -40,10 +40,17 @@ def song_list_api(request):
     query = request.GET.get("q", "")
     page_num = request.GET.get("page", 1)
     page_size = request.GET.get("limit", 50)
+    style_filter = request.GET.get("styles", "")
 
+    # 支持模糊查询
     songs = Songs.objects.all().order_by("-perform_count")
     if query:
         songs = songs.filter(song_name__icontains=query)
+
+    # 支持曲风筛选
+    if style_filter:
+        style_list = style_filter.split(",")
+        songs = songs.filter(songstyle__style__name__in=style_list).distinct()
 
     paginator = Paginator(songs, page_size)
     page = paginator.get_page(page_num)
@@ -68,3 +75,8 @@ def song_list_api(request):
         "results": results
     })
 
+
+@api_view(['GET'])
+def style_list_api(request):
+    styles = Style.objects.all().values_list("name", flat=True)
+    return Response(list(styles))
