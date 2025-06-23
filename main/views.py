@@ -49,7 +49,7 @@ def song_list_api(request):
             style_list = style_raw.split(",")
 
     # ✅ 基础查询
-    songs = Songs.objects.all().order_by("-performed_at")
+    songs = Songs.objects.all().order_by("-last_performed")
 
     if query:
         songs = songs.filter(song_name__icontains=query)
