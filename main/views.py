@@ -1,5 +1,6 @@
 from django.http import HttpResponse
 from django.core.paginator import Paginator
+from rest_framework.response import Response
 from django.http import JsonResponse
 from .models import Songs, SongStyle, Style
 from django.shortcuts import render
@@ -34,27 +35,33 @@ def song_records_api(request, song_id):
 
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
-
 @api_view(['GET'])
 def song_list_api(request):
     query = request.GET.get("q", "")
     page_num = request.GET.get("page", 1)
     page_size = request.GET.get("limit", 50)
-    style_filter = request.GET.get("styles", "")
 
-    # 支持模糊查询
-    songs = Songs.objects.all().order_by("-perform_count")
+    # ✅ 获取 styles 参数（支持 ?styles=民谣&styles=流行 和 ?styles=民谣,流行 两种格式）
+    style_list = request.GET.getlist("styles")
+    if not style_list:
+        style_raw = request.GET.get("styles")
+        if style_raw:
+            style_list = style_raw.split(",")
+
+    # ✅ 基础查询
+    songs = Songs.objects.all().order_by("-performed_at")
+
     if query:
         songs = songs.filter(song_name__icontains=query)
 
-    # 支持曲风筛选
-    if style_filter:
-        style_list = style_filter.split(",")
+    if style_list:
         songs = songs.filter(songstyle__style__name__in=style_list).distinct()
 
+    # ✅ 分页处理
     paginator = Paginator(songs, page_size)
     page = paginator.get_page(page_num)
 
+    # ✅ 构造响应数据
     results = []
     for song in page.object_list:
         styles = [s.style.name for s in SongStyle.objects.filter(song=song)]
@@ -67,14 +74,12 @@ def song_list_api(request):
             "styles": styles,
         })
 
-    # 返回结构包含总数、当前页、数据列表
     return Response({
         "total": paginator.count,
         "page": page.number,
-        "page_size": page.paginator.per_page,
+        "page_size": paginator.per_page,
         "results": results
     })
-
 
 @api_view(['GET'])
 def style_list_api(request):
