@@ -47,7 +47,8 @@ def song_list_api(request):
         style_raw = request.GET.get("styles")
         if style_raw:
             style_list = style_raw.split(",")
-
+    # ✅ 清除空字符串
+    style_list = [s for s in style_list if s.strip()]
     # ✅ 基础查询
     songs = Songs.objects.all().order_by("-last_performed")
 
