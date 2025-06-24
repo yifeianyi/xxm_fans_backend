@@ -13,7 +13,6 @@ class Songs(models.Model):
     singer = models.CharField(max_length=200, blank=True, null=True)
     last_performed = models.DateField(blank=True, null=True)
     perform_count = models.IntegerField(default=0)
-
     language = models.CharField(max_length=50, blank=True, null=True)
 
     def __str__(self):

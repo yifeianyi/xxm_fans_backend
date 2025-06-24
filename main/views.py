@@ -27,7 +27,7 @@ def songs_list(request):
 def song_records_api(request, song_id):
     try:
         song = Songs.objects.get(id = song_id)
-        records = song.records.order_by("-performed_at").values("performed_at", "url", "notes")
+        records = song.records.order_by("-performed_at").values("performed_at", "url", "notes","cover_url")
         return JsonResponse(list(records), safe=False)
     except Songs.DoesNotExist:
         return JsonResponse({"error": "Song not found."}, status=404)

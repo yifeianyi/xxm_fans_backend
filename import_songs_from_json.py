@@ -9,7 +9,7 @@ django.setup()
 from main.models import Songs, Style, SongStyle
 
 # 载入 JSON 文件
-with open('songlist_all.json', 'r', encoding='utf-8') as f:
+with open('sqlInit_data/songlist_all.json', 'r', encoding='utf-8') as f:
     data = json.load(f)
 
 # 开始导入
