@@ -53,7 +53,7 @@ coverage.xml
 
 # Django collectstatic 生成的静态文件（如果你用了 collectstatic）
 staticfiles/
-
+static/covers_backup/
 # 文件上传目录（如果有的话）
 media/
 uploads/
