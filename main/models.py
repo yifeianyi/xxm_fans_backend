@@ -25,6 +25,7 @@ class SongRecord(models.Model):
     performed_at = models.DateField()
     url = models.URLField(blank=True, null=True)
     notes = models.TextField(blank=True, null=True)
+    cover_url = models.URLField(blank=True, null=True)
     def __str__(self):
         return f"{self.song.song_name} @ {self.performed_at}"
 

@@ -1,96 +1,114 @@
-from .models import SongRecord, SongStyle
+from .models import SongRecord, Songs
 import requests
 import re
 from datetime import datetime
-from .models import Songs, SongRecord
 from collections import defaultdict
-from django import forms
+
+def is_url_valid(url):
+    """检测图片 URL 是否有效"""
+    try:
+        res = requests.head(url, timeout=3)
+        return res.status_code == 200
+    except Exception:
+        return False
 
 def import_bv_song(bvid):
     print(f"[BV:{bvid}] 开始导入")
-    url = f"https://api.bilibili.com/x/player/pagelist?bvid={bvid}"
     headers = {
         "User-Agent": "Mozilla/5.0"
     }
 
+    # Step 1: 获取分P信息
+    pagelist_url = f"https://api.bilibili.com/x/player/pagelist?bvid={bvid}"
+    response = requests.get(pagelist_url, headers=headers)
+    response.raise_for_status()
+    json_data = response.json()
+
+    # Step 2: 获取视频总封面（用于 fallback）
+    fallback_cover_url = None
     try:
-        response = requests.get(url, headers=headers)
-        response.raise_for_status()
-        json_data = response.json()
+        video_info = requests.get(f"https://api.bilibili.com/x/web-interface/view?bvid={bvid}", headers=headers).json()
+        if video_info["code"] == 0:
+            fallback_cover_url = video_info["data"]["pic"]
+    except Exception as e:
+        print(f"[BV:{bvid}] 获取总封面失败: {e}")
 
-        results = []
-        cur_song_counts = defaultdict(int)
+    results = []
+    cur_song_counts = defaultdict(int)
 
-        if json_data["code"] == 0:
-            for page_info in json_data["data"]:
-                page = page_info["page"]
-                title = page_info["part"]
+    if json_data["code"] == 0:
+        for page_info in json_data["data"]:
+            page = page_info["page"]
+            cid = page_info["cid"]
+            title = page_info["part"]
 
-                # 提取日期（例如：2025年6月12日）
-                match = re.search(r"(\d{4})年(\d{1,2})月(\d{1,2})日", title)
-                if match:
-                    try:
-                        year, month, day = map(int, match.groups())
-                        performed_date = datetime(year, month, day).date()
-                        # 去掉日期部分，提取歌名
-                        song_name = re.sub(r"\d{4}年\d{1,2}月\d{1,2}日", "", title).strip("- ").strip()
-                        # 可选：只取前段作为歌名
-                        song_name = song_name.split("-")[0].strip()
-                    except Exception as e:
-                        print(f"[BV:{bvid}] 日期解析失败: {e} - 标题: {title}")
-                        performed_date = None
-                        song_name = title.strip()
-                else:
-                    print(f"[BV:{bvid}] 分P标题不含时间: {title}")
+            # ✅ 优先尝试分P封面图（截图）
+            preferred_cover = f"https://i0.hdslb.com/bfs/frame/{cid}.jpg"
+            cover_url = preferred_cover if is_url_valid(preferred_cover) else fallback_cover_url
+
+            # 提取日期（例如：2025年6月12日）
+            match = re.search(r"(\d{4})年(\d{1,2})月(\d{1,2})日", title)
+            if match:
+                try:
+                    year, month, day = map(int, match.groups())
+                    performed_date = datetime(year, month, day).date()
+                    song_name = re.sub(r"\d{4}年\d{1,2}月\d{1,2}日", "", title).strip("- ").strip()
+                    song_name = song_name.split("-")[0].strip()
+                except Exception as e:
+                    print(f"[BV:{bvid}] 日期解析失败: {e} - 标题: {title}")
                     performed_date = None
                     song_name = title.strip()
+            else:
+                print(f"[BV:{bvid}] 分P标题不含时间: {title}")
+                performed_date = None
+                song_name = title.strip()
 
-                part_url = f"https://player.bilibili.com/player.html?bvid={bvid}&p={page}"
+            part_url = f"https://player.bilibili.com/player.html?bvid={bvid}&p={page}"
 
-                if performed_date is None:
-                    results.append({
-                        "song_name": song_name,
-                        "url": part_url,
-                        "note": "❌ 无法解析日期，跳过",
-                        "created_song": False
-                    })
-                    continue
-
-                # 查找或创建歌曲
-                song_obj, created_song = Songs.objects.get_or_create(song_name=song_name)
-
-                if SongRecord.objects.filter(song=song_obj, performed_at=performed_date).exists():
-                    results.append({
-                        "song_name": song_name,
-                        "url": part_url,
-                        "note": "❌ 已存在，跳过",
-                        "created_song": created_song
-                    })
-                    continue
-
-                # 记录同批内的数量
-                cur_song_counts[song_name] += 1
-                count = cur_song_counts[song_name]
-                note = f"同批版本 {count}" if count > 1 else None
-
-                # 创建记录
-                SongRecord.objects.create(
-                    song=song_obj,
-                    performed_at=performed_date,
-                    url=part_url,
-                    notes=note
-                )
-                print(f"[BV:{bvid}] 成功创建演唱记录：{song_name} @ {performed_date}")
+            if performed_date is None:
                 results.append({
                     "song_name": song_name,
                     "url": part_url,
-                    "note": note,
-                    "created_song": created_song
+                    "note": "❌ 无法解析日期，跳过",
+                    "created_song": False,
+                    "cover": cover_url,
                 })
+                continue
 
-        print(f"[BV:{bvid}] 导入完成，共导入 {len(results)} 条")
-        return results
+            # 查找或创建歌曲
+            song_obj, created_song = Songs.objects.get_or_create(song_name=song_name)
 
-    except Exception as e:
-        print(f"[BV:{bvid}] 导入失败: {e}")
-        raise e
+            if SongRecord.objects.filter(song=song_obj, performed_at=performed_date).exists():
+                results.append({
+                    "song_name": song_name,
+                    "url": part_url,
+                    "note": "❌ 已存在，跳过",
+                    "created_song": created_song,
+                    "cover": cover_url,
+                })
+                continue
+
+            cur_song_counts[song_name] += 1
+            count = cur_song_counts[song_name]
+            note = f"同批版本 {count}" if count > 1 else None
+
+            # ✅ 创建记录
+            SongRecord.objects.create(
+                song=song_obj,
+                performed_at=performed_date,
+                url=part_url,
+                notes=note,
+                cover_url=cover_url
+            )
+
+            print(f"[BV:{bvid}] 成功创建演唱记录：{song_name} @ {performed_date}")
+            results.append({
+                "song_name": song_name,
+                "url": part_url,
+                "note": note,
+                "created_song": created_song,
+                "cover": cover_url
+            })
+
+    print(f"[BV:{bvid}] 导入完成，共导入 {len(results)} 条")
+    return results
