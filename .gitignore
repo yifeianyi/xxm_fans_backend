@@ -17,6 +17,13 @@ env/
 # 本地配置或开发使用的数据文件
 *.json
 !happy_data.json  # 如果你希望保留它，请取消注释
+!sqlInit_data/public_data.json  # 允许公开数据文件
+
+# 环境变量文件（包含敏感信息）
+.env
+.env.local
+.env.production
+.env.staging
 
 # VSCode 配置
 .vscode/
@@ -24,9 +31,9 @@ env/
 # PyCharm 配置
 .idea/
 
-# # 系统文件
-# .DS_Store
-# Thumbs.db
+# 系统文件
+.DS_Store
+Thumbs.db
 
 # 编译生成的文件
 *.so
@@ -60,3 +67,27 @@ uploads/
 
 # 本地运行生成的临时文件（如 manage.py runserver 创建的 pid 文件等）
 *.pid
+
+# Node.js 相关（前端）
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# 前端构建文件
+dist/
+dist-ssr/
+*.local
+
+# 编辑器文件
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# 备份文件
+*.backup
+*.tmp

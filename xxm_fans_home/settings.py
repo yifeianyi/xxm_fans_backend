@@ -12,6 +12,11 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 
 from pathlib import Path
 import os
+from dotenv import load_dotenv
+
+# 加载环境变量
+load_dotenv()
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -20,13 +25,14 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-9n&grh)z2lxmykh9nj_2c%a@s(r97%t@0)yog&+t67iqphrh3j'
+SECRET_KEY = os.getenv('DJANGO_SECRET_KEY', 'django-insecure-9n&grh)z2lxmykh9nj_2c%a@s(r97%t@0)yog&+t67iqphrh3j')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.getenv('DJANGO_DEBUG', 'True').lower() == 'true'
 
-ALLOWED_HOSTS = ["192.168.0.102","localhost","127.0.0.1","47.92.253.0","xxm8777.cn","www.xxm8777.cn"]
-# ALLOWED_HOSTS = ["*"]
+# 从环境变量读取允许的主机，用逗号分隔
+ALLOWED_HOSTS_STR = os.getenv('DJANGO_ALLOWED_HOSTS', 'localhost,127.0.0.1')
+ALLOWED_HOSTS = [host.strip() for host in ALLOWED_HOSTS_STR.split(',') if host.strip()]
 
 
 # Application definition
