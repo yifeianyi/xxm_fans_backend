@@ -26,21 +26,49 @@ def songs_list(request):
     page_obj = paginator.get_page(page_num)
     # return render(request, "songs_list.html",{"songs":songs})
     return render(request, "songs_list.html", {"page_obj":page_obj})
-
 def song_records_api(request, song_id):
     cache_key = f"song_records:{song_id}"
     records = cache.get(cache_key)
-    
+
     if records is not None:
         return JsonResponse(records, safe=False)
-    
+
     try:
         song = Songs.objects.get(id=song_id)
-        records = list(song.records.order_by("-performed_at").values("performed_at", "url", "notes", "cover_url"))
-        cache.set(cache_key, records, 600)  # 缓存 10 分钟
+        raw_records = song.records.order_by("-performed_at").values("performed_at", "url", "notes")
+        records = []
+
+        for r in raw_records:
+            if r["performed_at"]:
+                date = r["performed_at"]
+                date_str = date.strftime("%Y-%m-%d")
+                year = date.strftime("%Y")
+                month = date.strftime("%m")
+                r["cover_url"] = f"/covers/{year}/{month}/{date_str}.jpg"
+            else:
+                r["cover_url"] = "/covers/default.jpg"
+            records.append(r)
+
+        cache.set(cache_key, records, 600)
         return JsonResponse(records, safe=False)
     except Songs.DoesNotExist:
-        return JsonResponse({"error": "Song not found."}, status=404)    
+        return JsonResponse({"error": "Song not found."}, status=404)
+
+
+# def song_records_api(request, song_id):
+#     cache_key = f"song_records:{song_id}"
+#     records = cache.get(cache_key)
+    
+#     if records is not None:
+#         return JsonResponse(records, safe=False)
+    
+#     try:
+#         song = Songs.objects.get(id=song_id)
+#         records = list(song.records.order_by("-performed_at").values("performed_at", "url", "notes", "cover_url"))
+#         cache.set(cache_key, records, 600)  # 缓存 10 分钟
+#         return JsonResponse(records, safe=False)
+#     except Songs.DoesNotExist:
+#         return JsonResponse({"error": "Song not found."}, status=404)    
 
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
