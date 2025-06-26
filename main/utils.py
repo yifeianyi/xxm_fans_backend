@@ -1,8 +1,12 @@
 from .models import SongRecord, Songs
 import requests
 import re
+import os
 from datetime import datetime
 from collections import defaultdict
+from django.conf import settings
+import hashlib
+from urllib.parse import urlparse
 
 def is_url_valid(url):
     """检测图片 URL 是否有效"""
@@ -11,6 +15,50 @@ def is_url_valid(url):
         return res.status_code == 200
     except Exception:
         return False
+
+def download_and_save_cover(cover_url, performed_date):
+    """下载并保存封面图片"""
+    if not cover_url:
+        return None
+    
+    try:
+        # 构建本地保存路径
+        date_str = performed_date.strftime("%Y-%m-%d")
+        year = performed_date.strftime("%Y")
+        month = performed_date.strftime("%m")
+        
+        # 本地封面目录根
+        BASE_DIR = os.path.join("static", "covers")
+        save_dir = os.path.join(BASE_DIR, year, month)
+        os.makedirs(save_dir, exist_ok=True)
+        
+        filename = f"{date_str}.jpg"
+        file_path = os.path.join(save_dir, filename)
+        local_path = f"/static/covers/{year}/{month}/{filename}"
+        
+        # 如果文件已存在，直接返回本地路径
+        if os.path.exists(file_path):
+            return local_path
+        
+        # 下载图片
+        headers = {
+            "Referer": "https://www.bilibili.com",
+            "User-Agent": "Mozilla/5.0"
+        }
+        response = requests.get(cover_url, headers=headers, timeout=10)
+        response.raise_for_status()
+        image_data = response.content
+        
+        # 保存图片
+        with open(file_path, "wb") as f:
+            f.write(image_data)
+        
+        print(f"封面已下载: {local_path}")
+        return local_path
+        
+    except Exception as e:
+        print(f"封面下载失败: {e}")
+        return cover_url  # 返回原始URL作为备选
 
 def import_bv_song(bvid):
     print(f"[BV:{bvid}] 开始导入")
@@ -71,7 +119,7 @@ def import_bv_song(bvid):
                     "url": part_url,
                     "note": "❌ 无法解析日期，跳过",
                     "created_song": False,
-                    "cover": cover_url,
+                    "cover_url": cover_url,
                 })
                 continue
 
@@ -84,7 +132,7 @@ def import_bv_song(bvid):
                     "url": part_url,
                     "note": "❌ 已存在，跳过",
                     "created_song": created_song,
-                    "cover": cover_url,
+                    "cover_url": cover_url,
                 })
                 continue
 
@@ -92,13 +140,16 @@ def import_bv_song(bvid):
             count = cur_song_counts[song_name]
             note = f"同批版本 {count}" if count > 1 else None
 
+            # ✅ 下载并保存封面
+            final_cover_url = download_and_save_cover(cover_url, performed_date)
+
             # ✅ 创建记录
             SongRecord.objects.create(
                 song=song_obj,
                 performed_at=performed_date,
                 url=part_url,
                 notes=note,
-                cover_url=cover_url
+                cover_url=final_cover_url
             )
 
             print(f"[BV:{bvid}] 成功创建演唱记录：{song_name} @ {performed_date}")
@@ -107,7 +158,7 @@ def import_bv_song(bvid):
                 "url": part_url,
                 "note": note,
                 "created_song": created_song,
-                "cover": cover_url
+                "cover_url": final_cover_url
             })
 
     print(f"[BV:{bvid}] 导入完成，共导入 {len(results)} 条")

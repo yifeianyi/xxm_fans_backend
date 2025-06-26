@@ -91,3 +91,6 @@ dist-ssr/
 # 备份文件
 *.backup
 *.tmp
+
+# 测试文件
+test_*.py

@@ -11,6 +11,7 @@ from .models import *
 from django.contrib.admin.helpers import ACTION_CHECKBOX_NAME
 from django.shortcuts import render
 from .utils import import_bv_song
+from django.utils.html import format_html, format_html_join
 
 admin.site.register(Style)
 admin.site.register(SongStyle)
@@ -22,13 +23,19 @@ class SelectMainSongFrom(forms.Form):
 
 @admin.register(Songs)
 class SongsAdmin(admin.ModelAdmin):
-    list_display = ['song_name_display','singer_display', 'last_performed_display', 'perform_count_display' ]
+    list_display = ['song_name_display','singer_display', 'last_performed_display', 'perform_count_display', 'view_records' ]
     list_filter = ['language','last_performed']
     search_fields = ["song_name","perform_count","singer"]
     actions = ['merge_songs_action']
-    
 
     list_per_page = 25  # 每页30条
+    
+    class Media:
+        css = {
+            'all': ('admin/css/collapsible.css',)
+        }
+        js = ('admin/js/collapsible.js',)
+    
     """
         后台管理界面的显示方式
     """
@@ -48,6 +55,35 @@ class SongsAdmin(admin.ModelAdmin):
     def perform_count_display(self, obj):
         return obj.perform_count
     
+    @admin.display(description="演唱记录")
+    def view_records(self, obj):
+        records = SongRecord.objects.filter(song=obj).order_by('-performed_at')
+        if not records:
+            return "暂无记录"
+
+        from django.utils.html import format_html, format_html_join
+
+        def get_date_html(record):
+            date_str = record.performed_at.strftime('%Y-%m-%d') if record.performed_at else '未知日期'
+            if record.url:
+                return format_html("<a href='{}' target='_blank' style='color:#79aec8;font-weight:bold;text-decoration:underline;font-size:13px;'>{}</a>", record.url, date_str)
+            else:
+                return date_str
+
+        records_html = format_html_join(
+            '',
+            '<li>{}{}</li>',
+            (
+                (get_date_html(r), f"（{r.notes}）" if r.notes else "")
+                for r in records
+            )
+        )
+        ul_html = format_html('<ul style="margin:0 0 0 10px;padding:0;list-style:disc inside;">{}</ul>', records_html)
+        return format_html(
+            '<button type="button" class="toggle-records" data-song-id="{}" style="background: #79aec8; color: white; border: none; padding: 5px 10px; border-radius: 3px; cursor: pointer;">查看记录</button>'
+            '<div class="records-content" id="records-{}" style="display: none; margin-top: 10px; padding: 10px; background: #f9f9f9; border-radius: 3px;">{}</div>',
+            obj.id, obj.id, ul_html
+        )
     ##################################
     #   合并多个数据项
     ##################################
@@ -75,9 +111,12 @@ class SongsAdmin(admin.ModelAdmin):
             other_songs = selected_songs.exclude(id=master_id)
 
             for song in other_songs:
+                for record in SongRecord.objects.filter(song=song):
+                    # 复制所有字段，song 换成 master_song
+                    record.pk = None  # 新建一条
+                    record.song = master_song
+                    record.save()
                 master_song.perform_count += song.perform_count
-                # 如果需要合并其他字段也可以加上，比如备注、历史时间等
-
             master_song.save()
             other_songs.delete()
 
@@ -117,11 +156,21 @@ class BVImportForm(forms.Form):
         bvid = forms.CharField(label="BV号", max_length=20)
 @admin.register(SongRecord)
 class SongReccordAdmin(admin.ModelAdmin):
-    list_display = ("song", "performed_at", "url","cover_url", "notes")
+    list_display = ("song", "performed_at", "cover_thumb", "url", "notes")
     actions = ["import_from_bv"]
     search_fields = ["song__song_name", "notes"]
+    list_filter = ["performed_at", "song__song_name"]
 
-    
+    @admin.display(description="封面")
+    def cover_thumb(self, obj):
+        if obj.cover_url:
+            if obj.cover_url.startswith('/static/'):
+                # 本地图片，显示缩略图
+                return format_html('<img src="{}" style="max-width: 50px; max-height: 50px;" />', obj.cover_url)
+            else:
+                # 外链，显示为链接
+                return format_html('<a href="{}" target="_blank">查看封面</a>', obj.cover_url)
+        return "无封面"
 
     def get_urls(self):
         urls = super().get_urls()
@@ -143,6 +192,8 @@ class SongReccordAdmin(admin.ModelAdmin):
                             msg += f"（{result['note']}）"
                         if result["created_song"]:
                             msg += "，🎵 新建歌曲"
+                        if result["cover_url"]:
+                            msg += "，🖼️ 封面已下载"
                         request.session.setdefault("_messages", []).append(("SUCCESS", msg))
                     return redirect("admin:import-bv-songrecord")
                 except Exception as e:
@@ -169,6 +220,8 @@ class SongReccordAdmin(admin.ModelAdmin):
                             msg += f"（{result['note']}）"
                         if result["created_song"]:
                             msg += "，新歌曲已创建"
+                        if result["cover_url"]:
+                            msg += "，封面已下载"
                         self.message_user(request, msg, level=messages.SUCCESS)
                 except Exception as e:
                     self.message_user(request, f"❌ 失败: {str(e)}", level=messages.ERROR)
