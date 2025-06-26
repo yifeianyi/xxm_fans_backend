@@ -6,6 +6,7 @@ from .models import Songs, SongStyle, Style
 from django.shortcuts import render
 from datetime import datetime, timedelta
 from django.db.models import Count
+from django.core.cache import cache
 
 # Create your views here.
 
@@ -27,13 +28,19 @@ def songs_list(request):
     return render(request, "songs_list.html", {"page_obj":page_obj})
 
 def song_records_api(request, song_id):
-    try:
-        song = Songs.objects.get(id = song_id)
-        records = song.records.order_by("-performed_at").values("performed_at", "url", "notes","cover_url")
-        return JsonResponse(list(records), safe=False)
-    except Songs.DoesNotExist:
-        return JsonResponse({"error": "Song not found."}, status=404)
+    cache_key = f"song_records:{song_id}"
+    records = cache.get(cache_key)
     
+    if records is not None:
+        return JsonResponse(records, safe=False)
+    
+    try:
+        song = Songs.objects.get(id=song_id)
+        records = list(song.records.order_by("-performed_at").values("performed_at", "url", "notes", "cover_url"))
+        cache.set(cache_key, records, 600)  # 缓存 10 分钟
+        return JsonResponse(records, safe=False)
+    except Songs.DoesNotExist:
+        return JsonResponse({"error": "Song not found."}, status=404)    
 
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
@@ -43,13 +50,17 @@ def song_list_api(request):
     page_num = request.GET.get("page", 1)
     page_size = request.GET.get("limit", 50)
     ordering = request.GET.get("ordering", "")
-    # ✅ 获取 styles 参数
     style_list = request.GET.getlist("styles")
     if not style_list:
         style_raw = request.GET.get("styles")
         if style_raw:
             style_list = style_raw.split(",")
     style_list = [s for s in style_list if s.strip()]
+    # 构造缓存key，包含所有查询参数
+    cache_key = f"song_list_api:{query}:{page_num}:{page_size}:{ordering}:{'-'.join(style_list)}"
+    data = cache.get(cache_key)
+    if data is not None:
+        return Response(data)
     # ✅ 基础查询
     songs = Songs.objects.all()
     # ✅ 排序处理
@@ -80,12 +91,14 @@ def song_list_api(request):
             "last_performed": song.last_performed,
             "perform_count": song.perform_count,
         })
-    return Response({
+    data = {
         "total": paginator.count,
         "page": page.number,
         "page_size": paginator.per_page,
         "results": results
-    })
+    }
+    cache.set(cache_key, data, 600)  # 缓存10分钟
+    return Response(data)
 
 @api_view(['GET'])
 def style_list_api(request):
