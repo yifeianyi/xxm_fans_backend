@@ -146,12 +146,13 @@ def top_songs_api(request):
     }
     range_key = request.GET.get('range', 'all')
     days = range_map.get(range_key, None)
+    limit = int(request.GET.get('limit', 10))  # 新增limit参数，默认10
     qs = Songs.objects.all()
     if days:
         since = datetime.now().date() - timedelta(days=days)
         qs = qs.filter(records__performed_at__gte=since)
     # annotate 统计演唱次数
-    qs = qs.annotate(recent_count=Count('records')).order_by('-recent_count', '-last_performed')[:10]
+    qs = qs.annotate(recent_count=Count('records')).order_by('-recent_count', '-last_performed')[:limit]
     result = [
         {
             'id': s.id,

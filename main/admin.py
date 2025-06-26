@@ -156,21 +156,10 @@ class BVImportForm(forms.Form):
         bvid = forms.CharField(label="BV号", max_length=20)
 @admin.register(SongRecord)
 class SongReccordAdmin(admin.ModelAdmin):
-    list_display = ("song", "performed_at", "cover_thumb", "url", "notes")
+    list_display = ("song", "performed_at", "url", "notes")
     actions = ["import_from_bv"]
     search_fields = ["song__song_name", "notes"]
     list_filter = ["performed_at", "song__song_name"]
-
-    @admin.display(description="封面")
-    def cover_thumb(self, obj):
-        if obj.cover_url:
-            if obj.cover_url.startswith('/static/'):
-                # 本地图片，显示缩略图
-                return format_html('<img src="{}" style="max-width: 50px; max-height: 50px;" />', obj.cover_url)
-            else:
-                # 外链，显示为链接
-                return format_html('<a href="{}" target="_blank">查看封面</a>', obj.cover_url)
-        return "无封面"
 
     def get_urls(self):
         urls = super().get_urls()
