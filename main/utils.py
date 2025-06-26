@@ -27,14 +27,14 @@ def download_and_save_cover(cover_url, performed_date):
         year = performed_date.strftime("%Y")
         month = performed_date.strftime("%m")
         
-        # 本地封面目录根
-        BASE_DIR = os.path.join("static", "covers")
+        # 本地封面目录根（已迁移到前端public目录）
+        BASE_DIR = os.path.join(".", "xxm_fans_frontend", "public", "covers")
         save_dir = os.path.join(BASE_DIR, year, month)
         os.makedirs(save_dir, exist_ok=True)
         
         filename = f"{date_str}.jpg"
         file_path = os.path.join(save_dir, filename)
-        local_path = f"/static/covers/{year}/{month}/{filename}"
+        local_path = f"/covers/{year}/{month}/{filename}"
         
         # 如果文件已存在，直接返回本地路径
         if os.path.exists(file_path):
