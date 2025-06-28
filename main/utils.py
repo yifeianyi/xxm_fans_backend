@@ -163,3 +163,9 @@ def import_bv_song(bvid):
 
     print(f"[BV:{bvid}] 导入完成，共导入 {len(results)} 条")
     return results
+
+def is_mobile(request):
+    ua = request.META.get('HTTP_USER_AGENT', '').lower()
+    return any(keyword in ua for keyword in [
+        'android', 'iphone', 'ipad', 'ipod', 'blackberry', 'iemobile', 'opera mini', 'mobile'
+    ])

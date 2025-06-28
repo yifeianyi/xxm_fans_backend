@@ -191,30 +191,3 @@ class SongReccordAdmin(admin.ModelAdmin):
             form = BVImportForm()
 
         return render(request, "admin/import_bv_form.html", {"form": form})
-
-    # def import_from_bv(self, request, queryset):
-        if "apply" in request.POST:
-            Form = BVImportFrom(request.POST)
-            if Form.is_valid():
-                bvid = Form.cleaned_data["bvid"]
-                try:
-                    result_list = import_bv_song(bvid)
-                    if not result_list:
-                        self.message_user(request, "没有找到可导入的分P歌曲", level=messages.WARNING)
-                        return None
-                    
-                    for result in result_list:
-                        msg = f"✅ {result['song_name']} 导入成功"
-                        if result["note"]:
-                            msg += f"（{result['note']}）"
-                        if result["created_song"]:
-                            msg += "，新歌曲已创建"
-                        if result["cover_url"]:
-                            msg += "，封面已下载"
-                        self.message_user(request, msg, level=messages.SUCCESS)
-                except Exception as e:
-                    self.message_user(request, f"❌ 失败: {str(e)}", level=messages.ERROR)
-                return None
-        else:
-            Form = BVImportFrom()
-        return render(request, "admin/import_bv_form.html", {"form": Form})

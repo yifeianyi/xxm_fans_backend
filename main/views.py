@@ -7,6 +7,7 @@ from django.shortcuts import render
 from datetime import datetime, timedelta
 from django.db.models import Count
 from django.core.cache import cache
+from .utils import is_mobile
 
 # Create your views here.
 
@@ -172,3 +173,7 @@ def top_songs_api(request):
         for s in qs
     ]
     return Response(result)
+
+@api_view(['GET'])
+def is_mobile_api(request):
+    return Response({'is_mobile': is_mobile(request)})
