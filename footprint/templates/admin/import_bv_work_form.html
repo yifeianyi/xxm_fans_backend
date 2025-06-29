@@ -1,0 +1,90 @@
+{% extends "admin/base_site.html" %}
+{% load i18n admin_urls static admin_modify %}
+
+{% block extrahead %}{{ block.super }}
+<script type="text/javascript" src="{% url 'admin:jsi18n' %}"></script>
+{{ form.media }}
+<script type="text/javascript">
+    document.addEventListener('DOMContentLoaded', function () {
+        const collectionChoice = document.querySelector('input[name="collection_choice"]:checked');
+        const existingCollectionDiv = document.getElementById('div_id_existing_collection');
+        const newCollectionDiv = document.getElementById('div_id_collection_name');
+
+        function toggleCollectionFields() {
+            const selectedChoice = document.querySelector('input[name="collection_choice"]:checked');
+            if (selectedChoice) {
+                if (selectedChoice.value === 'existing') {
+                    existingCollectionDiv.style.display = 'block';
+                    newCollectionDiv.style.display = 'none';
+                } else {
+                    existingCollectionDiv.style.display = 'none';
+                    newCollectionDiv.style.display = 'block';
+                }
+            }
+        }
+
+        // 初始状态
+        toggleCollectionFields();
+
+        // 监听选择变化
+        document.querySelectorAll('input[name="collection_choice"]').forEach(function (radio) {
+            radio.addEventListener('change', toggleCollectionFields);
+        });
+    });
+</script>
+{% endblock %}
+
+{% block breadcrumbs %}
+<div class="breadcrumbs">
+    <a href="{% url 'admin:index' %}">{% trans 'Home' %}</a>
+    &rsaquo; <a href="{% url 'admin:app_list' app_label='footprint' %}">Footprint</a>
+    &rsaquo; <a href="{% url 'admin:footprint_work_changelist' %}">作品记录</a>
+    &rsaquo; 导入B站视频
+</div>
+{% endblock %}
+
+{% block content %}
+<div id="content-main">
+    <h1>导入B站视频</h1>
+
+    <form method="post">
+        {% csrf_token %}
+
+        <fieldset class="module aligned">
+            {% for field in form %}
+            <div class="form-row" id="div_id_{{ field.name }}">
+                <div>
+                    {{ field.errors }}
+                    {{ field.label_tag }}
+                    {{ field }}
+                    {% if field.help_text %}
+                    <div class="help">{{ field.help_text|safe }}</div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </fieldset>
+
+        <div class="submit-row">
+            <input type="submit" value="导入视频" class="default" />
+            <a href="{% url 'admin:footprint_work_changelist' %}" class="button cancel-link">取消</a>
+        </div>
+    </form>
+
+    <div style="margin-top: 20px; padding: 15px; background-color: #f8f9fa; border-radius: 5px;">
+        <h3>使用说明：</h3>
+        <ul>
+            <li><strong>BV号</strong>：从B站视频URL中获取，例如：BV1xx411c7mD</li>
+            <li><strong>合集选择</strong>：
+                <ul>
+                    <li>选择"已有合集"：从下拉列表中选择已创建的合集</li>
+                    <li>选择"创建新合集"：输入新的合集名称</li>
+                </ul>
+            </li>
+            <li>系统会自动获取视频的标题、作者、封面等信息</li>
+            <li>封面会自动下载到 <code>xxm_fans_frontend/public/footprint/Collection/合集名称/</code> 目录下</li>
+            <li>文件名格式为：<code>发布年-月-日.jpg</code></li>
+        </ul>
+    </div>
+</div>
+{% endblock %}
