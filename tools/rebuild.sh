@@ -2,7 +2,7 @@
 # 用于生产环境：重启后端服务 + 重新加载前端资源
 
 # 1. 重启后端服务（假设用 systemd 管理，服务名为 xxm_backend）
-sudo systemctl restart xxm_backend
+sudo systemctl restart gunicorn
 
 # 2. 重新构建前端资源
 cd /home/yifeianyi/Desktop/xxm_fans_home/xxm_fans_frontend
