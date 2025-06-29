@@ -29,7 +29,7 @@ def songs_list(request):
     return render(request, "songs_list.html", {"page_obj":page_obj})
 def song_records_api(request, song_id):
     page_num = int(request.GET.get("page", 1))
-    page_size = int(request.GET.get("limit", 20))
+    page_size = int(request.GET.get("page_size", 20))
     cache_key = f"song_records:{song_id}:{page_num}:{page_size}"
     records = cache.get(cache_key)
 
