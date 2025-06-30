@@ -5,7 +5,7 @@ from django.http import JsonResponse
 from .models import Songs, SongStyle, Style
 from django.shortcuts import render
 from datetime import datetime, timedelta
-from django.db.models import Count
+from django.db.models import Count, Q
 from django.core.cache import cache
 from .utils import is_mobile
 
@@ -20,7 +20,11 @@ def songs_list(request):
     songs = Songs.objects.all().order_by("-perform_count")
 
     if query:
-        songs = songs.filter(song_name__icontains=query)
+        songs = songs.filter(
+            song_name__icontains=query
+        ) | songs.filter(
+            singer__icontains=query
+        )
 
     paginator = Paginator(songs, 50)
     page_num = request.GET.get("page")
@@ -111,7 +115,7 @@ def song_list_api(request):
     else:
         songs = songs.order_by('-last_performed')
     if query:
-        songs = songs.filter(song_name__icontains=query)
+        songs = songs.filter(Q(song_name__icontains=query) | Q(singer__icontains=query))
     if style_list:
         songs = songs.filter(songstyle__style__name__in=style_list).distinct()
     # 分页处理
