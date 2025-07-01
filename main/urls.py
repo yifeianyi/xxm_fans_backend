@@ -1,6 +1,8 @@
-from django.urls import path,include
+from django.urls import path,include, re_path
 from . import views
 from .views import song_list_api, top_songs_api, is_mobile_api
+# from main.admin import SongsAutocomplete
+
 urlpatterns = [
     # path('',views.index, name="index")
     path("",views.songs_list,name="歌单"),

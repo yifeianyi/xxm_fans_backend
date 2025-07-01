@@ -30,7 +30,8 @@ def songs_list(request):
     page_num = request.GET.get("page")
     page_obj = paginator.get_page(page_num)
     # return render(request, "songs_list.html",{"songs":songs})
-    return render(request, "songs_list.html", {"page_obj":page_obj})
+    return render(request, "songs_list.html", {"page_obj": page_obj, "query": query})
+
 def song_records_api(request, song_id):
     page_num = int(request.GET.get("page", 1))
     page_size = int(request.GET.get("page_size", 20))
@@ -131,6 +132,7 @@ def song_list_api(request):
             "styles": styles,
             "last_performed": song.last_performed,
             "perform_count": song.perform_count,
+            "language": song.language,
         })
     data = {
         "total": paginator.count,

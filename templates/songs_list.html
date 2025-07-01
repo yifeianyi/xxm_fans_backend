@@ -121,6 +121,7 @@
             <th>歌手</th>
             <th>最近演唱</th>
             <th>次数</th>
+            <th>语言</th>
             <th>操作</th>
         </tr>
 
@@ -130,13 +131,14 @@
             <td>{{ song.singer }}</td>
             <td>{{ song.last_performed }}</td>
             <td>{{ song.perform_count }}</td>
+            <td>{{ song.language }}</td>
             <td>
                 <button onclick="toggleDetails({{ song.id }}, this)">更多记录</button>
             </td>
         </tr>
         {% empty %}
         <tr>
-            <td colspan="5">暂无数据</td>
+            <td colspan="6">暂无数据</td>
         </tr>
         {% endfor %}
     </table>

@@ -23,10 +23,10 @@ class SelectMainSongFrom(forms.Form):
 
 @admin.register(Songs)
 class SongsAdmin(admin.ModelAdmin):
-    list_display = ['song_name_display','singer_display', 'last_performed_display', 'perform_count_display', 'view_records' ]
+    list_display = ['song_name_display','singer_display', 'last_performed_display', 'perform_count_display', 'language_display', 'view_records' ]
     list_filter = ['language','last_performed']
     search_fields = ["song_name","perform_count","singer"]
-    actions = ['merge_songs_action']
+    actions = ['merge_songs_action', 'batch_set_language']
 
     list_per_page = 25  # 每页30条
     
@@ -54,6 +54,10 @@ class SongsAdmin(admin.ModelAdmin):
     @admin.display(description="演唱次数",ordering="perform_count")
     def perform_count_display(self, obj):
         return obj.perform_count
+
+    @admin.display(description="语言", ordering="language")
+    def language_display(self, obj):
+        return obj.language
     
     @admin.display(description="演唱记录")
     def view_records(self, obj):
@@ -151,6 +155,23 @@ class SongsAdmin(admin.ModelAdmin):
         next_url = quote(current_path)
         return HttpResponseRedirect(f"./merge_songs/?ids={','.join(selected)}&next={next_url}")
     merge_songs_action.short_description = "合并选中的歌曲"
+
+    def batch_set_language(self, request, queryset):
+        from django import forms
+        from django.shortcuts import render, redirect
+        class LanguageForm(forms.Form):
+            language = forms.CharField(label="语言", max_length=50)
+        if 'apply' in request.POST:
+            form = LanguageForm(request.POST)
+            if form.is_valid():
+                language = form.cleaned_data['language']
+                count = queryset.update(language=language)
+                self.message_user(request, f"已成功批量标记 {count} 首歌为{language}!")
+                return None
+        else:
+            form = LanguageForm()
+        return render(request, 'admin/batch_set_language.html', {'form': form, 'songs': queryset})
+    batch_set_language.short_description = "批量标记语言"
 
 class BVImportForm(forms.Form):
         bvid = forms.CharField(label="BV号", max_length=20)
