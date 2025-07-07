@@ -46,8 +46,8 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'main',
     'footprint',
-    'rest_framework',# 如果你要用 DRF（推荐） (暂时不知道是啥)
-    # 'corsheaders',# 如果之后和前端分离开发
+    'rest_framework',
+    'drf_yasg',
 ]
 
 MIDDLEWARE = [

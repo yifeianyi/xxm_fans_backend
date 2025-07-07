@@ -8,6 +8,9 @@ from datetime import datetime, timedelta
 from django.db.models import Count, Q
 from django.core.cache import cache
 from .utils import is_mobile
+from rest_framework_swagger.views import get_swagger_view
+from rest_framework.decorators import api_view
+from rest_framework.response import Response
 
 # Create your views here.
 
@@ -31,7 +34,7 @@ def songs_list(request):
     page_obj = paginator.get_page(page_num)
     # return render(request, "songs_list.html",{"songs":songs})
     return render(request, "songs_list.html", {"page_obj": page_obj, "query": query})
-
+@api_view(['GET'])
 def song_records_api(request, song_id):
     page_num = int(request.GET.get("page", 1))
     page_size = int(request.GET.get("page_size", 20))
@@ -69,25 +72,9 @@ def song_records_api(request, song_id):
         return JsonResponse({"error": "Song not found."}, status=404)
 
 
-# def song_records_api(request, song_id):
-#     cache_key = f"song_records:{song_id}"
-#     records = cache.get(cache_key)
-    
-#     if records is not None:
-#         return JsonResponse(records, safe=False)
-    
-#     try:
-#         song = Songs.objects.get(id=song_id)
-#         records = list(song.records.order_by("-performed_at").values("performed_at", "url", "notes", "cover_url"))
-#         cache.set(cache_key, records, 600)  # 缓存 10 分钟
-#         return JsonResponse(records, safe=False)
-#     except Songs.DoesNotExist:
-#         return JsonResponse({"error": "Song not found."}, status=404)    
-
-from rest_framework.decorators import api_view
-from rest_framework.response import Response
 @api_view(['GET'])
 def song_list_api(request):
+    # 从url中获取参数
     query = request.GET.get("q", "")
     page_num = request.GET.get("page", 1)
     page_size = request.GET.get("limit", 50)
@@ -103,8 +90,10 @@ def song_list_api(request):
     data = cache.get(cache_key)
     if data is not None:
         return Response(data)
+
+
     # ✅ 基础查询
-    songs = Songs.objects.all()
+    songs = Songs.objects.all() #数据库操作
     # ✅ 排序处理
     allowed_order_fields = ['singer', 'last_performed', 'perform_count']
     if ordering:
@@ -119,6 +108,8 @@ def song_list_api(request):
         songs = songs.filter(Q(song_name__icontains=query) | Q(singer__icontains=query))
     if style_list:
         songs = songs.filter(songstyle__style__name__in=style_list).distinct()
+
+
     # 分页处理
     paginator = Paginator(songs, page_size)
     page = paginator.get_page(page_num)
