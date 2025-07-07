@@ -13,6 +13,8 @@ from django.shortcuts import render
 from .utils import import_bv_song
 from django.utils.html import format_html, format_html_join
 from django.core.exceptions import MultipleObjectsReturned
+import os
+from django.utils.safestring import mark_safe
 
 admin.site.register(Style)
 admin.site.register(SongStyle)
@@ -176,12 +178,49 @@ class SongsAdmin(admin.ModelAdmin):
 
 class BVImportForm(forms.Form):
         bvid = forms.CharField(label="BV号", max_length=20)
+
+class ReplaceCoverForm(forms.ModelForm):
+    replace_cover = forms.ImageField(label="更换封面图（仅内容覆盖，路径和文件名不变）", required=False)
+    class Meta:
+        model = SongRecord
+        fields = '__all__'
+
+    def save(self, commit=True):
+        instance = super().save(commit=False)
+        new_cover = self.cleaned_data.get('replace_cover')
+        if new_cover and instance.cover_url:
+            from django.conf import settings
+            # 兼容 /covers/ 前缀和无 /covers/ 前缀
+            rel_path = instance.cover_url.lstrip('/')
+            if rel_path.startswith('covers/'):
+                rel_path = rel_path[len('covers/'):]
+            cover_path = os.path.join(settings.BASE_DIR, 'xxm_fans_frontend', 'public', 'covers', rel_path)
+            if os.path.exists(cover_path):
+                with open(cover_path, 'wb+') as f:
+                    for chunk in new_cover.chunks():
+                        f.write(chunk)
+        if commit:
+            instance.save()
+        return instance
+
 @admin.register(SongRecord)
 class SongReccordAdmin(admin.ModelAdmin):
-    list_display = ("song", "performed_at", "url","cover_url","notes")
+    form = ReplaceCoverForm
+    list_display = ("song", "performed_at", "url", "cover_url", "cover_thumb", "notes")
     actions = ["import_from_bv"]
     search_fields = ["song__song_name", "notes"]
     list_filter = ["performed_at", "song__song_name"]
+    fields = ("song", "performed_at", "url", "cover_url", "notes", "replace_cover")
+
+    def cover_thumb(self, obj):
+        if obj.cover_url:
+            url = obj.cover_url.lstrip('/')
+            if url.startswith('covers/'):
+                url = url[len('covers/'):]
+            full_url = f'/static/covers/{url}'
+            return mark_safe(f'<img src="{full_url}" style="height:48px;max-width:80px;object-fit:cover;" />')
+        return "-"
+    cover_thumb.short_description = "封面缩略图"
 
     def get_urls(self):
         urls = super().get_urls()
