@@ -12,6 +12,7 @@ from django.contrib.admin.helpers import ACTION_CHECKBOX_NAME
 from django.shortcuts import render
 from .utils import import_bv_song
 from django.utils.html import format_html, format_html_join
+from django.core.exceptions import MultipleObjectsReturned
 
 admin.site.register(Style)
 admin.site.register(SongStyle)
@@ -194,8 +195,29 @@ class SongReccordAdmin(admin.ModelAdmin):
             form = BVImportForm(request.POST)
             if form.is_valid():
                 bvid = form.cleaned_data["bvid"]
-                try:
-                    result_list = import_bv_song(bvid)
+                selected_song_id = request.POST.get("selected_song_id")
+                pending_parts_json = request.POST.get("pending_parts")
+                all_results_count = int(request.POST.get("all_results_count", 0))
+                
+                # 解析待处理分P信息
+                pending_parts = None
+                if pending_parts_json:
+                    import json
+                    try:
+                        pending_parts = json.loads(pending_parts_json)
+                    except json.JSONDecodeError:
+                        pending_parts = None
+                
+                import json
+                conflict_info = None
+                while True:
+                    result_list, remaining_parts, conflict_info = import_bv_song(
+                        bvid,
+                        selected_song_id=selected_song_id,
+                        pending_parts=pending_parts
+                    )
+                    all_results_count += len(result_list)
+                    # 显示导入结果
                     for result in result_list:
                         msg = f"✅ {result['song_name']}"
                         if result["note"]:
@@ -204,11 +226,27 @@ class SongReccordAdmin(admin.ModelAdmin):
                             msg += "，🎵 新建歌曲"
                         if result["cover_url"]:
                             msg += "，🖼️ 封面已下载"
-                        request.session.setdefault("_messages", []).append(("SUCCESS", msg))
-                    return redirect("admin:import-bv-songrecord")
-                except Exception as e:
-                    self.message_user(request, f"❌ 导入失败: {e}", level=messages.ERROR)
+                        self.message_user(request, msg, level=messages.SUCCESS)
+                    # 如果有冲突，跳出循环，交给后续处理
+                    if conflict_info:
+                        break
+                    # 如果没有剩余，全部完成
+                    if not remaining_parts:
+                        self.message_user(request, f"🎉 BV导入完成！共处理 {all_results_count} 条记录", level=messages.SUCCESS)
+                        return redirect("admin:main_songrecord_changelist")
+                    # 没有冲突但还有剩余，继续循环
+                    pending_parts = remaining_parts
+                    selected_song_id = None
+                # 如果有冲突，渲染人工选择页面，并传递累计all_results_count
+                if conflict_info:
+                    return render(request, "admin/select_song.html", {
+                        "song_name": conflict_info["song_name"],
+                        "candidates": conflict_info["candidates"],
+                        "bvid": bvid,
+                        "pending_parts": json.dumps(conflict_info["remaining_parts"]),
+                        "current_part": conflict_info["current_part"],
+                        "all_results_count": all_results_count,
+                    })
         else:
             form = BVImportForm()
-
         return render(request, "admin/import_bv_form.html", {"form": form})

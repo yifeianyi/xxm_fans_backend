@@ -114,5 +114,6 @@ def import_bv_song(bvid):
     print(f"[BV:{bvid}] 导入完成")
 
 if __name__ == "__main__":
-    bv = input("请输入BV号（如BV1xxxxxxx）：").strip()
+    # bv = input("请输入BV号（如BV1xxxxxxx）：").strip()
+    bv = "BV1kc3BzxEiQ"
     import_bv_song(bv)
