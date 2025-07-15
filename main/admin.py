@@ -217,7 +217,7 @@ class SongReccordAdmin(admin.ModelAdmin):
             url = obj.cover_url.lstrip('/')
             if url.startswith('covers/'):
                 url = url[len('covers/'):]
-            full_url = f'/static/covers/{url}'
+            full_url = f'/covers/{url}'
             return mark_safe(f'<img src="{full_url}" style="height:48px;max-width:80px;object-fit:cover;" />')
         return "-"
     cover_thumb.short_description = "封面缩略图"

@@ -8,7 +8,7 @@ from datetime import datetime, timedelta
 from django.db.models import Count, Q
 from django.core.cache import cache
 from .utils import is_mobile
-from rest_framework_swagger.views import get_swagger_view
+#from rest_framework_swagger.views import get_swagger_view
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 
