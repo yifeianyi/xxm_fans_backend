@@ -15,7 +15,7 @@ env/
 *.log
 
 # 本地配置或开发使用的数据文件
-*.json
+#*.json
 !happy_data.json  # 如果你希望保留它，请取消注释
 !sqlInit_data/public_data.json  # 允许公开数据文件
 
