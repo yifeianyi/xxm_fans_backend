@@ -4,11 +4,6 @@ from django.db import models
 class Style(models.Model):
     name = models.CharField(max_length=100, unique=True)
 
-    class Meta:
-        verbose_name = "曲风表"
-        verbose_name_plural = "曲风表"
-        ordering = ['name']
-
     def __str__(self):
         return self.name
 
@@ -20,11 +15,6 @@ class Songs(models.Model):
     perform_count = models.IntegerField(default=0)
     language = models.CharField(max_length=50, blank=True, null=True)
 
-    class Meta:
-        verbose_name = "歌单"
-        verbose_name_plural = "歌单"
-        ordering = ['song_name']
-
     def __str__(self):
         return self.song_name
 
@@ -35,12 +25,6 @@ class SongRecord(models.Model):
     url = models.URLField(blank=True, null=True)
     notes = models.TextField(blank=True, null=True)
     cover_url = models.CharField(max_length=300, blank=True, null=True)
-
-
-    class Meta:
-        verbose_name = "演唱记录"
-        verbose_name_plural = "演唱记录"
-        ordering = ['-performed_at']
     def __str__(self):
         return f"{self.song.song_name} @ {self.performed_at}"
 
@@ -51,8 +35,6 @@ class SongStyle(models.Model):
 
     class Meta:
         unique_together = ("song", "style")
-        verbose_name = "歌曲-曲风表"
-        verbose_name_plural = "歌曲-曲风表"
 
     def __str__(self):
         return f"{self.song.song_name} - {self.style.name}"

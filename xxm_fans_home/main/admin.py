@@ -16,17 +16,14 @@ from django.core.exceptions import MultipleObjectsReturned
 import os
 from django.utils.safestring import mark_safe
 
-# 构建默认的style和SongStyle表单管理界面
 admin.site.register(Style)
 admin.site.register(SongStyle)
     
-"""
-    自定义admin界面
-    1. 显示歌手、最近演唱时间、歌名、演唱次数、语言
-    2. 支持合并多个数据项
-    3. 支持批量设置语言
-    4. 支持查看演唱记录
-"""
+
+class SelectMainSongFrom(forms.Form):
+    _selected_action = forms.CharField(widget=forms.MultipleHiddenInput)
+    main_song = forms.ChoiceField(label="请选择主项",widget=forms.RadioSelect)
+
 @admin.register(Songs)
 class SongsAdmin(admin.ModelAdmin):
     list_display = ['song_name_display','singer_display', 'last_performed_display', 'perform_count_display', 'language_display', 'view_records' ]
@@ -179,11 +176,9 @@ class SongsAdmin(admin.ModelAdmin):
         return render(request, 'admin/batch_set_language.html', {'form': form, 'songs': queryset})
     batch_set_language.short_description = "批量标记语言"
 
-
 class BVImportForm(forms.Form):
-    bvid = forms.CharField(label="BV号", max_length=20)
+        bvid = forms.CharField(label="BV号", max_length=20)
 
-# 替换Record封面图的
 class ReplaceCoverForm(forms.ModelForm):
     replace_cover = forms.ImageField(label="更换封面图（仅内容覆盖，路径和文件名不变）", required=False)
     class Meta:
@@ -208,17 +203,8 @@ class ReplaceCoverForm(forms.ModelForm):
             instance.save()
         return instance
 
-
-"""
-    管理SongRecord的admin界面
-    1. 支持从BV导入演唱记录
-    2. 支持替换封面图
-    3. 支持查看封面缩略图
-
-"""
 @admin.register(SongRecord)
 class SongReccordAdmin(admin.ModelAdmin):
-    # 后台显示的表单项
     form = ReplaceCoverForm
     list_display = ("song", "performed_at", "url", "cover_url", "cover_thumb", "notes")
     actions = ["import_from_bv"]
@@ -226,7 +212,6 @@ class SongReccordAdmin(admin.ModelAdmin):
     list_filter = ["performed_at", "song__song_name"]
     fields = ("song", "performed_at", "url", "cover_url", "notes", "replace_cover")
 
-    # 缩略图显示
     def cover_thumb(self, obj):
         if obj.cover_url:
             url = obj.cover_url.lstrip('/')
@@ -244,7 +229,6 @@ class SongReccordAdmin(admin.ModelAdmin):
         ]
         return my_urls + urls
 
-    # 导入BV演唱记录的视图
     def import_bv_view(self, request):
         if request.method == "POST":
             form = BVImportForm(request.POST)
@@ -305,7 +289,3 @@ class SongReccordAdmin(admin.ModelAdmin):
         else:
             form = BVImportForm()
         return render(request, "admin/import_bv_form.html", {"form": form})
-
-class SelectMainSongFrom(forms.Form):
-    _selected_action = forms.CharField(widget=forms.MultipleHiddenInput)
-    main_song = forms.ChoiceField(label="请选择主项",widget=forms.RadioSelect)

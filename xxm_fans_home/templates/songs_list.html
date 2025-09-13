@@ -1,0 +1,170 @@
+<html>
+
+<head>
+    <title>小满虫之家 · 歌曲列表</title>
+
+    <style>
+        /* 弹窗遮罩 */
+        #player-popup-mask {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+        }
+
+        /* 弹窗盒子 */
+        #player-popup {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 80vw;
+            height: 60vh;
+            background: white;
+            border-radius: 8px;
+            z-index: 1001;
+            box-shadow: 0 0 10px #333;
+        }
+
+        #player-popup iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+            border-radius: 8px;
+        }
+
+        #player-popup .close-btn {
+            position: absolute;
+            top: 6px;
+            right: 10px;
+            cursor: pointer;
+            font-size: 24px;
+            font-weight: bold;
+            color: #666;
+        }
+
+        #player-popup .close-btn:hover {
+            color: #000;
+        }
+    </style>
+
+    <script>
+        // 切换展开更多记录
+        function toggleDetails(songId, button) {
+            const existing = document.getElementById(`details-${songId}`);
+            if (existing) {
+                existing.remove();
+                button.textContent = "更多记录";
+                return;
+            }
+            fetch(`/song/${songId}/records`)
+                .then(response => response.json())
+                .then(data => {
+                    const rows = data.map(record => {
+                        // 点击链接调用 openPlayer 弹窗播放
+                        const url = record.url + "&muted=0"
+                            ? `<a href="#" onclick="openPlayer('${record.url}');return false;">BV链接</a>`
+                            : '无链接';
+                        const notes = record.notes || '';
+                        return `<li>${record.performed_at} - ${url} - ${notes}</li>`;
+                    }).join("");
+                    const html = `
+                        <tr id="details-${songId}">
+                            <td colspan="5">
+                                <ul style="margin: 0; padding: 0 0 0 1em;">${rows}</ul>
+                            </td>
+                        </tr>
+                    `;
+                    button.parentElement.parentElement.insertAdjacentHTML("afterend", html);
+                    button.textContent = "收起";
+                })
+                .catch(err => {
+                    console.error("加载失败:", err);
+                    alert("无法加载记录，请稍后重试。");
+                });
+        }
+
+        // 打开播放器弹窗
+        function openPlayer(url) {
+            const iframe = document.getElementById('player-iframe');
+            iframe.src = url;
+            document.getElementById('player-popup').style.display = 'block';
+            document.getElementById('player-popup-mask').style.display = 'block';
+        }
+
+        // 关闭播放器弹窗
+        function closePlayer() {
+            const iframe = document.getElementById('player-iframe');
+            iframe.src = ''; // 清空iframe，停止播放
+            document.getElementById('player-popup').style.display = 'none';
+            document.getElementById('player-popup-mask').style.display = 'none';
+        }
+    </script>
+</head>
+
+<body>
+    <!-- <h1>歌曲列表</h1> -->
+
+    <form method="get">
+        <input type="text" name="q" placeholder="搜索歌名或歌手..." value="{{ query|default:'' }}">
+        <button type="submit">搜索</button>
+    </form>
+
+    <table border="1">
+        <tr>
+            <th>歌曲</th>
+            <th>歌手</th>
+            <th>最近演唱</th>
+            <th>次数</th>
+            <th>语言</th>
+            <th>操作</th>
+        </tr>
+
+        {% for song in page_obj %}
+        <tr>
+            <td>{{ song.song_name }}</td>
+            <td>{{ song.singer }}</td>
+            <td>{{ song.last_performed }}</td>
+            <td>{{ song.perform_count }}</td>
+            <td>{{ song.language }}</td>
+            <td>
+                <button onclick="toggleDetails({{ song.id }}, this)">更多记录</button>
+            </td>
+        </tr>
+        {% empty %}
+        <tr>
+            <td colspan="6">暂无数据</td>
+        </tr>
+        {% endfor %}
+    </table>
+
+    <div style="margin-top: 20px;">
+        {% if page_obj.has_previous %}
+        <a href="?page=1{% if query %}&q={{ query }}{% endif %}">首页</a>
+        <a href="?page={{ page_obj.previous_page_number }}{% if query %}&q={{ query }}{% endif %}">上一页</a>
+        {% endif %}
+
+        <span>第 {{ page_obj.number }} / {{ page_obj.paginator.num_pages }} 页</span>
+
+        {% if page_obj.has_next %}
+        <a href="?page={{ page_obj.next_page_number }}{% if query %}&q={{ query }}{% endif %}">下一页</a>
+        <a href="?page={{ page_obj.paginator.num_pages }}{% if query %}&q={{ query }}{% endif %}">末页</a>
+        {% endif %}
+    </div>
+
+    <!-- 弹窗遮罩 -->
+    <div id="player-popup-mask" onclick="closePlayer()"></div>
+
+    <!-- 弹窗播放器 -->
+    <div id="player-popup">
+        <div class="close-btn" onclick="closePlayer()">×</div>
+        <iframe id="player-iframe" src="" allowfullscreen></iframe>
+    </div>
+</body>
+
+</html>
