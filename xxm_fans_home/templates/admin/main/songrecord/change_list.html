@@ -1,8 +1,0 @@
-{% extends "admin/change_list.html" %}
-
-{% block object-tools-items %}
-{{ block.super }}
-<li>
-    <a href="{% url 'admin:import-bv-songrecord' %}" class="addlink"> 导入新歌切数据 </a>
-</li>
-{% endblock %}
