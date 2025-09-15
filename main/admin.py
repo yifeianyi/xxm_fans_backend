@@ -1,5 +1,7 @@
 from django.contrib import admin, messages
+from django.db.models import Sum
 from django.urls import reverse
+from django.http import HttpResponseRedirect
 from django.template.response import TemplateResponse
 from django.urls import path
 from django.shortcuts import render, redirect
@@ -41,6 +43,7 @@ class SongsAdmin(admin.ModelAdmin):
             'all': ('admin/css/collapsible.css',)
         }
         js = ('admin/js/collapsible.js',)
+     
     """
         表属性别名设置
     """
@@ -97,58 +100,15 @@ class SongsAdmin(admin.ModelAdmin):
             obj.id, obj.id, ul_html
         )
     
-    """
-        实现 action 按钮点击后，跳转的跳转逻辑
-    """
-    #获取跳转页面的url
+    
+    # 路由设置
     def get_urls(self):
-        urls = super().get_urls()
+        urls = super().get_urls() # 获取原有的url
         custom_urls = [
             path("merge_songs/", self.admin_site.admin_view(self.merge_songs_view), name="merge_songs"),
         ]
-        return custom_urls + urls
+        return custom_urls + urls # 将自定义的url加入到原有的url中
     
-    def merge_songs_view(self, request):
-        ids = request.GET.get("ids", "") or request.POST.get("ids", "")
-        id_list = ids.split(",")
-        selected_songs = Songs.objects.filter(id__in=id_list)
-
-        if request.method == "POST":
-            master_id = request.POST.get("master_id")
-            if not master_id:
-                self.message_user(request, "必须选择一个主项", level=messages.ERROR)
-                return redirect(request.path + f"?ids={ids}")
-
-            master_song = Songs.objects.get(id=master_id)
-            other_songs = selected_songs.exclude(id=master_id)
-
-            for song in other_songs:
-                for record in SongRecord.objects.filter(song=song):
-                    # 复制所有字段，song 换成 master_song
-                    record.pk = None  # 新建一条
-                    record.song = master_song
-                    record.save()
-                master_song.perform_count += song.perform_count
-            master_song.save()
-            other_songs.delete()
-
-            self.message_user(request, f"成功将 {len(id_list)-1} 项合并到主项《{master_song.song_name}》。")
-
-            next_url = request.GET.get('next') or request.POST.get('next') or "../"
-            next_url = unquote(next_url)
-
-            from django.http import HttpResponseRedirect
-            return HttpResponseRedirect(next_url)  # 返回admin changelist 页
-
-        # GET 请求显示页面
-        context = dict(
-            self.admin_site.each_context(request),
-            songs=selected_songs,
-            ids=ids,
-            next=request.GET.get('next', '') 
-        )
-        return TemplateResponse(request, "admin/merge_songs.html", context)
-
     """
         action按钮设置
     """
@@ -158,14 +118,12 @@ class SongsAdmin(admin.ModelAdmin):
         if len(selected) < 2:
             self.message_user(request, "至少选择两个才能合并",level=messages.WARNING)
             return None
-        # #重定向到新页面选择合并方式
-
+        
+        # 设置跳转地址和返回地址
         current_path = request.get_full_path()
-        # print("merge_songs_action current_path:", current_path)
         next_url = quote(current_path)
         return HttpResponseRedirect(f"./merge_songs/?ids={','.join(selected)}&next={next_url}")
     
-
     def batch_set_language(self, request, queryset):
         class LanguageForm(forms.Form):
             language = forms.CharField(label="语言", max_length=50)
@@ -179,70 +137,68 @@ class SongsAdmin(admin.ModelAdmin):
         else:
             form = LanguageForm()
         return render(request, 'admin/batch_set_language.html', {'form': form, 'songs': queryset})
-    
-    # 拆分选中歌曲的演唱记录
-    # def split_song_records(self, request, queryset):
-    #     '''
-    #         异常情况处理：
-    #         1. 只能选择一首歌进行拆分
-    #         2. 该歌曲的演唱记录少于2条，无法拆分
-    #         3. 必须选择至少一条记录进行拆分
-    #     '''
-    #     if queryset.count() != 1:
-    #         self.message_user(request, "只能选择一首歌进行拆分", level=messages.WARNING)
-    #         return None
-    #     song = queryset.first() # 选择的唯一一首歌
-    #     records = SongRecord.objects.filter(song=song)
-    #     if records.count() < 2:
-    #         self.message_user(request, "该歌曲的演唱记录少于2条，无法拆分", level=messages.WARNING)
-    #         return None
-
-    #     # GET请求显示选择页面
-    #     if request.method == "POST":
-    #         selected_record_ids = request.POST.getlist("record_ids")
-    #         if not selected_record_ids:
-    #             self.message_user(request, "必须选择至少一条记录进行拆分", level=messages.ERROR)
-    #             return redirect(request.path + f"?song_id={song.id}")
-
-    #         new_song_name = request.POST.get("new_song_name") or song.song_name + " (拆分)"
-    #         new_singer = request.POST.get("new_singer") or song.singer
-    #         new_language = request.POST.get("new_language") or song.language
-
-    #         new_song = Songs.objects.create(
-    #             song_name=new_song_name,
-    #             singer=new_singer,
-    #             language=new_language,
-    #             perform_count=0,
-    #             last_performed=None
-    #         )
-
-    #         selected_records = records.filter(id__in=selected_record_ids)
-    #         for record in selected_records:
-    #             record.song = new_song
-    #             record.save()
-    #             new_song.perform_count += 1
-    #             if not new_song.last_performed or (record.performed_at and record.performed_at > new_song.last_performed):
-    #                 new_song.last_performed = record.performed_at
-    #         new_song.save()
-
-    #         song.perform_count -= selected_records.count()
-    #         if song.perform_count == 0:
-    #             song.last_performed = None
-    #         else:
-    #             last_record = records.exclude(id__in=selected_record_ids).order_by('-performed_at').first()
-    #             song.last_performed = last_record.performed_at if last_record else None
-    #         song.save()
-
-    #         self.message_user(request, f"成功将 {selected_records.count()} 条记录拆分到新歌《{new_song.song_name}》。")
-    #         next_url = request.GET.get('next') or request.POST.get('next') or "../"
-    #         next_url = unquote(next_url)
-    #         from django.http import HttpResponseRedirect
-    #         return HttpResponseRedirect(next_url)
-
 
     merge_songs_action.short_description = "合并选中的歌曲"
     batch_set_language.short_description = "批量标记语言"
     # split_song_records.short_description = "拆分选中歌曲的演唱记录"
+    
+    
+    """
+       admin views: 需要跳转页面的操作逻辑
+        1. 支持合并多个数据项
+        2. 支持拆分选中歌曲的演唱记录
+    """
+    def merge_songs_view(self, request):
+        
+        # 获取选中的歌曲的ID列表
+        ids = request.GET.get("ids", "") or request.POST.get("ids", "")
+        id_list = ids.split(",")
+        selected_songs = Songs.objects.filter(id__in=id_list)
+
+        # 选定主项后的处理逻辑
+        if request.method == "POST":
+            master_id = request.POST.get("master_id")
+            if not master_id:
+                self.message_user(request, "必须选择一个主项", level=messages.ERROR)
+                return redirect(request.path + f"?ids={ids}")
+
+            # 分类处理
+            master_song = Songs.objects.get(id=master_id)
+            other_songs = selected_songs.exclude(id=master_id)
+
+            # for song in other_songs:
+            #     for record in SongRecord.objects.filter(song=song):
+            #         # record.pk = None  #不在原记录的基础上更新，而是新建一条记录
+            #         # record.song = master_song
+            #         # record.save() # 保存新记录到数据库中
+            #         record.song = master_song
+            #         record.save(update_fields=["song"])  # 更新字段
+            #     master_song.perform_count += song.perform_count # 更新演唱次数
+            for song in other_songs:
+                SongRecord.objects.filter(song=song).update(song=master_song)
+            total_add = other_songs.aggregate(Sum('perform_count'))['perform_count__sum'] or 0
+            master_song.perform_count += total_add
+            master_song.save()
+            other_songs.delete()
+
+            self.message_user(request, f"成功将 {len(id_list)-1} 项合并到主项《{master_song.song_name}》。")
+
+            next_url = request.GET.get('next') or request.POST.get('next') or "../"
+            next_url = unquote(next_url)
+            return HttpResponseRedirect(next_url)  # 返回admin changelist 页
+
+        # 默认 GET 获取显示页面
+        context = dict(
+            self.admin_site.each_context(request),
+            songs=selected_songs,
+            ids=ids,
+            next=request.GET.get('next', '') 
+        )
+        return TemplateResponse(request, "admin/merge_songs.html", context)
+
+
+
+
 """
     管理SongRecord的admin界面
     1. 支持从BV导入演唱记录
