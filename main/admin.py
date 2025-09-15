@@ -17,6 +17,8 @@ from django.utils.html import format_html, format_html_join
 from django.core.exceptions import MultipleObjectsReturned
 import os
 from django.utils.safestring import mark_safe
+from django.db import transaction
+
 from .forms import BVImportForm, ReplaceCoverForm
 # 构建默认的style和SongStyle表单管理界面
 admin.site.register(Style)
@@ -34,7 +36,7 @@ class SongsAdmin(admin.ModelAdmin):
     list_display = ['song_name_display','language_display','singer_display', 'last_performed_display', 'perform_count_display', 'view_records' ]
     list_filter = ['language','last_performed']
     search_fields = ["song_name","perform_count","singer"]
-    actions = ['merge_songs_action', 'batch_set_language'] #,'split_song_records'
+    actions = ['merge_songs_action', 'batch_set_language',"split_song_action"] #,'split_song_records'
     fields = ["song_name", "singer", "language"]
     list_per_page = 25  # 每页30条
 
@@ -44,9 +46,6 @@ class SongsAdmin(admin.ModelAdmin):
         }
         js = ('admin/js/collapsible.js',)
      
-    """
-        表属性别名设置
-    """
     @admin.display(description="歌手",ordering="singer")
     def singer_display(self,obj):
         return obj.singer
@@ -66,14 +65,9 @@ class SongsAdmin(admin.ModelAdmin):
     @admin.display(description="演唱次数",ordering="perform_count")
     def perform_count_display(self, obj):
         return obj.perform_count
-
-    @admin.display(description="语言", ordering="language")
-    def language_display(self, obj):
-        return obj.language
     
     @admin.display(description="演唱记录")
     def view_records(self, obj):
-        # 从 SongRecord 表中获取所有演唱记录
         records = SongRecord.objects.filter(song=obj).order_by('-performed_at')
         if not records:
             return "暂无记录"
@@ -100,33 +94,39 @@ class SongsAdmin(admin.ModelAdmin):
             obj.id, obj.id, ul_html
         )
     
-    
     # 路由设置
     def get_urls(self):
-        urls = super().get_urls() # 获取原有的url
+        urls = super().get_urls()
         custom_urls = [
             path("merge_songs/", self.admin_site.admin_view(self.merge_songs_view), name="merge_songs"),
+            path('split_song/<int:song_id>/', self.admin_site.admin_view(self.split_song_view), name='split_song'),
         ]
-        return custom_urls + urls # 将自定义的url加入到原有的url中
+        return custom_urls + urls
     
-    """
-        action按钮设置
-    """
-    # 合并重复项
+    # 合并按钮
     def merge_songs_action(self, request, queryset):
         selected = request.POST.getlist(ACTION_CHECKBOX_NAME)
         if len(selected) < 2:
             self.message_user(request, "至少选择两个才能合并",level=messages.WARNING)
             return None
         
-        # 设置跳转地址和返回地址
         current_path = request.get_full_path()
         next_url = quote(current_path)
         return HttpResponseRedirect(f"./merge_songs/?ids={','.join(selected)}&next={next_url}")
     
+    # 拆分按钮
+    def split_song_action(self, request, queryset):
+        if queryset.count() != 1:
+            self.message_user(request, "请只选择一首歌进行拆分")
+            return
+        song_id = queryset.first().id
+        return redirect(f'./split_song/{song_id}/')
+    
+    # 批量标记语言
     def batch_set_language(self, request, queryset):
         class LanguageForm(forms.Form):
             language = forms.CharField(label="语言", max_length=50)
+        
         if 'apply' in request.POST:
             form = LanguageForm(request.POST)
             if form.is_valid():
@@ -140,40 +140,25 @@ class SongsAdmin(admin.ModelAdmin):
 
     merge_songs_action.short_description = "合并选中的歌曲"
     batch_set_language.short_description = "批量标记语言"
-    # split_song_records.short_description = "拆分选中歌曲的演唱记录"
-    
-    
-    """
-       admin views: 需要跳转页面的操作逻辑
-        1. 支持合并多个数据项
-        2. 支持拆分选中歌曲的演唱记录
-    """
+    split_song_action.short_description = "拆分选中的歌曲"
+
+    ##########################
+    # 合并视图
+    ##########################
     def merge_songs_view(self, request):
-        
-        # 获取选中的歌曲的ID列表
         ids = request.GET.get("ids", "") or request.POST.get("ids", "")
         id_list = ids.split(",")
         selected_songs = Songs.objects.filter(id__in=id_list)
 
-        # 选定主项后的处理逻辑
         if request.method == "POST":
             master_id = request.POST.get("master_id")
             if not master_id:
                 self.message_user(request, "必须选择一个主项", level=messages.ERROR)
                 return redirect(request.path + f"?ids={ids}")
 
-            # 分类处理
             master_song = Songs.objects.get(id=master_id)
             other_songs = selected_songs.exclude(id=master_id)
-
-            # for song in other_songs:
-            #     for record in SongRecord.objects.filter(song=song):
-            #         # record.pk = None  #不在原记录的基础上更新，而是新建一条记录
-            #         # record.song = master_song
-            #         # record.save() # 保存新记录到数据库中
-            #         record.song = master_song
-            #         record.save(update_fields=["song"])  # 更新字段
-            #     master_song.perform_count += song.perform_count # 更新演唱次数
+            
             for song in other_songs:
                 SongRecord.objects.filter(song=song).update(song=master_song)
             total_add = other_songs.aggregate(Sum('perform_count'))['perform_count__sum'] or 0
@@ -182,12 +167,10 @@ class SongsAdmin(admin.ModelAdmin):
             other_songs.delete()
 
             self.message_user(request, f"成功将 {len(id_list)-1} 项合并到主项《{master_song.song_name}》。")
-
-            next_url = request.GET.get('next') or request.POST.get('next') or "../"
+            next_url = request.GET.get('next') or request.POST.get('next') or reverse('admin:app_songs_changelist')
             next_url = unquote(next_url)
-            return HttpResponseRedirect(next_url)  # 返回admin changelist 页
+            return HttpResponseRedirect(next_url)
 
-        # 默认 GET 获取显示页面
         context = dict(
             self.admin_site.each_context(request),
             songs=selected_songs,
@@ -196,8 +179,48 @@ class SongsAdmin(admin.ModelAdmin):
         )
         return TemplateResponse(request, "admin/merge_songs.html", context)
 
+    ##########################
+    # 拆分视图
+    ##########################
+    class SplitSongForm(forms.Form):
+        records = forms.ModelMultipleChoiceField(
+            queryset=SongRecord.objects.none(),
+            widget=forms.CheckboxSelectMultiple,
+            required=True,
+            label="选择要拆分的演唱记录"
+        )
+        
 
+    def split_song_view(self, request, song_id):
+        song = Songs.objects.get(id=song_id)
+        queryset = SongRecord.objects.filter(song=song).order_by('-performed_at')
+        
+        if request.method == 'POST':
+            form = self.SplitSongForm(request.POST)
+            form.fields['records'].queryset = queryset
+            if form.is_valid():
+                selected_records = form.cleaned_data['records']
+                with transaction.atomic():
+                    for record in selected_records:
+                        new_song = Songs.objects.create(
+                            song_name=song.song_name,
+                            singer=None,
+                            language=song.language
+                        )
+                        record.song = new_song
+                        record.save()
+                self.message_user(request, f"已成功拆分 {len(selected_records)} 条演唱记录")
+                # return HttpResponseRedirect(reverse('admin:app_songs_changelist'))
+                return redirect('admin:main_songs_changelist')
+        else:
+            form = self.SplitSongForm()
+            form.fields['records'].queryset = queryset
 
+        return render(request, 'admin/split_song.html', {
+            'song': song,
+            'form': form,
+            'opts': self.model._meta,
+        })
 
 """
     管理SongRecord的admin界面
