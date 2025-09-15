@@ -36,6 +36,11 @@ class SongsAdmin(admin.ModelAdmin):
     fields = ["song_name", "singer", "language"]
     list_per_page = 25  # 每页30条
 
+    class Media:
+        css = {
+            'all': ('admin/css/collapsible.css',)
+        }
+        js = ('admin/js/collapsible.js',)
     """
         表属性别名设置
     """
