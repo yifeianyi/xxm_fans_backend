@@ -13,11 +13,6 @@ from rest_framework.decorators import api_view
 from rest_framework.response import Response
 
 # Create your views here.
-
-def index(request):
-    print("Index view called!")
-    return HttpResponse("hello world")
-
 def songs_list(request):
     query = request.GET.get("q","")
     songs = Songs.objects.all().order_by("-perform_count")
@@ -34,6 +29,8 @@ def songs_list(request):
     page_obj = paginator.get_page(page_num)
     # return render(request, "songs_list.html",{"songs":songs})
     return render(request, "songs_list.html", {"page_obj": page_obj, "query": query})
+
+
 @api_view(['GET'])
 def song_records_api(request, song_id):
     page_num = int(request.GET.get("page", 1))

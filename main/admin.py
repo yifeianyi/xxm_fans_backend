@@ -15,7 +15,7 @@ from django.utils.html import format_html, format_html_join
 from django.core.exceptions import MultipleObjectsReturned
 import os
 from django.utils.safestring import mark_safe
-
+from .forms import BVImportForm, ReplaceCoverForm
 # 构建默认的style和SongStyle表单管理界面
 admin.site.register(Style)
 admin.site.register(SongStyle)
@@ -29,25 +29,23 @@ admin.site.register(SongStyle)
 """
 @admin.register(Songs)
 class SongsAdmin(admin.ModelAdmin):
-    list_display = ['song_name_display','singer_display', 'last_performed_display', 'perform_count_display', 'language_display', 'view_records' ]
+    list_display = ['song_name_display','language_display','singer_display', 'last_performed_display', 'perform_count_display', 'view_records' ]
     list_filter = ['language','last_performed']
     search_fields = ["song_name","perform_count","singer"]
-    actions = ['merge_songs_action', 'batch_set_language']
-
+    actions = ['merge_songs_action', 'batch_set_language'] #,'split_song_records'
+    fields = ["song_name", "singer", "language"]
     list_per_page = 25  # 每页30条
-    
-    class Media:
-        css = {
-            'all': ('admin/css/collapsible.css',)
-        }
-        js = ('admin/js/collapsible.js',)
-    
+
     """
-        后台管理界面的显示方式
+        表属性别名设置
     """
     @admin.display(description="歌手",ordering="singer")
     def singer_display(self,obj):
         return obj.singer
+
+    @admin.display(description="语言",ordering="language")
+    def language_display(self,obj):
+        return obj.language
 
     @admin.display(description="最近演唱时间", ordering="last_performed")
     def last_performed_display(self, obj):
@@ -67,11 +65,10 @@ class SongsAdmin(admin.ModelAdmin):
     
     @admin.display(description="演唱记录")
     def view_records(self, obj):
+        # 从 SongRecord 表中获取所有演唱记录
         records = SongRecord.objects.filter(song=obj).order_by('-performed_at')
         if not records:
             return "暂无记录"
-
-        from django.utils.html import format_html, format_html_join
 
         def get_date_html(record):
             date_str = record.performed_at.strftime('%Y-%m-%d') if record.performed_at else '未知日期'
@@ -94,10 +91,10 @@ class SongsAdmin(admin.ModelAdmin):
             '<div class="records-content" id="records-{}" style="display: none; margin-top: 10px; padding: 10px; background: #f9f9f9; border-radius: 3px;">{}</div>',
             obj.id, obj.id, ul_html
         )
-    ##################################
-    #   合并多个数据项
-    ##################################
     
+    """
+        实现 action 按钮点击后，跳转的跳转逻辑
+    """
     #获取跳转页面的url
     def get_urls(self):
         urls = super().get_urls()
@@ -147,10 +144,12 @@ class SongsAdmin(admin.ModelAdmin):
         )
         return TemplateResponse(request, "admin/merge_songs.html", context)
 
+    """
+        action按钮设置
+    """
+    # 合并重复项
     def merge_songs_action(self, request, queryset):
-        from django.http import HttpResponseRedirect
         selected = request.POST.getlist(ACTION_CHECKBOX_NAME)
-
         if len(selected) < 2:
             self.message_user(request, "至少选择两个才能合并",level=messages.WARNING)
             return None
@@ -160,11 +159,9 @@ class SongsAdmin(admin.ModelAdmin):
         # print("merge_songs_action current_path:", current_path)
         next_url = quote(current_path)
         return HttpResponseRedirect(f"./merge_songs/?ids={','.join(selected)}&next={next_url}")
-    merge_songs_action.short_description = "合并选中的歌曲"
+    
 
     def batch_set_language(self, request, queryset):
-        from django import forms
-        from django.shortcuts import render, redirect
         class LanguageForm(forms.Form):
             language = forms.CharField(label="语言", max_length=50)
         if 'apply' in request.POST:
@@ -177,38 +174,70 @@ class SongsAdmin(admin.ModelAdmin):
         else:
             form = LanguageForm()
         return render(request, 'admin/batch_set_language.html', {'form': form, 'songs': queryset})
+    
+    # 拆分选中歌曲的演唱记录
+    # def split_song_records(self, request, queryset):
+    #     '''
+    #         异常情况处理：
+    #         1. 只能选择一首歌进行拆分
+    #         2. 该歌曲的演唱记录少于2条，无法拆分
+    #         3. 必须选择至少一条记录进行拆分
+    #     '''
+    #     if queryset.count() != 1:
+    #         self.message_user(request, "只能选择一首歌进行拆分", level=messages.WARNING)
+    #         return None
+    #     song = queryset.first() # 选择的唯一一首歌
+    #     records = SongRecord.objects.filter(song=song)
+    #     if records.count() < 2:
+    #         self.message_user(request, "该歌曲的演唱记录少于2条，无法拆分", level=messages.WARNING)
+    #         return None
+
+    #     # GET请求显示选择页面
+    #     if request.method == "POST":
+    #         selected_record_ids = request.POST.getlist("record_ids")
+    #         if not selected_record_ids:
+    #             self.message_user(request, "必须选择至少一条记录进行拆分", level=messages.ERROR)
+    #             return redirect(request.path + f"?song_id={song.id}")
+
+    #         new_song_name = request.POST.get("new_song_name") or song.song_name + " (拆分)"
+    #         new_singer = request.POST.get("new_singer") or song.singer
+    #         new_language = request.POST.get("new_language") or song.language
+
+    #         new_song = Songs.objects.create(
+    #             song_name=new_song_name,
+    #             singer=new_singer,
+    #             language=new_language,
+    #             perform_count=0,
+    #             last_performed=None
+    #         )
+
+    #         selected_records = records.filter(id__in=selected_record_ids)
+    #         for record in selected_records:
+    #             record.song = new_song
+    #             record.save()
+    #             new_song.perform_count += 1
+    #             if not new_song.last_performed or (record.performed_at and record.performed_at > new_song.last_performed):
+    #                 new_song.last_performed = record.performed_at
+    #         new_song.save()
+
+    #         song.perform_count -= selected_records.count()
+    #         if song.perform_count == 0:
+    #             song.last_performed = None
+    #         else:
+    #             last_record = records.exclude(id__in=selected_record_ids).order_by('-performed_at').first()
+    #             song.last_performed = last_record.performed_at if last_record else None
+    #         song.save()
+
+    #         self.message_user(request, f"成功将 {selected_records.count()} 条记录拆分到新歌《{new_song.song_name}》。")
+    #         next_url = request.GET.get('next') or request.POST.get('next') or "../"
+    #         next_url = unquote(next_url)
+    #         from django.http import HttpResponseRedirect
+    #         return HttpResponseRedirect(next_url)
+
+
+    merge_songs_action.short_description = "合并选中的歌曲"
     batch_set_language.short_description = "批量标记语言"
-
-
-class BVImportForm(forms.Form):
-    bvid = forms.CharField(label="BV号", max_length=20)
-
-# 替换Record封面图的
-class ReplaceCoverForm(forms.ModelForm):
-    replace_cover = forms.ImageField(label="更换封面图（仅内容覆盖，路径和文件名不变）", required=False)
-    class Meta:
-        model = SongRecord
-        fields = '__all__'
-
-    def save(self, commit=True):
-        instance = super().save(commit=False)
-        new_cover = self.cleaned_data.get('replace_cover')
-        if new_cover and instance.cover_url:
-            from django.conf import settings
-            # 兼容 /covers/ 前缀和无 /covers/ 前缀
-            rel_path = instance.cover_url.lstrip('/')
-            if rel_path.startswith('covers/'):
-                rel_path = rel_path[len('covers/'):]
-            cover_path = os.path.join(settings.BASE_DIR, 'xxm_fans_frontend', 'public', 'covers', rel_path)
-            if os.path.exists(cover_path):
-                with open(cover_path, 'wb+') as f:
-                    for chunk in new_cover.chunks():
-                        f.write(chunk)
-        if commit:
-            instance.save()
-        return instance
-
-
+    # split_song_records.short_description = "拆分选中歌曲的演唱记录"
 """
     管理SongRecord的admin界面
     1. 支持从BV导入演唱记录
@@ -224,7 +253,26 @@ class SongReccordAdmin(admin.ModelAdmin):
     actions = ["import_from_bv"]
     search_fields = ["song__song_name", "notes"]
     list_filter = ["performed_at", "song__song_name"]
-    fields = ("song", "performed_at", "url", "cover_url", "notes", "replace_cover")
+    # fields = ("song", "performed_at", "url", "cover_url", "notes", "replace_cover")
+
+    """
+        覆写模块
+    """
+    def get_fields(self, request, obj = None):
+        fields = ["song", "performed_at", "url", "cover_url", "notes"]
+        if obj:
+            return fields + ("replace_cover")
+        return fields
+        # return super().get_fields(request, obj)
+
+    def get_urls(self):
+        urls = super().get_urls()
+        my_urls = [
+            path("import-bv/", self.admin_site.admin_view(self.import_bv_view), name="import-bv-songrecord"),
+            path("fetch-bv/", self.admin_site.admin_view(self.fetch_bv_view), name="fetch-bv-songrecord"), 
+        ]
+        return my_urls + urls
+    
 
     # 缩略图显示
     def cover_thumb(self, obj):
@@ -237,12 +285,7 @@ class SongReccordAdmin(admin.ModelAdmin):
         return "-"
     cover_thumb.short_description = "封面缩略图"
 
-    def get_urls(self):
-        urls = super().get_urls()
-        my_urls = [
-            path("import-bv/", self.admin_site.admin_view(self.import_bv_view), name="import-bv-songrecord"),
-        ]
-        return my_urls + urls
+    
 
     # 导入BV演唱记录的视图
     def import_bv_view(self, request):
@@ -305,7 +348,23 @@ class SongReccordAdmin(admin.ModelAdmin):
         else:
             form = BVImportForm()
         return render(request, "admin/import_bv_form.html", {"form": form})
+    
+    def fetch_bv_view(self, request):
+        from django.http import JsonResponse
+        bvid = request.GET.get("bvid")
+        if not bvid:
+            return JsonResponse({"error": "缺少 BV 号"}, status=400)
 
-class SelectMainSongFrom(forms.Form):
-    _selected_action = forms.CharField(widget=forms.MultipleHiddenInput)
-    main_song = forms.ChoiceField(label="请选择主项",widget=forms.RadioSelect)
+        # 调用你已有的导入逻辑，但只取第一条结果
+        result_list, _, _ = import_bv_song(bvid)
+        if not result_list:
+            return JsonResponse({"error": "未找到记录"}, status=404)
+
+        result = result_list[0]
+        return JsonResponse({
+            "song": result.get("song_name"),
+            "performed_at": result.get("performed_at"),
+            "url": f"https://www.bilibili.com/video/{bvid}",
+            "cover_url": result.get("cover_url"),
+            "notes": result.get("note"),
+        })

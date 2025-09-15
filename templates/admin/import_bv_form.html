@@ -6,4 +6,31 @@
     <button type="submit" class="default">导入</button>
 </form>
 <a href="{% url 'admin:main_songrecord_changelist' %}">← 返回歌曲记录列表</a>
+
+<!-- 
+    使用说明:
+-->
+<div style="margin-top: 20px; padding: 15px; background-color: #f8f9fa; border-radius: 5px;">
+    <h3>使用说明：</h3>
+    <ul>
+        <li><strong>BV号</strong>：从B站视频URL中获取，例如：BV1xx411c7mD</li>
+        <li><strong>格式</strong>：导入的视频需要符合 "" 的格式</li>
+        <li>系统会自动获取视频的标题、作者、封面等信息</li>
+        <li><strong>封面保存路径</strong>：封面会自动下载到 <code>xxm_fans_frontend/public/cover/year/month/</code> 目录下</li>
+        <li><strong>封面文件格式</strong>：<code>发布年-月-日.jpg</code></li>
+    </ul>
+    <h3 style="color: red;">重点提示：</h3>
+    <ul>
+        <li>如果导入的视频包含多个分P，系统会自动为每个分P创建单独的歌曲记录</li>
+        <li>如果曲库中不存在将要导入的歌曲：系统会自动在曲库中新创建对应歌曲，并把歌曲记录
+            <ul>
+                <li>曲库中，自动创建的导入演唱记录对应的歌曲</li>
+                <li>新导入的演唱记录，系统自动把它归属到对应的歌曲名下</li>
+            </ul>
+        </li>
+        <li>如果遇到同名歌曲冲突，系统会弹出选择页面，让你选择演唱记录归属到哪个版本的歌曲名下</li>
+
+    </ul>
+</div>
+</div>
 {% endblock %}

@@ -1,0 +1,38 @@
+{% extends "admin/change_form.html" %}
+{% load static %}
+
+{% block extrahead %}
+{{ block.super }}
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script>
+    function fetchBV() {
+        const bvid = document.getElementById("id_bvid").value.trim();
+        if (!bvid) {
+            alert("请输入 BV 号");
+            return;
+        }
+
+        $.get("{% url 'admin:fetch-bv-songrecord' %}", { bvid: bvid }, function (data) {
+            if (data.error) {
+                alert(data.error);
+            } else {
+                // 自动填充表单
+                if (data.song) $("#id_song").val(data.song);   // ⚠️ 如果是外键，这里要传 ID
+                if (data.performed_at) $("#id_performed_at").val(data.performed_at);
+                if (data.url) $("#id_url").val(data.url);
+                if (data.cover_url) $("#id_cover_url").val(data.cover_url);
+                if (data.notes) $("#id_notes").val(data.notes);
+            }
+        });
+    }
+</script>
+{% endblock %}
+
+{% block content %}
+<div style="margin-bottom:15px;">
+    <label for="id_bvid">BV号：</label>
+    <input type="text" id="id_bvid" />
+    <button type="button" class="button" onclick="fetchBV()">获取信息</button>
+</div>
+{{ block.super }}
+{% endblock %}
