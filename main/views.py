@@ -41,6 +41,14 @@ class SongListView(generics.ListAPIView):
                 Q(song_name__icontains=query) | Q(singer__icontains=query)
             )
         
+        # 语言过滤
+        language = self.request.query_params.get("language", "")
+        if language:
+            languages = language.split(',')
+            languages = [lang.strip() for lang in languages if lang.strip()]
+            if languages:
+                queryset = queryset.filter(language__in=languages)
+        
         # 曲风过滤
         styles = self.request.query_params.getlist('styles', [])
         if not styles:
@@ -66,6 +74,12 @@ class SongListView(generics.ListAPIView):
         styles_param = self.request.query_params.get('styles')
         if styles_param:
             styles = [s.strip() for s in styles_param.split(',') if s.strip()]
+            
+        # 获取语言过滤条件
+        languages = []
+        language_param = self.request.query_params.get('language')
+        if language_param:
+            languages = [lang.strip() for lang in language_param.split(',') if lang.strip()]
         
         # 使用Django的Paginator来处理分页
         queryset = self.get_queryset()
@@ -84,7 +98,7 @@ class SongListView(generics.ListAPIView):
         }
         
         # 构造缓存key
-        cache_key = f"song_list_api:{query}:{page_num}:{page_size}:{ordering}:{'-'.join(styles)}"
+        cache_key = f"song_list_api:{query}:{page_num}:{page_size}:{ordering}:{'-'.join(styles)}:{'-'.join(languages)}"
         
         # 尝试缓存结果，处理Redis连接异常
         try:
