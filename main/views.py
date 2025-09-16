@@ -83,6 +83,16 @@ class SongListView(generics.ListAPIView):
         
         # 使用Django的Paginator来处理分页
         queryset = self.get_queryset()
+        
+        # 应用排序
+        if ordering:
+            # 验证排序字段是否在允许的范围内
+            allowed_ordering_fields = ['singer', 'last_performed', 'perform_count']
+            # 处理降序字段（以-开头）
+            order_field = ordering.lstrip('-')
+            if order_field in allowed_ordering_fields:
+                queryset = queryset.order_by(ordering)
+        
         paginator = Paginator(queryset, page_size)
         page = paginator.get_page(page_num)
         
