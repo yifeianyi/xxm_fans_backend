@@ -239,6 +239,9 @@ def is_mobile_api(request):
 def random_song_api(request):
     song = Songs.objects.order_by('?').first()
     if song:
+        # 导入SongStyle模型
+        from .models import SongStyle
+        
         styles = [s.style.name for s in SongStyle.objects.filter(song=song)]
         data = {
             "id": song.id,
