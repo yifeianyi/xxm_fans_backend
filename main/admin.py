@@ -19,7 +19,7 @@ import os
 from django.utils.safestring import mark_safe
 from django.db import transaction
 
-from .forms import BVImportForm, ReplaceCoverForm
+from .forms import BVImportForm, SongRecordForm
 # 构建默认的style和SongStyle表单管理界面
 admin.site.register(Style)
 admin.site.register(SongStyle)
@@ -36,7 +36,7 @@ class SongsAdmin(admin.ModelAdmin):
     list_display = ['song_name_display','language_display','singer_display', 'last_performed_display', 'perform_count_display', 'view_records' ]
     list_filter = ['language','last_performed']
     search_fields = ["song_name","perform_count","singer"]
-    actions = ['merge_songs_action', 'batch_set_language',"split_song_action"] #,'split_song_records'
+    actions = ['merge_songs_action', 'set_language_action',"split_song_action"] #,'split_song_records'
     fields = ["song_name", "singer", "language"]
     list_per_page = 25  # 每页30条
 
@@ -123,7 +123,7 @@ class SongsAdmin(admin.ModelAdmin):
         return redirect(f'./split_song/{song_id}/')
     
     # 批量标记语言
-    def batch_set_language(self, request, queryset):
+    def set_language_action(self, request, queryset):
         class LanguageForm(forms.Form):
             language = forms.CharField(label="语言", max_length=50)
         
@@ -139,7 +139,7 @@ class SongsAdmin(admin.ModelAdmin):
         return render(request, 'admin/batch_set_language.html', {'form': form, 'songs': queryset})
 
     merge_songs_action.short_description = "合并选中的歌曲"
-    batch_set_language.short_description = "批量标记语言"
+    set_language_action.short_description = "批量标记语言"
     split_song_action.short_description = "拆分选中的歌曲"
 
     ##########################
@@ -190,7 +190,6 @@ class SongsAdmin(admin.ModelAdmin):
             label="选择要拆分的演唱记录"
         )
         
-
     def split_song_view(self, request, song_id):
         song = Songs.objects.get(id=song_id)
         queryset = SongRecord.objects.filter(song=song).order_by('-performed_at')
@@ -232,28 +231,28 @@ class SongsAdmin(admin.ModelAdmin):
 @admin.register(SongRecord)
 class SongReccordAdmin(admin.ModelAdmin):
     # 后台显示的表单项
-    form = ReplaceCoverForm
+    form = SongRecordForm
     list_display = ("song", "performed_at", "url", "cover_url", "cover_thumb", "notes")
     actions = ["import_from_bv"]
     search_fields = ["song__song_name", "notes"]
     list_filter = ["performed_at", "song__song_name"]
     # fields = ("song", "performed_at", "url", "cover_url", "notes", "replace_cover")
+    autocomplete_fields = ("song",)
 
     """
         覆写模块
     """
     def get_fields(self, request, obj = None):
-        fields = ["song", "performed_at", "url", "cover_url", "notes"]
+        fields = ["song","performed_at", "url", "cover_url", "notes"]
         if obj:
             return fields + ("replace_cover")
         return fields
-        # return super().get_fields(request, obj)
 
     def get_urls(self):
         urls = super().get_urls()
         my_urls = [
             path("import-bv/", self.admin_site.admin_view(self.import_bv_view), name="import-bv-songrecord"),
-            path("fetch-bv/", self.admin_site.admin_view(self.fetch_bv_view), name="fetch-bv-songrecord"), 
+            # path("fetch-bv/", self.admin_site.admin_view(self.fetch_bv_view), name="fetch-bv-songrecord"), 
         ]
         return my_urls + urls
     
@@ -332,23 +331,3 @@ class SongReccordAdmin(admin.ModelAdmin):
         else:
             form = BVImportForm()
         return render(request, "admin/import_bv_form.html", {"form": form})
-    
-    def fetch_bv_view(self, request):
-        from django.http import JsonResponse
-        bvid = request.GET.get("bvid")
-        if not bvid:
-            return JsonResponse({"error": "缺少 BV 号"}, status=400)
-
-        # 调用你已有的导入逻辑，但只取第一条结果
-        result_list, _, _ = import_bv_song(bvid)
-        if not result_list:
-            return JsonResponse({"error": "未找到记录"}, status=404)
-
-        result = result_list[0]
-        return JsonResponse({
-            "song": result.get("song_name"),
-            "performed_at": result.get("performed_at"),
-            "url": f"https://www.bilibili.com/video/{bvid}",
-            "cover_url": result.get("cover_url"),
-            "notes": result.get("note"),
-        })

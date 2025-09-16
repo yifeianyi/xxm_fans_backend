@@ -1,15 +1,12 @@
-from django.urls import path,include, re_path
+from django.urls import path, include
 from . import views
-from .views import song_list_api, top_songs_api, is_mobile_api
-# from main.admin import SongsAutocomplete
+from .views import SongListView, SongRecordListView, StyleListView, top_songs_api, is_mobile_api
 
 urlpatterns = [
-    path('',views.index,name='index'),
-    # path("",views.songs_list,name="歌单"),
-    # path("",admin.site.urls)
-    path('api/songs/<int:song_id>/records',views.song_records_api,name= "song_records_api"),
-    path("api/songs",song_list_api),
-    path('api/styles', views.style_list_api),
-    path('api/top_songs', top_songs_api),
-    path('api/is_mobile/', is_mobile_api),
+    path('', views.index, name='index'),
+    path('api/songs/', SongListView.as_view(), name='song-list'),
+    path('api/songs/<int:song_id>/records/', SongRecordListView.as_view(), name='song-record-list'),
+    path('api/styles/', StyleListView.as_view(), name='style-list'),
+    path('api/top_songs/', top_songs_api, name='top-songs'),
+    path('api/is_mobile/', is_mobile_api, name='is-mobile'),
 ]

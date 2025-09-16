@@ -1,21 +1,30 @@
+from django.contrib import admin
 from django import forms
 from .models import SongRecord
+from django.conf import settings
+import os
+
 
 class BVImportForm(forms.Form):
     bvid = forms.CharField(label="bv号", max_length=20)
 
 # 替换Record封面图的
-class ReplaceCoverForm(forms.ModelForm):
+class SongRecordForm(forms.ModelForm):
     replace_cover = forms.ImageField(label="更换封面图（仅内容覆盖，路径和文件名不变）", required=False)
     class Meta:
         model = SongRecord
         fields = '__all__'
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['url'].initial = "	https://player.bilibili.com/player.html?bvid='换成对应BV号'"
+        self.fields['cover_url'].initial = "/covers/2025/01/01.jpg"
+
 
     def save(self, commit=True):
         instance = super().save(commit=False)
         new_cover = self.cleaned_data.get('replace_cover')
         if new_cover and instance.cover_url:
-            from django.conf import settings
+            
             # 兼容 /covers/ 前缀和无 /covers/ 前缀
             rel_path = instance.cover_url.lstrip('/')
             if rel_path.startswith('covers/'):
@@ -28,3 +37,4 @@ class ReplaceCoverForm(forms.ModelForm):
         if commit:
             instance.save()
         return instance
+   

@@ -47,7 +47,7 @@ INSTALLED_APPS = [
     'main',
     'footprint',
     'rest_framework',
-    'drf_yasg',
+    # 'drf_yasg',
 ]
 
 MIDDLEWARE = [

@@ -1,125 +1,128 @@
 from django.http import HttpResponse
 from django.core.paginator import Paginator
 from rest_framework.response import Response
+from rest_framework import status, generics, filters
+from rest_framework.decorators import api_view
 from django.http import JsonResponse
-from .models import Songs, SongStyle, Style
-from django.shortcuts import render
+from .models import Songs, SongRecord, Style
 from datetime import datetime, timedelta
 from django.db.models import Count, Q
 from django.core.cache import cache
 from .utils import is_mobile
-#from rest_framework_swagger.views import get_swagger_view
-from rest_framework.decorators import api_view
-from rest_framework.response import Response
+from .serializers import SongsSerializer, SongRecordSerializer, StyleSerializer
 
 # Create your views here.
 def index(request):
     return HttpResponse("Hello, world. You're at the main index.")
 
-@api_view(['GET'])
-def song_records_api(request, song_id):
-    page_num = int(request.GET.get("page", 1))
-    page_size = int(request.GET.get("page_size", 20))
-    cache_key = f"song_records:{song_id}:{page_num}:{page_size}"
-    records = cache.get(cache_key)
 
-    if records is not None:
-        return JsonResponse(records, safe=False)
+class SongListView(generics.ListAPIView):
+    """
+    获取歌曲列表，支持搜索、分页和排序
+    """
+    serializer_class = SongsSerializer
+    filter_backends = [filters.SearchFilter, filters.OrderingFilter]
+    search_fields = ['song_name', 'singer']
+    ordering_fields = ['singer', 'last_performed', 'perform_count']
+    ordering = ['-last_performed']
 
-    try:
-        song = Songs.objects.get(id=song_id)
-        raw_records = song.records.order_by("-performed_at").values("performed_at", "url", "notes", "cover_url")
-        paginator = Paginator(raw_records, page_size)
-        page = paginator.get_page(page_num)
-        results = []
-        for r in page.object_list:
-            if r["performed_at"]:
-                date = r["performed_at"]
-                date_str = date.strftime("%Y-%m-%d")
-                year = date.strftime("%Y")
-                month = date.strftime("%m")
-                r["cover_url"] = r.get("cover_url") or f"/covers/{year}/{month}/{date_str}.jpg"
-            else:
-                r["cover_url"] = "/covers/default.jpg"
-            results.append(r)
-        data = {
-            "total": paginator.count,
-            "page": page.number,
-            "page_size": paginator.per_page,
-            "results": results
-        }
-        cache.set(cache_key, data, 600)
-        return JsonResponse(data, safe=False)
-    except Songs.DoesNotExist:
-        return JsonResponse({"error": "Song not found."}, status=404)
+    def get_queryset(self):
+        queryset = Songs.objects.all()
+        
+        # 曲风过滤
+        styles = self.request.query_params.getlist('styles', [])
+        if not styles:
+            style_raw = self.request.query_params.get('styles')
+            if style_raw:
+                styles = style_raw.split(',')
+        styles = [s.strip() for s in styles if s.strip()]
+        
+        if styles:
+            queryset = queryset.filter(songstyle__style__name__in=styles).distinct()
+            
+        return queryset
 
-
-@api_view(['GET'])
-def song_list_api(request):
-    # 从url中获取参数
-    query = request.GET.get("q", "")
-    page_num = request.GET.get("page", 1)
-    page_size = request.GET.get("limit", 50)
-    ordering = request.GET.get("ordering", "")
-    style_list = request.GET.getlist("styles")
-    if not style_list:
-        style_raw = request.GET.get("styles")
-        if style_raw:
-            style_list = style_raw.split(",")
-    style_list = [s for s in style_list if s.strip()]
-    # 构造缓存key，包含所有查询参数
-    cache_key = f"song_list_api:{query}:{page_num}:{page_size}:{ordering}:{'-'.join(style_list)}"
-    data = cache.get(cache_key)
-    if data is not None:
-        return Response(data)
+    def list(self, request, *args, **kwargs):
+        # 获取查询参数
+        query = self.request.query_params.get("q", "")
+        page_num = self.request.query_params.get("page", 1)
+        page_size = self.request.query_params.get("limit", 50)
+        ordering = self.request.query_params.get("ordering", "")
+        style_list = self.get_queryset()._result_cache if hasattr(self.get_queryset(), '_result_cache') else []
+        
+        # 构造缓存key
+        cache_key = f"song_list_api:{query}:{page_num}:{page_size}:{ordering}:{'-'.join([str(s) for s in style_list])}"
+        data = cache.get(cache_key)
+        if data is not None:
+            return Response(data)
+        
+        # 调用父类方法获取数据
+        response = super().list(request, *args, **kwargs)
+        
+        # 缓存结果
+        cache.set(cache_key, response.data, 600)  # 缓存10分钟
+        return response
 
 
-    # ✅ 基础查询
-    songs = Songs.objects.all() #数据库操作
-    # ✅ 排序处理
-    allowed_order_fields = ['singer', 'last_performed', 'perform_count']
-    if ordering:
-        field = ordering.lstrip('-')
-        if field in allowed_order_fields:
-            songs = songs.order_by(ordering)
-        else:
-            songs = songs.order_by('-last_performed')
-    else:
-        songs = songs.order_by('-last_performed')
-    if query:
-        songs = songs.filter(Q(song_name__icontains=query) | Q(singer__icontains=query))
-    if style_list:
-        songs = songs.filter(songstyle__style__name__in=style_list).distinct()
+class SongRecordListView(generics.ListAPIView):
+    """
+    获取特定歌曲的演唱记录列表
+    """
+    serializer_class = SongRecordSerializer
+
+    def get_queryset(self):
+        song_id = self.kwargs['song_id']
+        return SongRecord.objects.filter(song_id=song_id).order_by('-performed_at')
+    
+    def list(self, request, *args, **kwargs):
+        song_id = self.kwargs['song_id']
+        page_num = int(request.GET.get("page", 1))
+        page_size = int(request.GET.get("page_size", 20))
+        cache_key = f"song_records:{song_id}:{page_num}:{page_size}"
+        records = cache.get(cache_key)
+
+        if records is not None:
+            return Response(records)
+
+        # 调用父类方法获取数据
+        try:
+            queryset = self.get_queryset()
+            paginator = Paginator(queryset, page_size)
+            page = paginator.get_page(page_num)
+            
+            serializer = self.get_serializer(page, many=True)
+            data = {
+                "total": paginator.count,
+                "page": page.number,
+                "page_size": paginator.per_page,
+                "results": serializer.data
+            }
+            
+            # 处理封面URL
+            for record in data['results']:
+                performed_at = record.get('performed_at')
+                if performed_at:
+                    date = datetime.strptime(performed_at, "%Y-%m-%d").date()
+                    date_str = date.strftime("%Y-%m-%d")
+                    year = date.strftime("%Y")
+                    month = date.strftime("%m")
+                    record["cover_url"] = record.get("cover_url") or f"/covers/{year}/{month}/{date_str}.jpg"
+                else:
+                    record["cover_url"] = "/covers/default.jpg"
+            
+            cache.set(cache_key, data, 600)
+            return Response(data)
+        except Songs.DoesNotExist:
+            return Response({"error": "Song not found."}, status=status.HTTP_404_NOT_FOUND)
 
 
-    # 分页处理
-    paginator = Paginator(songs, page_size)
-    page = paginator.get_page(page_num)
-    results = []
-    for song in page.object_list:
-        styles = [s.style.name for s in SongStyle.objects.filter(song=song)]
-        results.append({
-            "id": song.id,
-            "song_name": song.song_name,
-            "singer": song.singer,
-            "styles": styles,
-            "last_performed": song.last_performed,
-            "perform_count": song.perform_count,
-            "language": song.language,
-        })
-    data = {
-        "total": paginator.count,
-        "page": page.number,
-        "page_size": paginator.per_page,
-        "results": results
-    }
-    cache.set(cache_key, data, 600)  # 缓存10分钟
-    return Response(data)
+class StyleListView(generics.ListAPIView):
+    """
+    获取所有曲风列表
+    """
+    queryset = Style.objects.all()
+    serializer_class = StyleSerializer
 
-@api_view(['GET'])
-def style_list_api(request):
-    styles = Style.objects.all().values_list("name", flat=True)
-    return Response(list(styles))
 
 @api_view(['GET'])
 def top_songs_api(request):
@@ -156,3 +159,22 @@ def top_songs_api(request):
 @api_view(['GET'])
 def is_mobile_api(request):
     return Response({'is_mobile': is_mobile(request)})
+
+# 随机返回一首歌
+@api_view(['GET'])
+def random_song_api(request):
+    song = Songs.objects.order_by('?').first()
+    if song:
+        styles = [s.style.name for s in SongStyle.objects.filter(song=song)]
+        data = {
+            "id": song.id,
+            "song_name": song.song_name,
+            "singer": song.singer,
+            "styles": styles,
+            "last_performed": song.last_performed,
+            "perform_count": song.perform_count,
+            "language": song.language,
+        }
+        return Response(data)
+    else:
+        return Response({"error": "No songs available."}, status=404)
