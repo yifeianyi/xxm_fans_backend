@@ -9,7 +9,7 @@ env/
 .myenv/
 
 # # Django 本地数据库文件
-# db.sqlite3
+db.sqlite3
 
 # 本地日志文件
 *.log
@@ -99,3 +99,5 @@ db.sqlite3
 
 # agent提示词
 prompts/*
+
+xxm_fans_frontend/package-lock.json
