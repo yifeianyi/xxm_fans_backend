@@ -159,3 +159,22 @@ def top_songs_api(request):
 @api_view(['GET'])
 def is_mobile_api(request):
     return Response({'is_mobile': is_mobile(request)})
+
+# 随机返回一首歌
+@api_view(['GET'])
+def random_song_api(request):
+    song = Songs.objects.order_by('?').first()
+    if song:
+        styles = [s.style.name for s in SongStyle.objects.filter(song=song)]
+        data = {
+            "id": song.id,
+            "song_name": song.song_name,
+            "singer": song.singer,
+            "styles": styles,
+            "last_performed": song.last_performed,
+            "perform_count": song.perform_count,
+            "language": song.language,
+        }
+        return Response(data)
+    else:
+        return Response({"error": "No songs available."}, status=404)
