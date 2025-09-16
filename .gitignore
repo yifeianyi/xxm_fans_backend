@@ -96,3 +96,6 @@ dist-ssr/
 # 测试文件
 test_*.py
 db.sqlite3
+
+# agent提示词
+prompts/*
