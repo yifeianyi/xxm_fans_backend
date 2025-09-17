@@ -245,24 +245,41 @@ def tag_list_api(request):
     try:
         data = cache.get(cache_key)
         if data is not None:
-            response = Response(data)
-            response['Content-Type'] = 'application/json; charset=utf-8'
-            return response
+            # 确保返回的数据不是空列表
+            if isinstance(data, list) and len(data) > 0:
+                response = Response(data)
+                response['Content-Type'] = 'application/json; charset=utf-8'
+                return response
+            else:
+                logger.warning("Cache data is empty or invalid for tags")
     except Exception as e:
         logger.warning(f"Cache get failed for tags: {e}")
     
     # 获取所有标签名称并排序
-    tag_names = list(Tag.objects.values_list('name', flat=True).order_by('name'))
-    
-    # 尝试缓存结果，处理Redis连接异常
     try:
-        cache.set(cache_key, tag_names, 3600)  # 缓存1小时
+        tag_names = list(Tag.objects.values_list('name', flat=True).order_by('name'))
+        
+        # 检查是否有标签数据
+        if not tag_names:
+            logger.warning("No tags found in database")
+            # 返回空列表而不是None
+            tag_names = []
+        
+        # 尝试缓存结果，处理Redis连接异常
+        try:
+            cache.set(cache_key, tag_names, 3600)  # 缓存1小时
+        except Exception as e:
+            logger.warning(f"Cache set failed for tags: {e}")
+        
+        response = Response(tag_names)
+        response['Content-Type'] = 'application/json; charset=utf-8'
+        return response
     except Exception as e:
-        logger.warning(f"Cache set failed for tags: {e}")
-    
-    response = Response(tag_names)
-    response['Content-Type'] = 'application/json; charset=utf-8'
-    return response
+        logger.error(f"Database query failed for tags: {e}")
+        # 返回空列表而不是错误，确保前端不会崩溃
+        response = Response([])
+        response['Content-Type'] = 'application/json; charset=utf-8'
+        return response
 
 
 @api_view(['GET'])
