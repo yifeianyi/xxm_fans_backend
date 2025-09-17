@@ -32,3 +32,21 @@
 .records-content.hide {
     display: none !important;
 }
+
+/* 控制演唱记录列表，一行显示5个 */
+.records-content ul {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    list-style: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+}
+
+.records-content ul li {
+    flex: 0 0 20% !important; /* 20% = 1/5 */
+    box-sizing: border-box !important;
+    padding: 2px 5px !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+}

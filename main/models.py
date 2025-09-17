@@ -13,12 +13,25 @@ class Style(models.Model):
         return self.name
 
 
+class Tag(models.Model):
+    name = models.CharField(max_length=100, unique=True)
+
+    class Meta:
+        verbose_name = "标签表"
+        verbose_name_plural = "标签表"
+        ordering = ['name']
+
+    def __str__(self):
+        return self.name
+
+
 class Songs(models.Model):
     song_name = models.CharField(max_length=200)
     singer = models.CharField(max_length=200, blank=True, null=True)
     last_performed = models.DateField(blank=True, null=True)
     perform_count = models.IntegerField(default=0)
     language = models.CharField(max_length=50, blank=True, null=True)
+    tag = models.CharField(max_length=100, blank=True, null=True, help_text="歌曲标签")
 
     class Meta:
         verbose_name = "歌单"
@@ -27,6 +40,9 @@ class Songs(models.Model):
 
     def __str__(self):
         return self.song_name
+
+    def get_search_result(self):
+        return f"{self.song_name} - {self.singer if self.singer else '未知歌手'}"
 
 
 class SongRecord(models.Model):
@@ -51,11 +67,24 @@ class SongStyle(models.Model):
 
     class Meta:
         unique_together = ("song", "style")
-        verbose_name = "歌曲-曲风表"
-        verbose_name_plural = "歌曲-曲风表"
+        verbose_name = "歌曲曲风"
+        verbose_name_plural = "歌曲曲风"
 
     def __str__(self):
         return f"{self.song.song_name} - {self.style.name}"
+
+
+class SongTag(models.Model):
+    song = models.ForeignKey(Songs, on_delete=models.CASCADE)
+    tag = models.ForeignKey(Tag, on_delete=models.CASCADE)
+
+    class Meta:
+        unique_together = ("song", "tag")
+        verbose_name = "歌曲标签"
+        verbose_name_plural = "歌曲标签"
+
+    def __str__(self):
+        return f"{self.song.song_name} - {self.tag.name}"
 
 
 class ViewBaseMess(models.Model):

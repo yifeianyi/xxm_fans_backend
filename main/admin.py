@@ -1,28 +1,130 @@
 from django.contrib import admin, messages
 from django.db.models import Sum
-from django.urls import reverse
+from django.urls import reverse, path
 from django.http import HttpResponseRedirect
 from django.template.response import TemplateResponse
-from django.urls import path
 from django.shortcuts import render, redirect
 from django import forms
 from urllib.parse import unquote, quote
-from .models import Songs, Style, SongRecord, SongStyle, ViewBaseMess, ViewRealTimeInformation, Recommendation
-# Register your models here.
-from .models import *
+
 from django.contrib.admin.helpers import ACTION_CHECKBOX_NAME
-from django.shortcuts import render
-from .utils import import_bv_song
+from django.contrib.admin.widgets import AutocompleteSelect
 from django.utils.html import format_html, format_html_join
-from django.core.exceptions import MultipleObjectsReturned
-import os
 from django.utils.safestring import mark_safe
+from django.core.exceptions import MultipleObjectsReturned
 from django.db import transaction
 
-from .forms import BVImportForm, SongRecordForm
+import os
+
+from .models import (
+    Songs,
+    Style,
+    Tag,
+    SongRecord,
+    SongStyle,
+    SongTag,
+    ViewBaseMess,
+    ViewRealTimeInformation,
+    Recommendation,
+)
+from .forms import BVImportForm, SongRecordForm, SongStyleForm, SongTagForm
+from .utils import import_bv_song
+
 # 构建默认的style和SongStyle表单管理界面
-admin.site.register(Style)
-admin.site.register(SongStyle)
+# admin.site.register(Style)
+
+@admin.register(Style)
+class StyleAdmin(admin.ModelAdmin):
+    search_fields = ('name',) 
+
+
+@admin.register(Tag)
+class TagAdmin(admin.ModelAdmin):
+    search_fields = ('name',)
+    list_display = ('name',)
+    actions = ['batch_tag_songs_action']
+    
+    def batch_tag_songs_action(self, request, queryset):
+        from django.shortcuts import render
+        from django.contrib import messages
+        from django.http import HttpResponseRedirect
+        from django.urls import reverse
+        from .models import Songs, SongTag
+        
+        class SelectSongsForm(forms.Form):
+            songs = forms.ModelMultipleChoiceField(
+                queryset=Songs.objects.all(),
+                widget=admin.widgets.FilteredSelectMultiple("歌曲", is_stacked=False),
+                required=True,
+                label="选择要标记的歌曲"
+            )
+        
+        if 'apply' in request.POST:
+            form = SelectSongsForm(request.POST)
+            if form.is_valid():
+                songs = form.cleaned_data['songs']
+                count = 0
+                for tag in queryset:
+                    for song in songs:
+                        # 使用get_or_create避免重复添加
+                        song_tag, created = SongTag.objects.get_or_create(
+                            song=song,
+                            tag=tag
+                        )
+                        if created:
+                            count += 1
+                self.message_user(request, f"已成功为 {songs.count()} 首歌添加了 {count} 个标签!")
+                return HttpResponseRedirect(reverse('admin:main_tag_changelist'))
+        else:
+            form = SelectSongsForm()
+            # 过滤掉已经与选中标签关联的歌曲
+            if queryset.exists():
+                # 如果只选择了一个标签，过滤掉已关联的歌曲
+                if queryset.count() == 1:
+                    tag = queryset.first()
+                    existing_song_ids = SongTag.objects.filter(tag=tag).values_list('song', flat=True)
+                    form.fields['songs'].queryset = Songs.objects.exclude(id__in=existing_song_ids)
+        
+        media = self.media + form.media
+        
+        context = dict(
+            self.admin_site.each_context(request),
+            form=form,
+            tags=queryset,
+            title="批量标记歌曲",
+            media=media
+        )
+        return render(request, 'admin/batch_tag_songs.html', context)
+    
+    batch_tag_songs_action.short_description = "为选中的标签批量标记歌曲"
+    
+    class Media:
+        js = ('admin/js/jquery.init.js',)
+        css = {
+            'all': ('admin/css/widgets.css',)
+        }
+    
+    
+# @admin.register(SongStyle)
+
+
+@admin.register(SongStyle)
+class SongStyleAdmin(admin.ModelAdmin):
+    form = SongStyleForm
+    list_display = ('song', 'style')
+    list_filter = ('style',)
+    search_fields = ('song__song_name', 'style__name')
+    autocomplete_fields = ('style', 'song')
+    
+
+@admin.register(SongTag)
+class SongTagAdmin(admin.ModelAdmin):
+    form = SongTagForm
+    list_display = ('song', 'tag')
+    list_filter = ('tag',)
+    search_fields = ('song__song_name', 'tag__name')
+    autocomplete_fields = ('tag', 'song')
+    
 
 from django.contrib.admin.widgets import FilteredSelectMultiple
 
@@ -67,12 +169,13 @@ class RecommendationAdmin(admin.ModelAdmin):
 """
 @admin.register(Songs)
 class SongsAdmin(admin.ModelAdmin):
-    list_display = ['song_name_display','language_display','singer_display', 'last_performed_display', 'perform_count_display', 'view_records' ]
+    list_display = ['song_name_display','language_display','singer_display','styles_display', 'tag_display', 'last_performed_display', 'perform_count_display', 'view_records' ]
     list_filter = ['language','last_performed']
     search_fields = ["song_name","perform_count","singer"]
-    actions = ['merge_songs_action', 'set_language_action',"split_song_action"] #,'split_song_records'
+    actions = ['merge_songs_action', 'set_language_action',"split_song_action", "batch_add_styles_action", "batch_add_tags_action"] #,'split_song_records'
     fields = ["song_name", "singer", "language"]
     list_per_page = 25  # 每页30条
+    ordering = ['song_name']
 
     class Media:
         css = {
@@ -99,6 +202,17 @@ class SongsAdmin(admin.ModelAdmin):
     @admin.display(description="演唱次数",ordering="perform_count")
     def perform_count_display(self, obj):
         return obj.perform_count
+    
+    @admin.display(description="曲风")
+    def styles_display(self, obj):
+        from .models import SongStyle
+        styles = SongStyle.objects.filter(song=obj).select_related('style')
+        style_names = [song_style.style.name for song_style in styles]
+        return ', '.join(style_names) if style_names else '-'
+    
+    @admin.display(description="标签")
+    def tag_display(self, obj):
+        return obj.tag if obj.tag else '-'
     
     @admin.display(description="演唱记录")
     def view_records(self, obj):
@@ -172,9 +286,83 @@ class SongsAdmin(admin.ModelAdmin):
             form = LanguageForm()
         return render(request, 'admin/batch_set_language.html', {'form': form, 'songs': queryset})
 
+    # 批量添加曲风标签
+    def batch_add_styles_action(self, request, queryset):
+        from .models import Style, SongStyle
+        class BatchAddStylesForm(forms.Form):
+            styles = forms.ModelMultipleChoiceField(
+                queryset=Style.objects.all(),
+                widget=forms.CheckboxSelectMultiple,
+                required=True,
+                label="选择要添加的曲风"
+            )
+        
+        if 'apply' in request.POST:
+            form = BatchAddStylesForm(request.POST)
+            if form.is_valid():
+                styles = form.cleaned_data['styles']
+                count = 0
+                for song in queryset:
+                    for style in styles:
+                        # 使用get_or_create避免重复添加
+                        song_style, created = SongStyle.objects.get_or_create(
+                            song=song,
+                            style=style
+                        )
+                        if created:
+                            count += 1
+                self.message_user(request, f"已成功为 {queryset.count()} 首歌添加了 {count} 个曲风标签!")
+                return None
+        else:
+            form = BatchAddStylesForm()
+            # 如果只选择了一首歌曲，过滤掉已关联的曲风
+            if queryset.count() == 1:
+                song = queryset.first()
+                existing_style_ids = SongStyle.objects.filter(song=song).values_list('style', flat=True)
+                form.fields['styles'].queryset = Style.objects.exclude(id__in=existing_style_ids)
+        return render(request, 'admin/batch_add_styles.html', {'form': form, 'songs': queryset, 'title': '批量添加曲风标签'})
+
+    # 批量添加标签
+    def batch_add_tags_action(self, request, queryset):
+        from .models import Tag, SongTag
+        class BatchAddTagsForm(forms.Form):
+            tags = forms.ModelMultipleChoiceField(
+                queryset=Tag.objects.all(),
+                widget=forms.CheckboxSelectMultiple,
+                required=True,
+                label="选择要添加的标签"
+            )
+        
+        if 'apply' in request.POST:
+            form = BatchAddTagsForm(request.POST)
+            if form.is_valid():
+                tags = form.cleaned_data['tags']
+                count = 0
+                for song in queryset:
+                    for tag in tags:
+                        # 使用get_or_create避免重复添加
+                        song_tag, created = SongTag.objects.get_or_create(
+                            song=song,
+                            tag=tag
+                        )
+                        if created:
+                            count += 1
+                self.message_user(request, f"已成功为 {queryset.count()} 首歌添加了 {count} 个标签!")
+                return None
+        else:
+            form = BatchAddTagsForm()
+            # 如果只选择了一首歌曲，过滤掉已关联的标签
+            if queryset.count() == 1:
+                song = queryset.first()
+                existing_tag_ids = SongTag.objects.filter(song=song).values_list('tag', flat=True)
+                form.fields['tags'].queryset = Tag.objects.exclude(id__in=existing_tag_ids)
+        return render(request, 'admin/batch_add_tags.html', {'form': form, 'songs': queryset, 'title': '批量添加标签'})
+
     merge_songs_action.short_description = "合并选中的歌曲"
     set_language_action.short_description = "批量标记语言"
     split_song_action.short_description = "拆分选中的歌曲"
+    batch_add_styles_action.short_description = "批量添加曲风标签"
+    batch_add_tags_action.short_description = "批量添加标签"
 
     ##########################
     # 合并视图

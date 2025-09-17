@@ -3,7 +3,19 @@ from django import forms
 from .models import SongRecord
 from django.conf import settings
 import os
-
+from .models import (
+    Songs,
+    Style,
+    Tag,
+    SongRecord,
+    SongStyle,
+    SongTag,
+    ViewBaseMess,
+    ViewRealTimeInformation,
+    Recommendation,
+)
+from django.contrib.admin.widgets import AutocompleteSelect, FilteredSelectMultiple
+from django.contrib.admin.widgets import AutocompleteSelect
 
 class BVImportForm(forms.Form):
     bvid = forms.CharField(label="bv号", max_length=20)
@@ -38,3 +50,59 @@ class SongRecordForm(forms.ModelForm):
             instance.save()
         return instance
    
+class SongStyleForm(forms.ModelForm):
+    class Meta:
+        model = SongStyle
+        fields = '__all__'
+        widgets = {
+            'song': FilteredSelectMultiple("歌曲", is_stacked=False),
+        }
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # 为style字段设置queryset，确保在添加新项时能显示所有曲风
+        self.fields['style'].queryset = Style.objects.all()
+        
+        # 如果正在编辑一个已存在的SongStyle实例，过滤掉已经与该曲风关联的歌曲
+        if self.instance and self.instance.pk:
+            # 获取当前曲风已关联的歌曲
+            existing_song_ids = SongStyle.objects.filter(style=self.instance.style).values_list('song', flat=True)
+            # 从歌曲选择列表中排除这些歌曲
+            self.fields['song'].queryset = self.fields['song'].queryset.exclude(id__in=existing_song_ids)
+        elif 'style' in self.data:
+            # 如果通过表单数据传递了style ID，也进行过滤
+            try:
+                style_id = int(self.data.get('style'))
+                existing_song_ids = SongStyle.objects.filter(style_id=style_id).values_list('song', flat=True)
+                self.fields['song'].queryset = self.fields['song'].queryset.exclude(id__in=existing_song_ids)
+            except (ValueError, TypeError):
+                pass
+
+
+class SongTagForm(forms.ModelForm):
+    class Meta:
+        model = SongTag
+        fields = '__all__'
+        widgets = {
+            'song': FilteredSelectMultiple("歌曲", is_stacked=False),
+        }
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # 为tag字段设置queryset，确保在添加新项时能显示所有标签
+        self.fields['tag'].queryset = Tag.objects.all()
+        
+        # 如果正在编辑一个已存在的SongTag实例，过滤掉已经与该标签关联的歌曲
+        if self.instance and self.instance.pk:
+            # 获取当前标签已关联的歌曲
+            existing_song_ids = SongTag.objects.filter(tag=self.instance.tag).values_list('song', flat=True)
+            # 从歌曲选择列表中排除这些歌曲
+            self.fields['song'].queryset = self.fields['song'].queryset.exclude(id__in=existing_song_ids)
+        elif 'tag' in self.data:
+            # 如果通过表单数据传递了tag ID，也进行过滤
+            try:
+                tag_id = int(self.data.get('tag'))
+                existing_song_ids = SongTag.objects.filter(tag_id=tag_id).values_list('song', flat=True)
+                self.fields['song'].queryset = self.fields['song'].queryset.exclude(id__in=existing_song_ids)
+            except (ValueError, TypeError):
+                pass

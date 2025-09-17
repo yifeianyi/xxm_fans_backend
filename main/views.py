@@ -60,6 +60,17 @@ class SongListView(generics.ListAPIView):
         if styles:
             queryset = queryset.filter(songstyle__style__name__in=styles).distinct()
             
+        # 标签过滤
+        tags = self.request.query_params.getlist('tags', [])
+        if not tags:
+            tags_raw = self.request.query_params.get('tags')
+            if tags_raw:
+                tags = tags_raw.split(',')
+        tags = [tag.strip() for tag in tags if tag.strip()]
+        
+        if tags:
+            queryset = queryset.filter(tag__in=tags)
+            
         return queryset
 
     def list(self, request, *args, **kwargs):
@@ -74,6 +85,12 @@ class SongListView(generics.ListAPIView):
         styles_param = self.request.query_params.get('styles')
         if styles_param:
             styles = [s.strip() for s in styles_param.split(',') if s.strip()]
+            
+        # 获取标签过滤条件
+        tags = []
+        tags_param = self.request.query_params.get('tags')
+        if tags_param:
+            tags = [tag.strip() for tag in tags_param.split(',') if tag.strip()]
             
         # 获取语言过滤条件
         languages = []
@@ -108,7 +125,7 @@ class SongListView(generics.ListAPIView):
         }
         
         # 构造缓存key
-        cache_key = f"song_list_api:{query}:{page_num}:{page_size}:{ordering}:{'-'.join(styles)}:{'-'.join(languages)}"
+        cache_key = f"song_list_api:{query}:{page_num}:{page_size}:{ordering}:{'-'.join(styles)}:{'-'.join(tags)}:{'-'.join(languages)}"
         
         # 尝试缓存结果，处理Redis连接异常
         try:
