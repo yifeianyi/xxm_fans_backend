@@ -43,6 +43,21 @@ class Songs(models.Model):
 
     def get_search_result(self):
         return f"{self.song_name} - {self.singer if self.singer else '未知歌手'}"
+    
+    @property
+    def styles(self):
+        """获取歌曲的曲风列表"""
+        return [song_style.style.name for song_style in self.songstyle_set.all()]
+        
+    @property
+    def tags(self):
+        """获取歌曲的标签列表"""
+        return [song_tag.tag.name for song_tag in self.songtag_set.all()]
+        
+    @property
+    def tags(self):
+        """获取歌曲的标签列表"""
+        return [song_tag.tag.name for song_tag in self.songtag_set.all()]
 
 
 class SongRecord(models.Model):

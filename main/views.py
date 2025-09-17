@@ -4,7 +4,7 @@ from rest_framework.response import Response
 from rest_framework import status, generics, filters
 from rest_framework.decorators import api_view
 from django.http import JsonResponse
-from .models import Songs, SongRecord, Style, Recommendation
+from .models import Songs, SongRecord, Style, Tag, Recommendation
 from datetime import datetime, timedelta
 from django.db.models import Count, Q
 from django.core.cache import cache
@@ -231,6 +231,36 @@ def style_list_api(request):
         logger.warning(f"Cache set failed for styles: {e}")
     
     response = Response(style_names)
+    response['Content-Type'] = 'application/json; charset=utf-8'
+    return response
+
+
+@api_view(['GET'])
+def tag_list_api(request):
+    """
+    获取所有标签列表，返回简单的名称数组
+    """
+    # 尝试从缓存获取数据，处理Redis连接异常
+    cache_key = "tag_list_simple"
+    try:
+        data = cache.get(cache_key)
+        if data is not None:
+            response = Response(data)
+            response['Content-Type'] = 'application/json; charset=utf-8'
+            return response
+    except Exception as e:
+        logger.warning(f"Cache get failed for tags: {e}")
+    
+    # 获取所有标签名称并排序
+    tag_names = list(Tag.objects.values_list('name', flat=True).order_by('name'))
+    
+    # 尝试缓存结果，处理Redis连接异常
+    try:
+        cache.set(cache_key, tag_names, 3600)  # 缓存1小时
+    except Exception as e:
+        logger.warning(f"Cache set failed for tags: {e}")
+    
+    response = Response(tag_names)
     response['Content-Type'] = 'application/json; charset=utf-8'
     return response
 
