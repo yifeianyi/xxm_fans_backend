@@ -169,7 +169,7 @@ class RecommendationAdmin(admin.ModelAdmin):
 """
 @admin.register(Songs)
 class SongsAdmin(admin.ModelAdmin):
-    list_display = ['song_name_display','language_display','singer_display','styles_display', 'tag_display', 'last_performed_display', 'perform_count_display', 'view_records' ]
+    list_display = ['song_name_display','language_display','singer_display','styles_display', 'last_performed_display', 'perform_count_display', 'view_records' ]
     list_filter = ['language','last_performed']
     search_fields = ["song_name","perform_count","singer"]
     actions = ['merge_songs_action', 'set_language_action',"split_song_action", "batch_add_styles_action", "batch_add_tags_action"] #,'split_song_records'
@@ -209,10 +209,6 @@ class SongsAdmin(admin.ModelAdmin):
         styles = SongStyle.objects.filter(song=obj).select_related('style')
         style_names = [song_style.style.name for song_style in styles]
         return ', '.join(style_names) if style_names else '-'
-    
-    @admin.display(description="标签")
-    def tag_display(self, obj):
-        return obj.tag if obj.tag else '-'
     
     @admin.display(description="演唱记录")
     def view_records(self, obj):

@@ -8,7 +8,6 @@ from .models import Songs, SongRecord, Style, Tag, Recommendation
 from datetime import datetime, timedelta
 from django.db.models import Count, Q
 from django.core.cache import cache
-from django.core.cache import cache as django_cache
 from .utils import is_mobile
 from .serializers import SongsSerializer, SongRecordSerializer, StyleSerializer
 import logging
@@ -69,7 +68,7 @@ class SongListView(generics.ListAPIView):
         tags = [tag.strip() for tag in tags if tag.strip()]
         
         if tags:
-            queryset = queryset.filter(tag__in=tags)
+            queryset = queryset.filter(songtag__tag__name__in=tags).distinct()
             
         return queryset
 
@@ -355,7 +354,7 @@ def recommendation_api(request):
     # 尝试从缓存获取数据，处理Redis连接异常
     cache_key = "active_recommendation"
     try:
-        data = django_cache.get(cache_key)
+        data = cache.get(cache_key)
         if data is not None:
             response = Response(data)
             response['Content-Type'] = 'application/json; charset=utf-8'
@@ -389,7 +388,7 @@ def recommendation_api(request):
     
     # 尝试缓存结果，处理Redis连接异常
     try:
-        django_cache.set(cache_key, data, 300)  # 缓存5分钟
+        cache.set(cache_key, data, 300)  # 缓存5分钟
     except Exception as e:
         logger.warning(f"Cache set failed for recommendation: {e}")
     

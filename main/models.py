@@ -31,7 +31,6 @@ class Songs(models.Model):
     last_performed = models.DateField(blank=True, null=True)
     perform_count = models.IntegerField(default=0)
     language = models.CharField(max_length=50, blank=True, null=True)
-    tag = models.CharField(max_length=100, blank=True, null=True, help_text="歌曲标签")
 
     class Meta:
         verbose_name = "歌单"
@@ -48,11 +47,6 @@ class Songs(models.Model):
     def styles(self):
         """获取歌曲的曲风列表"""
         return [song_style.style.name for song_style in self.songstyle_set.all()]
-        
-    @property
-    def tags(self):
-        """获取歌曲的标签列表"""
-        return [song_tag.tag.name for song_tag in self.songtag_set.all()]
         
     @property
     def tags(self):
