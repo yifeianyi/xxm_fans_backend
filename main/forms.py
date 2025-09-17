@@ -54,55 +54,101 @@ class SongStyleForm(forms.ModelForm):
     class Meta:
         model = SongStyle
         fields = '__all__'
-        widgets = {
-            'song': FilteredSelectMultiple("歌曲", is_stacked=False),
-        }
+
+
+class BatchSongStyleForm(forms.Form):
+    """批量添加歌曲曲风的表单 - 新布局"""
+    song_search = forms.CharField(
+        max_length=200,
+        required=False,
+        label="",
+        widget=forms.TextInput(attrs={
+            'placeholder': '输入歌曲名称搜索...',
+            'class': 'song-search-input',
+            'style': 'width: 100%; padding: 8px; margin-bottom: 10px; box-sizing: border-box;'
+        })
+    )
+    available_songs = forms.ModelMultipleChoiceField(
+        queryset=Songs.objects.none(),  # 动态设置
+        widget=forms.SelectMultiple(attrs={
+            'size': '15',
+            'style': 'width: 100%; height: 300px;'
+        }),
+        required=False,
+        label="待选歌曲"
+    )
+    selected_songs = forms.ModelMultipleChoiceField(
+        queryset=Songs.objects.none(),  # 动态设置
+        widget=forms.SelectMultiple(attrs={
+            'size': '15',
+            'style': 'width: 100%; height: 300px;'
+        }),
+        required=False,
+        label="已选歌曲"
+    )
+    style = forms.ModelChoiceField(
+        queryset=Style.objects.all(),
+        widget=forms.Select(attrs={
+            'style': 'width: 300px; padding: 5px;'
+        }),
+        required=True,
+        label="选择曲风"
+    )
     
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # 为style字段设置queryset，确保在添加新项时能显示所有曲风
-        self.fields['style'].queryset = Style.objects.all()
-        
-        # 如果正在编辑一个已存在的SongStyle实例，过滤掉已经与该曲风关联的歌曲
-        if self.instance and self.instance.pk:
-            # 获取当前曲风已关联的歌曲
-            existing_song_ids = SongStyle.objects.filter(style=self.instance.style).values_list('song', flat=True)
-            # 从歌曲选择列表中排除这些歌曲
-            self.fields['song'].queryset = self.fields['song'].queryset.exclude(id__in=existing_song_ids)
-        elif 'style' in self.data:
-            # 如果通过表单数据传递了style ID，也进行过滤
-            try:
-                style_id = int(self.data.get('style'))
-                existing_song_ids = SongStyle.objects.filter(style_id=style_id).values_list('song', flat=True)
-                self.fields['song'].queryset = self.fields['song'].queryset.exclude(id__in=existing_song_ids)
-            except (ValueError, TypeError):
-                pass
+        # 初始化时显示所有歌曲到待选框
+        self.fields['available_songs'].queryset = Songs.objects.all().order_by('song_name')
+        self.fields['selected_songs'].queryset = Songs.objects.none()
 
 
 class SongTagForm(forms.ModelForm):
     class Meta:
         model = SongTag
         fields = '__all__'
-        widgets = {
-            'song': FilteredSelectMultiple("歌曲", is_stacked=False),
-        }
+
+
+class BatchSongTagForm(forms.Form):
+    """批量添加歌曲标签的表单 - 新布局"""
+    song_search = forms.CharField(
+        max_length=200,
+        required=False,
+        label="",
+        widget=forms.TextInput(attrs={
+            'placeholder': '输入歌曲名称搜索...',
+            'class': 'song-search-input',
+            'style': 'width: 100%; padding: 8px; margin-bottom: 10px; box-sizing: border-box;'
+        })
+    )
+    available_songs = forms.ModelMultipleChoiceField(
+        queryset=Songs.objects.none(),  # 动态设置
+        widget=forms.SelectMultiple(attrs={
+            'size': '15',
+            'style': 'width: 100%; height: 300px;'
+        }),
+        required=False,
+        label="待选歌曲"
+    )
+    selected_songs = forms.ModelMultipleChoiceField(
+        queryset=Songs.objects.none(),  # 动态设置
+        widget=forms.SelectMultiple(attrs={
+            'size': '15',
+            'style': 'width: 100%; height: 300px;'
+        }),
+        required=False,
+        label="已选歌曲"
+    )
+    tag = forms.ModelChoiceField(
+        queryset=Tag.objects.all(),
+        widget=forms.Select(attrs={
+            'style': 'width: 300px; padding: 5px;'
+        }),
+        required=True,
+        label="选择标签"
+    )
     
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # 为tag字段设置queryset，确保在添加新项时能显示所有标签
-        self.fields['tag'].queryset = Tag.objects.all()
-        
-        # 如果正在编辑一个已存在的SongTag实例，过滤掉已经与该标签关联的歌曲
-        if self.instance and self.instance.pk:
-            # 获取当前标签已关联的歌曲
-            existing_song_ids = SongTag.objects.filter(tag=self.instance.tag).values_list('song', flat=True)
-            # 从歌曲选择列表中排除这些歌曲
-            self.fields['song'].queryset = self.fields['song'].queryset.exclude(id__in=existing_song_ids)
-        elif 'tag' in self.data:
-            # 如果通过表单数据传递了tag ID，也进行过滤
-            try:
-                tag_id = int(self.data.get('tag'))
-                existing_song_ids = SongTag.objects.filter(tag_id=tag_id).values_list('song', flat=True)
-                self.fields['song'].queryset = self.fields['song'].queryset.exclude(id__in=existing_song_ids)
-            except (ValueError, TypeError):
-                pass
+        # 初始化时显示所有歌曲到待选框
+        self.fields['available_songs'].queryset = Songs.objects.all().order_by('song_name')
+        self.fields['selected_songs'].queryset = Songs.objects.none()

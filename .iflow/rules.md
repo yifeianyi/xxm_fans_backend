@@ -26,5 +26,5 @@
 ### 开发约束
 - Django 的 models.py 中 SongRecord 和 Songs 结构不能修改  
 - 前端必须保持和 Element Plus UI 风格一致  
-- 按照todolist.md中的需求工作,每完成一个需求让我确认是否完成,当确认完全后,修改 todolist.md 文件,在对应需求上打上完成
+- 按照prompts/todolist.md中的需求工作,每完成一个需求让我确认是否完成,当确认完全后,修改 todolist.md 文件,在对应需求上打上完成
 - 对于复杂需求，先写出一份实现方案放在 doc/ 中，我确认完没有问题再继续进行开发.

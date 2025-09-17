@@ -114,7 +114,94 @@ class SongStyleAdmin(admin.ModelAdmin):
     list_display = ('song', 'style')
     list_filter = ('style',)
     search_fields = ('song__song_name', 'style__name')
-    autocomplete_fields = ('style', 'song')
+    actions = ['batch_add_song_styles']
+    change_list_template = 'admin/songstyle_change_list.html'
+    
+    def get_urls(self):
+        urls = super().get_urls()
+        custom_urls = [
+            path('batch-add/', self.admin_site.admin_view(self.batch_add_view), name='batch_add_song_styles'),
+        ]
+        return custom_urls + urls
+    
+    def batch_add_song_styles(self, request, queryset):
+        """批量添加歌曲曲风的action"""
+        return HttpResponseRedirect(reverse('admin:batch_add_song_styles'))
+    
+    batch_add_song_styles.short_description = "批量添加歌曲曲风"
+    
+    def batch_add_view(self, request):
+        """批量添加歌曲曲风的视图 - 新布局"""
+        from .forms import BatchSongStyleForm
+        
+        if request.method == 'POST':
+            # 添加调试信息
+            self.message_user(request, f'POST数据: {request.POST}', messages.INFO)
+            
+            form = BatchSongStyleForm(request.POST)
+            # 重要：确保字段的queryset被正确设置
+            form.fields['available_songs'].queryset = Songs.objects.all().order_by('song_name')
+            form.fields['selected_songs'].queryset = Songs.objects.all().order_by('song_name')
+            
+            if form.is_valid():
+                selected_songs = form.cleaned_data['selected_songs']
+                style = form.cleaned_data['style']
+                
+                # 添加调试信息
+                self.message_user(request, f'选中的歌曲数量: {selected_songs.count()}', messages.INFO)
+                self.message_user(request, f'选中的曲风: {style.name}', messages.INFO)
+                
+                if not selected_songs or not style:
+                    self.message_user(request, '请选择歌曲和曲风', messages.WARNING)
+                    return HttpResponseRedirect(reverse('admin:batch_add_song_styles'))
+                
+                created_count = 0
+                for song in selected_songs:
+                    _, created = SongStyle.objects.get_or_create(
+                        song=song,
+                        style=style
+                    )
+                    if created:
+                        created_count += 1
+                
+                self.message_user(
+                    request,
+                    f'成功为 {selected_songs.count()} 首歌曲添加了曲风「{style.name}」，共创建 {created_count} 个新关联。',
+                    messages.SUCCESS
+                )
+                return HttpResponseRedirect(reverse('admin:main_songstyle_changelist'))
+            else:
+                # 添加表单错误信息
+                self.message_user(request, f'表单验证失败: {form.errors}', messages.ERROR)
+        else:
+            # 处理搜索功能
+            search_query = request.GET.get('song_search', '')
+            form = BatchSongStyleForm()
+            
+            # 添加调试信息
+            initial_count = Songs.objects.all().order_by('song_name').count()
+            self.message_user(request, f'初始化时歌曲总数: {initial_count}', messages.INFO)
+            
+            if search_query:
+                # 根据搜索词过滤歌曲 - 显示所有匹配的搜索结果
+                filtered_songs = Songs.objects.filter(
+                    song_name__icontains=search_query
+                ).order_by('song_name')
+                form.fields['available_songs'].queryset = filtered_songs
+                self.message_user(request, f'搜索"{search_query}"后找到 {filtered_songs.count()} 首歌曲', messages.INFO)
+            else:
+                # 显示所有歌曲，按名称排序
+                all_songs = Songs.objects.all().order_by('song_name')
+                form.fields['available_songs'].queryset = all_songs
+                self.message_user(request, f'未搜索时显示 {all_songs.count()} 首歌曲', messages.INFO)
+        
+        context = dict(
+            self.admin_site.each_context(request),
+            form=form,
+            title='批量添加歌曲曲风',
+            opts=self.model._meta,
+        )
+        return render(request, 'admin/batch_add_song_styles.html', context)
     
 
 @admin.register(SongTag)
@@ -123,7 +210,94 @@ class SongTagAdmin(admin.ModelAdmin):
     list_display = ('song', 'tag')
     list_filter = ('tag',)
     search_fields = ('song__song_name', 'tag__name')
-    autocomplete_fields = ('tag', 'song')
+    actions = ['batch_add_song_tags']
+    change_list_template = 'admin/songtag_change_list.html'
+    
+    def get_urls(self):
+        urls = super().get_urls()
+        custom_urls = [
+            path('batch-add/', self.admin_site.admin_view(self.batch_add_view), name='batch_add_song_tags'),
+        ]
+        return custom_urls + urls
+    
+    def batch_add_song_tags(self, request, queryset):
+        """批量添加歌曲标签的action"""
+        return HttpResponseRedirect(reverse('admin:batch_add_song_tags'))
+    
+    batch_add_song_tags.short_description = "批量添加歌曲标签"
+    
+    def batch_add_view(self, request):
+        """批量添加歌曲标签的视图 - 新布局"""
+        from .forms import BatchSongTagForm
+        
+        if request.method == 'POST':
+            # 添加调试信息
+            self.message_user(request, f'POST数据: {request.POST}', messages.INFO)
+            
+            form = BatchSongTagForm(request.POST)
+            # 重要：确保字段的queryset被正确设置
+            form.fields['available_songs'].queryset = Songs.objects.all().order_by('song_name')
+            form.fields['selected_songs'].queryset = Songs.objects.all().order_by('song_name')
+            
+            if form.is_valid():
+                selected_songs = form.cleaned_data['selected_songs']
+                tag = form.cleaned_data['tag']
+                
+                # 添加调试信息
+                self.message_user(request, f'选中的歌曲数量: {selected_songs.count()}', messages.INFO)
+                self.message_user(request, f'选中的标签: {tag.name}', messages.INFO)
+                
+                if not selected_songs or not tag:
+                    self.message_user(request, '请选择歌曲和标签', messages.WARNING)
+                    return HttpResponseRedirect(reverse('admin:batch_add_song_tags'))
+                
+                created_count = 0
+                for song in selected_songs:
+                    _, created = SongTag.objects.get_or_create(
+                        song=song,
+                        tag=tag
+                    )
+                    if created:
+                        created_count += 1
+                
+                self.message_user(
+                    request,
+                    f'成功为 {selected_songs.count()} 首歌曲添加了标签「{tag.name}」，共创建 {created_count} 个新关联。',
+                    messages.SUCCESS
+                )
+                return HttpResponseRedirect(reverse('admin:main_songtag_changelist'))
+            else:
+                # 添加表单错误信息
+                self.message_user(request, f'表单验证失败: {form.errors}', messages.ERROR)
+        else:
+            # 处理搜索功能
+            search_query = request.GET.get('song_search', '')
+            form = BatchSongTagForm()
+            
+            # 添加调试信息
+            initial_count = Songs.objects.all().order_by('song_name').count()
+            self.message_user(request, f'初始化时歌曲总数: {initial_count}', messages.INFO)
+            
+            if search_query:
+                # 根据搜索词过滤歌曲 - 显示所有匹配的搜索结果
+                filtered_songs = Songs.objects.filter(
+                    song_name__icontains=search_query
+                ).order_by('song_name')
+                form.fields['available_songs'].queryset = filtered_songs
+                self.message_user(request, f'搜索"{search_query}"后找到 {filtered_songs.count()} 首歌曲', messages.INFO)
+            else:
+                # 显示所有歌曲，按名称排序
+                all_songs = Songs.objects.all().order_by('song_name')
+                form.fields['available_songs'].queryset = all_songs
+                self.message_user(request, f'未搜索时显示 {all_songs.count()} 首歌曲', messages.INFO)
+        
+        context = dict(
+            self.admin_site.each_context(request),
+            form=form,
+            title='批量添加歌曲标签',
+            opts=self.model._meta,
+        )
+        return render(request, 'admin/batch_add_song_tags.html', context)
     
 
 from django.contrib.admin.widgets import FilteredSelectMultiple
