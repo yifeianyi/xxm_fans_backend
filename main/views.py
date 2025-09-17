@@ -4,7 +4,7 @@ from rest_framework.response import Response
 from rest_framework import status, generics, filters
 from rest_framework.decorators import api_view
 from django.http import JsonResponse
-from .models import Songs, SongRecord, Style
+from .models import Songs, SongRecord, Style, Recommendation
 from datetime import datetime, timedelta
 from django.db.models import Count, Q
 from django.core.cache import cache
@@ -281,3 +281,54 @@ def random_song_api(request):
         return response
     else:
         return Response({"error": "No songs available."}, status=404)
+
+
+@api_view(['GET'])
+def recommendation_api(request):
+    """
+    获取激活的推荐语
+    """
+    # 尝试从缓存获取数据，处理Redis连接异常
+    cache_key = "active_recommendation"
+    try:
+        data = django_cache.get(cache_key)
+        if data is not None:
+            response = Response(data)
+            response['Content-Type'] = 'application/json; charset=utf-8'
+            return response
+    except Exception as e:
+        logger.warning(f"Cache get failed for recommendation: {e}")
+    
+    # 获取激活的推荐语（按更新时间倒序取第一条）
+    recommendation = Recommendation.objects.filter(is_active=True).order_by('-updated_at').first()
+    
+    if recommendation:
+        # 获取推荐的歌曲列表
+        recommended_songs = []
+        for song in recommendation.recommended_songs.all():
+            recommended_songs.append({
+                "id": song.id,
+                "song_name": song.song_name,
+                "singer": song.singer,
+                "perform_count": song.perform_count
+            })
+        
+        data = {
+            "content": recommendation.content,
+            "recommended_songs": recommended_songs
+        }
+    else:
+        data = {
+            "content": "欢迎来到热歌榜！",
+            "recommended_songs": []
+        }
+    
+    # 尝试缓存结果，处理Redis连接异常
+    try:
+        django_cache.set(cache_key, data, 300)  # 缓存5分钟
+    except Exception as e:
+        logger.warning(f"Cache set failed for recommendation: {e}")
+    
+    response = Response(data)
+    response['Content-Type'] = 'application/json; charset=utf-8'
+    return response

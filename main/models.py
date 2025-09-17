@@ -78,3 +78,18 @@ class ViewRealTimeInformation(models.Model):
 
     def __str__(self):
         return f"RT info for {self.view.name} at {self.fetchtime}"
+
+
+class Recommendation(models.Model):
+    content = models.TextField(help_text="推荐语内容")
+    recommended_songs = models.ManyToManyField('Songs', blank=True, help_text="推荐的歌曲")
+    is_active = models.BooleanField(default=True, help_text="是否激活显示")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "推荐语"
+        verbose_name_plural = "推荐语"
+
+    def __str__(self):
+        return f"推荐语: {self.content[:50]}..." if len(self.content) > 50 else f"推荐语: {self.content}"

@@ -7,7 +7,7 @@ from django.urls import path
 from django.shortcuts import render, redirect
 from django import forms
 from urllib.parse import unquote, quote
-from .models import Songs, Style, SongRecord, SongStyle, ViewBaseMess, ViewRealTimeInformation
+from .models import Songs, Style, SongRecord, SongStyle, ViewBaseMess, ViewRealTimeInformation, Recommendation
 # Register your models here.
 from .models import *
 from django.contrib.admin.helpers import ACTION_CHECKBOX_NAME
@@ -23,6 +23,40 @@ from .forms import BVImportForm, SongRecordForm
 # 构建默认的style和SongStyle表单管理界面
 admin.site.register(Style)
 admin.site.register(SongStyle)
+
+from django.contrib.admin.widgets import FilteredSelectMultiple
+
+class RecommendationForm(forms.ModelForm):
+    class Meta:
+        model = Recommendation
+        fields = '__all__'
+        widgets = {
+            'recommended_songs': FilteredSelectMultiple("歌曲", is_stacked=False),
+        }
+
+@admin.register(Recommendation)
+class RecommendationAdmin(admin.ModelAdmin):
+    form = RecommendationForm
+    list_display = ('content_preview', 'is_active', 'updated_at', 'recommended_songs_count')
+    list_filter = ('is_active', 'updated_at')
+    search_fields = ('content',)
+    fields = ('content', 'recommended_songs', 'is_active')
+    
+    class Media:
+        css = {
+            'all': ('admin/css/widgets.css', 'admin/css/recommendation.css'),
+        }
+        js = ('admin/js/jquery.init.js', 'admin/js/recommendation.js')
+    
+    @admin.display(description="推荐语预览")
+    def content_preview(self, obj):
+        if len(obj.content) > 50:
+            return obj.content[:50] + '...'
+        return obj.content
+        
+    @admin.display(description="推荐歌曲数量")
+    def recommended_songs_count(self, obj):
+        return obj.recommended_songs.count()
     
 """
     自定义admin界面

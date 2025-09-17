@@ -1,0 +1,27 @@
+/* 自定义推荐管理界面样式 */
+.recommendation-filter {
+    width: 100%;
+}
+
+.recommendation-filter input[type="text"] {
+    width: 100%;
+    padding: 8px;
+    margin-bottom: 10px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+}
+
+.recommendation-filter select {
+    width: 100%;
+    height: 200px;
+}
+
+.recommendation-actions {
+    text-align: center;
+    margin: 10px 0;
+}
+
+.recommendation-actions button {
+    margin: 0 5px;
+    padding: 5px 10px;
+}
