@@ -48,7 +48,7 @@ class WorkAdmin(admin.ModelAdmin):
     list_display = ['title', 'author', 'collection', 'position', 'display_order', 'cover_url_preview', 'view_url_link', 'notes_preview']
     list_filter = ['collection', 'author']
     search_fields = ['title', 'author', 'collection__name', 'notes']
-    change_list_template = 'admin/footprint/work/change_list.html'
+    change_list_template = 'admin/fansDIY/work/change_list.html'
     
     fieldsets = (
         ('基本信息', {

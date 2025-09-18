@@ -37,9 +37,9 @@
 {% block breadcrumbs %}
 <div class="breadcrumbs">
     <a href="{% url 'admin:index' %}">{% trans 'Home' %}</a>
-    &rsaquo; <a href="{% url 'admin:app_list' app_label='footprint' %}">Footprint</a>
-    &rsaquo; <a href="{% url 'admin:footprint_work_changelist' %}">作品记录</a>
-    &rsaquo; 导入B站视频
+    › <a href="{% url 'admin:app_list' app_label='fansDIY' %}">FansDIY</a>
+    › <a href="{% url 'admin:fansDIY_work_changelist' %}">作品记录</a>
+    › 导入B站视频
 </div>
 {% endblock %}
 
@@ -67,7 +67,7 @@
 
         <div class="submit-row">
             <input type="submit" value="导入视频" class="default" />
-            <a href="{% url 'admin:footprint_work_changelist' %}" class="button cancel-link">取消</a>
+            <a href="{% url 'admin:fansDIY_work_changelist' %}" class="button cancel-link">取消</a>
         </div>
     </form>
 
