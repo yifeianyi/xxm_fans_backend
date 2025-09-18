@@ -101,3 +101,5 @@ db.sqlite3
 prompts/*
 
 xxm_fans_frontend/package-lock.json
+*.jpg
+doc/bug/*

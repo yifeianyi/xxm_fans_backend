@@ -4,22 +4,37 @@ from django.template.response import TemplateResponse
 from django.urls import path
 from django.shortcuts import render, redirect
 from django import forms
+from django.utils.safestring import mark_safe
 from .models import Collection, Work
 from .forms import BVImportForm
 from .utils import import_bv_work
 
 # Register your models here.
 
+class WorkInline(admin.TabularInline):
+    model = Work
+    extra = 0
+    fields = ['title', 'author', 'position', 'display_order', 'cover_url_preview']
+    readonly_fields = ['cover_url_preview']
+    
+    def cover_url_preview(self, obj):
+        """封面预览"""
+        if obj.cover_url:
+            return mark_safe(f'<img src="{obj.cover_url}" style="height:40px;max-width:60px;object-fit:cover;" />')
+        return "-"
+    cover_url_preview.short_description = "封面预览"
+
 @admin.register(Collection)
 class CollectionAdmin(admin.ModelAdmin):
-    list_display = ['name', 'works_count', 'created_at', 'updated_at']
+    list_display = ['name', 'works_count', 'position', 'display_order', 'created_at', 'updated_at']
     list_filter = ['created_at', 'updated_at']
     search_fields = ['name']
     readonly_fields = ['works_count', 'created_at', 'updated_at']
+    inlines = [WorkInline]
     
     fieldsets = (
         ('基本信息', {
-            'fields': ('name', 'works_count')
+            'fields': ('name', 'works_count', 'position', 'display_order')
         }),
         ('时间信息', {
             'fields': ('created_at', 'updated_at'),
@@ -30,14 +45,14 @@ class CollectionAdmin(admin.ModelAdmin):
 
 @admin.register(Work)
 class WorkAdmin(admin.ModelAdmin):
-    list_display = ['title', 'author', 'collection','cover_url',"view_url", 'notes_preview']
-    list_filter = ['collection']
+    list_display = ['title', 'author', 'collection', 'position', 'display_order', 'cover_url_preview', 'view_url_link', 'notes_preview']
+    list_filter = ['collection', 'author']
     search_fields = ['title', 'author', 'collection__name', 'notes']
     change_list_template = 'admin/footprint/work/change_list.html'
     
     fieldsets = (
         ('基本信息', {
-            'fields': ('collection', 'title', 'author')
+            'fields': ('collection', 'title', 'author', 'position', 'display_order')
         }),
         ('链接信息', {
             'fields': ('cover_url', 'view_url')
@@ -47,6 +62,25 @@ class WorkAdmin(admin.ModelAdmin):
             'classes': ('collapse',)
         }),
     )
+    
+    def cover_url_preview(self, obj):
+        """封面预览"""
+        if obj.cover_url:
+            # 处理相对路径
+            if obj.cover_url.startswith('/'):
+                url = obj.cover_url
+            else:
+                url = '/' + obj.cover_url
+            return mark_safe(f'<img src="{url}" style="height:40px;max-width:60px;object-fit:cover;" />')
+        return "-"
+    cover_url_preview.short_description = "封面预览"
+    
+    def view_url_link(self, obj):
+        """观看链接"""
+        if obj.view_url:
+            return mark_safe(f'<a href="{obj.view_url}" target="_blank">观看</a>')
+        return "-"
+    view_url_link.short_description = "观看链接"
     
     def notes_preview(self, obj):
         """备注预览"""

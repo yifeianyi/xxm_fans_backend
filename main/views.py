@@ -31,7 +31,14 @@ class SongListView(generics.ListAPIView):
     ordering = ['-last_performed']
 
     def get_queryset(self):
+        from django.db.models import Q
+        
         queryset = Songs.objects.all()
+        
+        # 添加调试信息
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.info(f"请求参数: {self.request.query_params}")
         
         # 处理搜索查询
         query = self.request.query_params.get("q", "")
@@ -48,6 +55,9 @@ class SongListView(generics.ListAPIView):
             if languages:
                 queryset = queryset.filter(language__in=languages)
         
+        # 收集所有筛选条件
+        filters = Q()
+        
         # 曲风过滤
         styles = self.request.query_params.getlist('styles', [])
         if not styles:
@@ -56,8 +66,13 @@ class SongListView(generics.ListAPIView):
                 styles = style_raw.split(',')
         styles = [s.strip() for s in styles if s.strip()]
         
+        logger.info(f"曲风筛选条件: {styles}")
+        
         if styles:
-            queryset = queryset.filter(songstyle__style__name__in=styles).distinct()
+            style_filter = Q()
+            for style in styles:
+                style_filter |= Q(songstyle__style__name=style)
+            filters &= style_filter
             
         # 标签过滤
         tags = self.request.query_params.getlist('tags', [])
@@ -67,9 +82,19 @@ class SongListView(generics.ListAPIView):
                 tags = tags_raw.split(',')
         tags = [tag.strip() for tag in tags if tag.strip()]
         
+        logger.info(f"标签筛选条件: {tags}")
+        
         if tags:
-            queryset = queryset.filter(songtag__tag__name__in=tags).distinct()
+            tag_filter = Q()
+            for tag in tags:
+                tag_filter |= Q(songtag__tag__name=tag)
+            filters &= tag_filter
             
+        # 应用所有筛选条件
+        if filters:
+            queryset = queryset.filter(filters).distinct()
+            
+        logger.info(f"最终查询集大小: {queryset.count()}")
         return queryset
 
     def list(self, request, *args, **kwargs):

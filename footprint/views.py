@@ -12,7 +12,8 @@ def collection_list_api(request):
     page_num = request.GET.get("page", 1)
     page_size = request.GET.get("limit", 20)
     
-    collections = Collection.objects.all()
+    # 按照 position 升序排列，再按 display_order 升序排列，最后按创建时间降序排列
+    collections = Collection.objects.all().order_by('position', 'display_order', '-created_at')
     paginator = Paginator(collections, page_size)
     page = paginator.get_page(page_num)
     
@@ -22,6 +23,8 @@ def collection_list_api(request):
             "id": collection.id,
             "name": collection.name,
             "works_count": collection.works_count,
+            "position": collection.position,
+            "display_order": collection.display_order,
             "created_at": collection.created_at,
             "updated_at": collection.updated_at,
         })
@@ -45,6 +48,8 @@ def collection_detail_api(request, collection_id):
             "id": collection.id,
             "name": collection.name,
             "works_count": collection.works_count,
+            "position": collection.position,
+            "display_order": collection.display_order,
             "created_at": collection.created_at,
             "updated_at": collection.updated_at,
         }
@@ -60,7 +65,8 @@ def work_list_api(request):
     page_size = request.GET.get("limit", 20)
     collection_id = request.GET.get("collection")
     
-    works = Work.objects.all()
+    # 按照 position 升序排列，再按 display_order 升序排列，最后按ID降序排列
+    works = Work.objects.all().order_by('position', 'display_order', '-id')
     
     if collection_id:
         works = works.filter(collection_id=collection_id)
@@ -77,6 +83,8 @@ def work_list_api(request):
             "view_url": work.view_url,
             "author": work.author,
             "notes": work.notes,
+            "position": work.position,
+            "display_order": work.display_order,
             "collection": {
                 "id": work.collection.id,
                 "name": work.collection.name,
@@ -105,6 +113,8 @@ def work_detail_api(request, work_id):
             "view_url": work.view_url,
             "author": work.author,
             "notes": work.notes,
+            "position": work.position,
+            "display_order": work.display_order,
             "collection": {
                 "id": work.collection.id,
                 "name": work.collection.name,
