@@ -45,7 +45,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'main',
-    'footprint',
+    'fansDIY',
     'rest_framework',
     # 'drf_yasg',
 ]
