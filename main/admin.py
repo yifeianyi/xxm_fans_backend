@@ -621,7 +621,7 @@ class SongsAdmin(admin.ModelAdmin):
 
 """
 @admin.register(SongRecord)
-class SongReccordAdmin(admin.ModelAdmin):
+class SongRecordAdmin(admin.ModelAdmin):
     # 后台显示的表单项
     form = SongRecordForm
     list_display = ("song", "performed_at", "url", "cover_url", "cover_thumb", "notes")
@@ -637,7 +637,7 @@ class SongReccordAdmin(admin.ModelAdmin):
     def get_fields(self, request, obj = None):
         fields = ["song","performed_at", "url", "cover_url", "notes"]
         if obj:
-            return fields + ("replace_cover")
+            return fields + ["replace_cover"]
         return fields
 
     def get_urls(self):

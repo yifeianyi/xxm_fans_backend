@@ -42,10 +42,15 @@ class SongRecordForm(forms.ModelForm):
             if rel_path.startswith('covers/'):
                 rel_path = rel_path[len('covers/'):]
             cover_path = os.path.join(settings.BASE_DIR, 'xxm_fans_frontend', 'public', 'covers', rel_path)
-            if os.path.exists(cover_path):
-                with open(cover_path, 'wb+') as f:
-                    for chunk in new_cover.chunks():
-                        f.write(chunk)
+            
+            # 确保目录存在
+            cover_dir = os.path.dirname(cover_path)
+            os.makedirs(cover_dir, exist_ok=True)
+            
+            # 保存文件
+            with open(cover_path, 'wb+') as f:
+                for chunk in new_cover.chunks():
+                    f.write(chunk)
         if commit:
             instance.save()
         return instance
