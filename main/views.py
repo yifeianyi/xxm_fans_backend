@@ -8,7 +8,6 @@ from .models import Songs, SongRecord, Style, Tag, Recommendation
 from datetime import datetime, timedelta
 from django.db.models import Count, Q
 from django.core.cache import cache
-from .utils import is_mobile
 from .serializers import SongsSerializer, SongRecordSerializer, StyleSerializer
 import logging
 
@@ -340,11 +339,7 @@ def top_songs_api(request):
     response['Content-Type'] = 'application/json; charset=utf-8'
     return response
 
-@api_view(['GET'])
-def is_mobile_api(request):
-    response = Response({'is_mobile': is_mobile(request)})
-    response['Content-Type'] = 'application/json; charset=utf-8'
-    return response
+
 
 # 随机返回一首歌
 @api_view(['GET'])

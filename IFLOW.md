@@ -1,15 +1,15 @@
 # 项目概述
 
-这是一个名为"XXM Fans Home"的音乐粉丝网站项目，采用Django + Vue.js技术栈构建。项目主要功能包括音乐记录管理、歌曲搜索筛选、排行榜展示以及图片处理等。
+这是一个名为"XXM Fans Home"的音乐粉丝网站项目，采用Django + Vue.js技术栈构建。项目主要功能包括音乐记录管理、歌曲搜索筛选、排行榜展示、精选二创作品展示以及图片处理等。
 
 ## 技术架构
 
-- **后端**: Django (Python)
-- **前端**: Vue.js 3
+- **后端**: Django (Python) + Django REST Framework
+- **前端**: Vue.js 3 + Element Plus
 - **数据库**: SQLite (开发环境)
 - **API**: Django REST Framework
 - **前端构建工具**: Vite
-- **UI框架**: Element Plus, Vant
+- **UI框架**: Element Plus
 
 ## 项目结构
 
@@ -17,26 +17,38 @@
 xxm_fans_home/
 ├── main/                    # Django 主应用，包含核心模型和API
 ├── xxm_fans_frontend/       # Vue.js 前端项目
+├── fansDIY/                 # 粉丝二创作品管理应用
 ├── static/                  # 静态文件
 ├── templates/               # Django 模板
-├── xxm_fans_home/          # Django 项目配置
-├── sqlInit_data/           # 公开数据文件
-└── manage.py               # Django 管理脚本
+├── xxm_fans_home/           # Django 项目配置
+├── sqlInit_data/            # 公开数据文件
+├── doc/                     # 项目文档
+├── tools/                   # 实用工具脚本
+└── manage.py                # Django 管理脚本
 ```
 
 ## 核心功能模块
 
-1. **音乐管理**:
-   - 歌曲信息管理 (Songs)
-   - 演唱记录管理 (SongRecord)
-   - 曲风分类管理 (Style)
-   - 歌曲与曲风关联 (SongStyle)
+### 音乐管理 (main应用)
+1. **歌曲信息管理** (Songs)
+2. **演唱记录管理** (SongRecord)
+3. **曲风分类管理** (Style)
+4. **标签管理** (Tag)
+5. **歌曲与曲风关联** (SongStyle)
+6. **歌曲与标签关联** (SongTag)
+7. **推荐语管理** (Recommendation)
 
-2. **前端展示**:
-   - 歌曲列表与搜索
-   - 演唱记录详情
-   - 排行榜展示
-   - 响应式设计支持移动端
+### 粉丝二创作品管理 (fansDIY应用)
+1. **合集管理** (Collection)
+2. **作品管理** (Work)
+
+### 前端展示
+1. **歌曲列表与搜索**
+2. **演唱记录详情**
+3. **排行榜展示**
+4. **精选二创作品展示**
+5. **盲盒功能（随机歌曲）**
+6. **自定义盲盒（筛选条件随机歌曲）**
 
 ## 开发环境搭建
 
@@ -91,15 +103,27 @@ xxm_fans_home/
 - `compress_images.py`: 压缩图片
 - `import_public_data.py`: 导入公开数据
 - `export_public_data.py`: 导出公开数据
+- `update_cover_urls.py`: 更新封面URL
+- `update_cover_urls_bulk.py`: 批量更新封面URL
 
 ## API接口
 
 主要REST API接口包括:
+
+### 音乐管理相关
 - `/api/songs/`: 歌曲列表，支持搜索、分页和排序
-- `/api/song-records/<song_id>/`: 特定歌曲的演唱记录
+- `/api/songs/<song_id>/records/`: 特定歌曲的演唱记录
 - `/api/styles/`: 曲风列表
-- `/api/top-songs/`: 排行榜数据
+- `/api/tags/`: 标签列表
+- `/api/top_songs/`: 排行榜数据
 - `/api/random-song/`: 随机歌曲
+- `/api/recommendation/`: 推荐语
+
+### 粉丝二创作品相关
+- `/api/fansDIY/collections/`: 合集列表
+- `/api/fansDIY/collections/<collection_id>/`: 特定合集详情
+- `/api/fansDIY/works/`: 作品列表
+- `/api/fansDIY/works/<work_id>/`: 特定作品详情
 
 ## 部署注意事项
 

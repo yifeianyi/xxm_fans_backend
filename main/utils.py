@@ -270,8 +270,4 @@ def import_bv_song(bvid, selected_song_id=None, pending_parts=None):
     print(f"[BV:{bvid}] 导入完成，共导入 {len(results)} 条")
     return results, [], conflict_info
 
-def is_mobile(request):
-    ua = request.META.get('HTTP_USER_AGENT', '').lower()
-    return any(keyword in ua for keyword in [
-        'android', 'iphone', 'ipad', 'ipod', 'blackberry', 'iemobile', 'opera mini', 'mobile'
-    ])
+
