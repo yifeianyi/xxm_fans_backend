@@ -1,0 +1,1 @@
+import os; os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'xxm_fans_home.settings'); import django; django.setup(); from django.conf import settings; print('APPEND_SLASH:', getattr(settings, 'APPEND_SLASH', True))  

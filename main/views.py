@@ -101,6 +101,8 @@ class SongListView(generics.ListAPIView):
         query = self.request.query_params.get("q", "")
         page_num = int(self.request.query_params.get("page", 1))
         page_size = int(self.request.query_params.get("limit", 50))
+        # 限制最大页面大小为50
+        page_size = min(page_size, 50)
         ordering = self.request.query_params.get("ordering", "")
         
         # 获取样式过滤条件
