@@ -13,7 +13,6 @@ from .models import (
     ViewBaseMess,
     ViewRealTimeInformation,
     Recommendation,
-    SiteSettings,
 )
 from django.contrib.admin.widgets import AutocompleteSelect, FilteredSelectMultiple
 from django.contrib.admin.widgets import AutocompleteSelect
@@ -158,16 +157,3 @@ class BatchSongTagForm(forms.Form):
         # 初始化时显示所有歌曲到待选框
         self.fields['available_songs'].queryset = Songs.objects.all().order_by('song_name')
         self.fields['selected_songs'].queryset = Songs.objects.none()
-
-
-class SiteSettingsForm(forms.ModelForm):
-    class Meta:
-        model = SiteSettings
-        fields = '__all__'
-        widgets = {
-            'favicon': forms.FileInput(attrs={
-                'class': 'drag-drop-upload',
-                'data-default-text': '点击选择文件或拖拽文件到这里',
-                'data-hover-text': '松开鼠标上传文件'
-            })
-        }

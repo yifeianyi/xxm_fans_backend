@@ -26,62 +26,9 @@ from .models import (
     ViewBaseMess,
     ViewRealTimeInformation,
     Recommendation,
-    SiteSettings,
 )
-from .forms import BVImportForm, SongRecordForm, SongStyleForm, SongTagForm, SiteSettingsForm
+from .forms import BVImportForm, SongRecordForm, SongStyleForm, SongTagForm
 from .utils import import_bv_song
-
-# 注册SiteSettings模型到Django管理后台
-@admin.register(SiteSettings)
-class SiteSettingsAdmin(admin.ModelAdmin):
-    form = SiteSettingsForm
-    list_display = ('id', 'favicon_preview', 'updated_at')
-    fields = ('favicon',)
-    
-    def favicon_preview(self, obj):
-        if obj.favicon:
-            return mark_safe(f'<img src="{obj.favicon.url}" style="height: 30px;" />')
-        return "未设置"
-    favicon_preview.short_description = "网站图标预览"
-    
-    def save_model(self, request, obj, form, change):
-        super().save_model(request, obj, form, change)
-        # 如果上传了图标文件，尝试转换为favicon.ico
-        if obj.favicon:
-            self.convert_to_favicon(obj)
-    
-    def convert_to_favicon(self, obj):
-        """将上传的图片转换为favicon.ico格式"""
-        import os
-        from PIL import Image
-        
-        try:
-            # 获取上传文件的路径
-            image_path = obj.favicon.path
-            # 获取covers目录的路径
-            covers_dir = os.path.dirname(image_path)
-            # favicon.ico的路径
-            favicon_path = os.path.join(covers_dir, 'favicon.ico')
-            
-            # 打开图片并转换为favicon格式
-            img = Image.open(image_path)
-            # 转换为RGB模式（如果需要）
-            if img.mode != 'RGB':
-                img = img.convert('RGB')
-            # 调整大小为32x32
-            img = img.resize((32, 32), Image.Resampling.LANCZOS)
-            # 保存为ICO格式
-            img.save(favicon_path, format='ICO')
-        except Exception as e:
-            # 如果转换失败，不影响正常保存
-            pass
-    
-    class Media:
-        css = {
-            'all': ('admin/css/drag-drop.css',)
-        }
-        js = ('admin/js/drag-drop.js',)
-
 
 # 构建默认的style和SongStyle表单管理界面
 # admin.site.register(Style)
@@ -713,6 +660,7 @@ class SongRecordAdmin(admin.ModelAdmin):
         return "-"
     cover_thumb.short_description = "封面缩略图"
 
+    
 
     # 导入BV演唱记录的视图
     def import_bv_view(self, request):

@@ -131,3 +131,22 @@ class Recommendation(models.Model):
 
     def __str__(self):
         return f"推荐语: {self.content[:50]}..." if len(self.content) > 50 else f"推荐语: {self.content}"
+
+
+class SiteSettings(models.Model):
+    favicon = models.ImageField(upload_to='', blank=True, null=True, verbose_name="网站图标")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "网站设置"
+        verbose_name_plural = "网站设置"
+
+    def __str__(self):
+        return "网站设置"
+        
+    def favicon_url(self):
+        """返回favicon的URL路径"""
+        if self.favicon:
+            return self.favicon.url
+        return None
