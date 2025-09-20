@@ -1,0 +1,2 @@
+Method,Name,Error,Occurrences
+GET,collections,404 Client Error: Not Found for url: collections,1017
