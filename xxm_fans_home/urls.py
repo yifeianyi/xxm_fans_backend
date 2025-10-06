@@ -37,6 +37,7 @@ from rest_framework import permissions
 urlpatterns = [
     path('',include('main.urls')),
     path('api/fansDIY/', include('fansDIY.urls')),
+    path('api/youyou/', include('youyou_SongList.urls')),
     path('admin/', admin.site.urls),
     # re_path(r'^swagger(?P<format>\.json|\.yaml), schema_view.without_ui(cache_timeout=0), name='schema-json'),
     # path('swagger/', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),

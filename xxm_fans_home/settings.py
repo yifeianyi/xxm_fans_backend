@@ -46,6 +46,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'main',
     'fansDIY',
+    'youyou_SongList',
     'rest_framework',
     # 'drf_yasg',
 ]
