@@ -723,7 +723,7 @@ class SongRecordAdmin(admin.ModelAdmin):
                 selected_song_id = request.POST.get("selected_song_id")
                 pending_parts_json = request.POST.get("pending_parts")
                 all_results_count = int(request.POST.get("all_results_count", 0))
-                
+
                 # 解析待处理分P信息
                 pending_parts = None
                 if pending_parts_json:
@@ -732,46 +732,80 @@ class SongRecordAdmin(admin.ModelAdmin):
                         pending_parts = json.loads(pending_parts_json)
                     except json.JSONDecodeError:
                         pending_parts = None
-                
+
                 import json
                 conflict_info = None
                 while True:
-                    result_list, remaining_parts, conflict_info = import_bv_song(
+                    from tools.bilibili_importer import BilibiliImporter
+                    importer = BilibiliImporter()
+
+                    result_list, remaining_parts, conflict_info = importer.import_bv_song(
                         bvid,
                         selected_song_id=selected_song_id,
                         pending_parts=pending_parts
                     )
+
+                    # 展平 result_list（避免嵌套）
+                    flattened_result_list = []
+                    for item in result_list:
+                        if isinstance(item, list):
+                            flattened_result_list.extend(item)
+                        else:
+                            flattened_result_list.append(item)
+                    result_list = flattened_result_list
+
                     all_results_count += len(result_list)
+
                     # 显示导入结果
                     for result in result_list:
-                        msg = f"✅ {result['song_name']}"
-                        if result["note"]:
+                        if not isinstance(result, dict):
+                            self.message_user(request, f"⚠️ 导入结果格式异常: {result}", level=messages.WARNING)
+                            continue
+
+                        song_name = result.get('song_name', '未知歌曲')
+                        msg = f"✅ {song_name}"
+                        if result.get("note"):
                             msg += f"（{result['note']}）"
-                        if result["created_song"]:
+                        if result.get("created_song"):
                             msg += "，🎵 新建歌曲"
-                        if result["cover_url"]:
+                        if result.get("cover_url"):
                             msg += "，🖼️ 封面已下载"
                         self.message_user(request, msg, level=messages.SUCCESS)
-                    # 如果有冲突，跳出循环，交给后续处理
+
+                    # 如果有冲突
                     if conflict_info:
-                        break
-                    # 如果没有剩余，全部完成
+                        # 判断是不是第一次进入冲突处理
+                        if not selected_song_id:
+                            # 首次进入 -> 返回选择页面
+                            remaining_parts_for_template = conflict_info["remaining_parts"]
+                            if isinstance(remaining_parts_for_template, str):
+                                try:
+                                    remaining_parts_for_template = json.loads(remaining_parts_for_template)
+                                except json.JSONDecodeError:
+                                    pass
+
+                            return render(request, "admin/select_song.html", {
+                                "song_name": conflict_info["song_name"],
+                                "candidates": conflict_info["candidates"],
+                                "bvid": bvid,
+                                "pending_parts": json.dumps(remaining_parts_for_template) if not isinstance(remaining_parts_for_template, str) else remaining_parts_for_template,
+                                "current_part": conflict_info["current_part"],
+                                "all_results_count": all_results_count,
+                            })
+                        else:
+                            # 用户已经选择了歌曲 -> 清空 selected_song_id，用于继续后续 pending_parts
+                            pending_parts = conflict_info["remaining_parts"]
+                            selected_song_id = None
+                            continue
+
+                    # 没有剩余 -> 完成
                     if not remaining_parts:
                         self.message_user(request, f"🎉 BV导入完成！共处理 {all_results_count} 条记录", level=messages.SUCCESS)
                         return redirect("admin:main_songrecord_changelist")
+
                     # 没有冲突但还有剩余，继续循环
                     pending_parts = remaining_parts
                     selected_song_id = None
-                # 如果有冲突，渲染人工选择页面，并传递累计all_results_count
-                if conflict_info:
-                    return render(request, "admin/select_song.html", {
-                        "song_name": conflict_info["song_name"],
-                        "candidates": conflict_info["candidates"],
-                        "bvid": bvid,
-                        "pending_parts": json.dumps(conflict_info["remaining_parts"]),
-                        "current_part": conflict_info["current_part"],
-                        "all_results_count": all_results_count,
-                    })
         else:
             form = BVImportForm()
         return render(request, "admin/import_bv_form.html", {"form": form})

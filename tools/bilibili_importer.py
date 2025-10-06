@@ -132,7 +132,7 @@ class BilibiliImporter:
         return pending_parts
     
     def _process_current_part(self, bvid, pending_parts, selected_song_id, cur_song_counts):
-        """处理当前分P"""
+        """处理当前分P (由用户在冲突页面选择歌曲后调用)"""
         current_part = pending_parts[0]
         song_name = current_part["song_name"]
         performed_date = datetime.strptime(current_part["performed_date"], "%Y-%m-%d").date()
@@ -142,53 +142,55 @@ class BilibiliImporter:
         remaining_parts = []
         conflict_info = None
         
-        try:
-            song_obj = Songs.objects.get(id=selected_song_id)
-            created_song = False
-        except Songs.DoesNotExist:
-            # 如果选定的歌曲不存在，跳过这个分P
-            remaining_parts = pending_parts[1:]
-            results.append({
-                "song_name": song_name,
-                "url": part_url,
-                "note": "❌ 选定的歌曲不存在，跳过",
-                "created_song": False,
-                "cover_url": cover_url,
-            })
-            return results, remaining_parts, conflict_info
-        
-        if SongRecord.objects.filter(song=song_obj, performed_at=performed_date).exists():
-            results.append({
-                "song_name": song_name,
-                "url": part_url,
-                "note": "❌ 已存在，跳过",
-                "created_song": created_song,
-                "cover_url": cover_url,
-            })
-        else:
-            cur_song_counts[song_name] += 1
-            count = cur_song_counts[song_name]
-            note = f"同批版本 {count}" if count > 1 else None
+        # 当用户提供 selected_song_id 时，直接使用它关联歌曲
+        # 这是解决冲突的关键步骤
+        if selected_song_id:
+            try:
+                song_obj = Songs.objects.get(id=selected_song_id)
+                created_song = False
+                
+                if SongRecord.objects.filter(song=song_obj, performed_at=performed_date).exists():
+                    results.append({
+                        "song_name": song_name,
+                        "url": part_url,
+                        "note": "❌ 已存在，跳过",
+                        "created_song": created_song,
+                        "cover_url": cover_url,
+                    })
+                else:
+                    cur_song_counts[song_name] += 1
+                    count = cur_song_counts[song_name]
+                    note = f"同批版本 {count}" if count > 1 else None
+                    
+                    # ✅ 下载并保存封面
+                    final_cover_url = self.download_and_save_cover(cover_url, performed_date)
+                    
+                    # ✅ 创建记录
+                    SongRecord.objects.create(
+                        song=song_obj,
+                        performed_at=performed_date,
+                        url=part_url,
+                        notes=note,
+                        cover_url=final_cover_url
+                    )
+                    
+                    results.append({
+                        "song_name": song_name,
+                        "url": part_url,
+                        "note": note,
+                        "created_song": created_song,
+                        "cover_url": final_cover_url
+                    })
             
-            # ✅ 下载并保存封面
-            final_cover_url = self.download_and_save_cover(cover_url, performed_date)
-            
-            # ✅ 创建记录
-            SongRecord.objects.create(
-                song=song_obj,
-                performed_at=performed_date,
-                url=part_url,
-                notes=note,
-                cover_url=final_cover_url
-            )
-            
-            results.append({
-                "song_name": song_name,
-                "url": part_url,
-                "note": note,
-                "created_song": created_song,
-                "cover_url": final_cover_url
-            })
+            except Songs.DoesNotExist:
+                # 如果选定的歌曲不存在，这通常不应该发生，但为了健壮性还是处理一下
+                results.append({
+                    "song_name": song_name,
+                    "url": part_url,
+                    "note": "❌ 选定的歌曲不存在",
+                    "created_song": False,
+                    "cover_url": cover_url,
+                })
         
         # 移除已处理的分P
         remaining_parts = pending_parts[1:]
@@ -209,12 +211,22 @@ class BilibiliImporter:
             except MultipleObjectsReturned:
                 # 遇到冲突，返回冲突信息
                 candidates = Songs.objects.filter(song_name=song_name)
+                # 构建从当前 part 开始的剩余部分列表
+                # 首先添加当前有冲突的 part
+                conflict_parts = [part]
+                # 然后添加当前 part 之后的所有 parts
+                remaining_index = parts_to_process.index(part) + 1
+                if remaining_index < len(parts_to_process):
+                    conflict_parts.extend(parts_to_process[remaining_index:])
+                
                 conflict_info = {
                     "song_name": song_name,
                     "candidates": candidates,
                     "current_part": part,
-                    "remaining_parts": parts_to_process[parts_to_process.index(part):]
+                    "remaining_parts": conflict_parts # 传递包含当前冲突和后续所有待处理的部分
                 }
+                # 当发生冲突时，立即返回当前已处理的结果和冲突信息
+                # remaining_parts 返回空列表，表示中断主循环
                 return results, [], conflict_info
             
             if SongRecord.objects.filter(song=song_obj, performed_at=performed_date).exists():
