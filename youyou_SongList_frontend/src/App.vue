@@ -69,10 +69,10 @@
           :border="true"
           class="songs-table"
         >
-          <el-table-column prop="song_name" label="歌曲名称" width="200" />
-          <el-table-column prop="language" label="语言" width="120" />
-          <el-table-column prop="singer" label="歌手" width="180" />
-          <el-table-column prop="style" label="曲风" width="120" />
+          <el-table-column prop="song_name" label="歌曲名称" :width="isMobile ? 120 : 200" />
+          <el-table-column prop="language" label="语言" :width="isMobile ? 80 : 120" />
+          <el-table-column prop="singer" label="歌手" :width="isMobile ? 120 : 180" />
+          <el-table-column prop="style" label="曲风" :width="isMobile ? 80 : 120" />
           <el-table-column prop="note" label="备注" />
         </el-table>
       </div>
@@ -124,6 +124,7 @@ export default {
     const searchText = ref('')
     const headIconUrl = ref('/favicon.ico')
     const backgroundUrl = ref('')
+    const isMobile = ref(window.innerWidth <= 768)
     
     // 盲盒相关
     const showRandomSongDialog = ref(false)
@@ -286,11 +287,24 @@ export default {
       }
     }
 
+    // 判断是否为移动端设备
+    const checkIsMobile = () => {
+      return window.innerWidth <= 768
+    }
+    
     onMounted(() => {
+      // 初始化isMobile值
+      isMobile.value = checkIsMobile()
+      
       fetchSongs()
       fetchLanguages()
       fetchStyles()
       fetchSiteSettings()
+      
+      // 监听窗口大小变化以更新isMobile值
+      window.addEventListener('resize', () => {
+        isMobile.value = checkIsMobile()
+      })
     })
 
     return {
@@ -302,6 +316,7 @@ export default {
       searchText,
       headIconUrl,
       backgroundUrl,
+      isMobile,
       filterSongs,
       searchSongs,
       resetFilters,
@@ -543,8 +558,38 @@ export default {
     display: flex;
     justify-content: space-between;
     width: 100%;
-    /* gap: ; */
+    gap: 2%;
     box-sizing: border-box;
+  }
+  
+  /* 调整表格列宽使其在移动端更紧凑 */
+  .songs-table ::v-deep .el-table__body td {
+    padding: 3px 0;
+  }
+  
+  /* 移动端表格列宽调整 */
+  .songs-table ::v-deep .el-table__header th:nth-child(1),
+  .songs-table ::v-deep .el-table__body td:nth-child(1) {
+    width: 100px !important;
+    min-width: 100px !important;
+  }
+  
+  .songs-table ::v-deep .el-table__header th:nth-child(2),
+  .songs-table ::v-deep .el-table__body td:nth-child(2) {
+    width: 60px !important;
+    min-width: 60px !important;
+  }
+  
+  .songs-table ::v-deep .el-table__header th:nth-child(3),
+  .songs-table ::v-deep .el-table__body td:nth-child(3) {
+    width: 100px !important;
+    min-width: 100px !important;
+  }
+  
+  .songs-table ::v-deep .el-table__header th:nth-child(4),
+  .songs-table ::v-deep .el-table__body td:nth-child(4) {
+    width: 60px !important;
+    min-width: 60px !important;
   }
 }
 
