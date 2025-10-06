@@ -52,7 +52,9 @@
                   <el-button icon="Search" @click="searchSongs" />
                 </template>
               </el-input>
-              
+            </div>
+            
+            <div class="button-container">
               <el-button @click="resetFilters" type="warning" class="reset-button">重置</el-button>
               <el-button @click="getRandomSong" type="success" class="random-button">盲盒</el-button>
             </div>
@@ -513,6 +515,7 @@ export default {
     flex-direction: column;
     min-width: 0;
     align-items: stretch;
+    box-sizing: border-box;
   }
   
   .search-input {
@@ -524,15 +527,24 @@ export default {
   .reset-button, .random-button {
     width: 48%;
     flex-shrink: 0;
-    margin-left: 0;
+    margin: 10px 0 0 0;
   }
   
   .reset-button {
-    margin-right: 4%;
+    margin-right: 2%;
   }
   
   .filters-container {
     padding: 0 10px;
+  }
+  
+  /* 添加按钮容器确保按钮在同一行 */
+  .button-container {
+    display: flex;
+    justify-content: space-between;
+    width: 100%;
+    /* gap: ; */
+    box-sizing: border-box;
   }
 }
 
