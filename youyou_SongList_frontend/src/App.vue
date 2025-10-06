@@ -66,18 +66,12 @@ export default {
           // 根据position设置headIcon和background
           data.forEach(setting => {
             if (setting.position === 1) {
-              // 在开发环境中使用/public目录下的图片
-              // 在生产环境中使用完整的路径
-              headIconUrl.value = process.env.NODE_ENV === 'development' ? 
-                `/photos/${setting.position}.png` : 
-                (setting.photoURL.startsWith('photos/') ? setting.photoURL : `photos/${setting.photoURL}`) || '/favicon.ico'
+              // 统一使用/photos/前缀
+              headIconUrl.value = setting.photoURL ? `/photos/${setting.photoURL}` : '/favicon.ico'
               console.log('设置headIconUrl为:', headIconUrl.value)
             } else if (setting.position === 2) {
-              // 在开发环境中使用/public目录下的图片
-              // 在生产环境中使用完整的路径
-              backgroundUrl.value = process.env.NODE_ENV === 'development' ? 
-                `/photos/${setting.position}.png` : 
-                (setting.photoURL.startsWith('photos/') ? setting.photoURL : `photos/${setting.photoURL}`)
+              // 统一使用/photos/前缀
+              backgroundUrl.value = setting.photoURL ? `/photos/${setting.photoURL}` : ''
               console.log('设置backgroundUrl为:', backgroundUrl.value)
             }
           })
