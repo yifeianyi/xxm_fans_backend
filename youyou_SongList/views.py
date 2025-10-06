@@ -1,13 +1,38 @@
 from django.shortcuts import render
 from django.http import JsonResponse
+from django.db.models import Q
 from .models import you_Songs, you_site_setting
 import json
 
 # Create your views here.
 def song_list(request):
     if request.method == 'GET':
-        songs = you_Songs.objects.all().values()
+        # 获取查询参数
+        language = request.GET.get('language', '')
+        search = request.GET.get('search', '')
+        
+        # 构建查询
+        songs = you_Songs.objects.all()
+        
+        # 语言筛选
+        if language:
+            songs = songs.filter(language=language)
+            
+        # 搜索功能（歌名或歌手）
+        if search:
+            songs = songs.filter(
+                Q(song_name__icontains=search) | Q(singer__icontains=search)
+            )
+            
+        songs = songs.values()
         return JsonResponse(list(songs), safe=False)
+
+
+def get_languages(request):
+    """获取所有语言列表"""
+    if request.method == 'GET':
+        languages = you_Songs.objects.exclude(language='').values_list('language', flat=True).distinct()
+        return JsonResponse(list(languages), safe=False)
 
 
 def site_settings(request):
