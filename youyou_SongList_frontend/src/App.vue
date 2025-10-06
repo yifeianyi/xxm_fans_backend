@@ -1,6 +1,7 @@
 <template>
   <div id="app">
-    <div class="content" :style="{ backgroundImage: backgroundUrl ? `url(${backgroundUrl})` : 'none' }">
+    <div class="background" :style="{ backgroundImage: backgroundUrl ? `url(${backgroundUrl})` : 'none' }"></div>
+    <div class="content">
       <div class="header">
         <HeadIcon v-if="headIconUrl" :url="headIconUrl" />
         <h1>由由的歌单</h1>
@@ -325,23 +326,25 @@ export default {
   padding: 0;
 }
 
-.content {
-  padding: 0;
-  margin: 0;
+.background {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
-  min-height: 100vh;
-  height: 100%;
-  background-color: rgba(255, 255, 255, 0.3);
-  background-blend-mode: overlay;
+  z-index: -1;
+}
+
+.content {
+  padding: 0;
+  margin: 0;
   width: 100%;
   box-sizing: border-box;
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
+  position: relative;
+  z-index: 1;
 }
 
 .header {
