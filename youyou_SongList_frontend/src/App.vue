@@ -23,6 +23,21 @@
               </el-option>
             </el-select>
             
+            <el-select 
+              v-model="selectedStyle" 
+              placeholder="请选择曲风" 
+              clearable 
+              @change="filterSongs"
+              class="filter-select"
+            >
+              <el-option
+                v-for="style in styles"
+                :key="style"
+                :label="style"
+                :value="style">
+              </el-option>
+            </el-select>
+            
             <div class="search-container">
               <el-input
                 v-model="searchText"
@@ -74,7 +89,9 @@ export default {
     const songs = ref([])
     const filteredSongs = ref([])
     const languages = ref([])
+    const styles = ref([])
     const selectedLanguage = ref('')
+    const selectedStyle = ref('')
     const searchText = ref('')
     const headIconUrl = ref('/favicon.ico')
     const backgroundUrl = ref('')
@@ -91,6 +108,21 @@ export default {
         }
       } catch (error) {
         console.error('获取语言列表失败:', error)
+      }
+    }
+
+    // 获取所有曲风列表
+    const fetchStyles = async () => {
+      try {
+        const response = await fetch('/api/youyou/styles/')
+        if (response.ok) {
+          const data = await response.json()
+          styles.value = data
+        } else {
+          console.error('获取曲风列表失败，HTTP状态:', response.status)
+        }
+      } catch (error) {
+        console.error('获取曲风列表失败:', error)
       }
     }
 
@@ -116,6 +148,9 @@ export default {
         if (selectedLanguage.value) {
           params.append('language', selectedLanguage.value)
         }
+        if (selectedStyle.value) {
+          params.append('style', selectedStyle.value)
+        }
         if (searchText.value) {
           params.append('search', searchText.value)
         }
@@ -140,6 +175,7 @@ export default {
     // 重置筛选条件
     const resetFilters = () => {
       selectedLanguage.value = ''
+      selectedStyle.value = ''
       searchText.value = ''
       fetchSongs() // 重新获取所有歌曲
     }
@@ -185,13 +221,16 @@ export default {
     onMounted(() => {
       fetchSongs()
       fetchLanguages()
+      fetchStyles()
       fetchSiteSettings()
     })
 
     return {
       filteredSongs,
       languages,
+      styles,
       selectedLanguage,
+      selectedStyle,
       searchText,
       headIconUrl,
       backgroundUrl,

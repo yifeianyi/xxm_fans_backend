@@ -9,6 +9,7 @@ def song_list(request):
     if request.method == 'GET':
         # 获取查询参数
         language = request.GET.get('language', '')
+        style = request.GET.get('style', '')
         search = request.GET.get('search', '')
         
         # 构建查询
@@ -17,6 +18,10 @@ def song_list(request):
         # 语言筛选
         if language:
             songs = songs.filter(language=language)
+            
+        # 曲风筛选
+        if style:
+            songs = songs.filter(style=style)
             
         # 搜索功能（歌名或歌手）
         if search:
@@ -33,6 +38,13 @@ def get_languages(request):
     if request.method == 'GET':
         languages = you_Songs.objects.exclude(language='').values_list('language', flat=True).distinct()
         return JsonResponse(list(languages), safe=False)
+
+
+def get_styles(request):
+    """获取所有曲风列表"""
+    if request.method == 'GET':
+        styles = you_Songs.objects.exclude(style='').values_list('style', flat=True).distinct()
+        return JsonResponse(list(styles), safe=False)
 
 
 def site_settings(request):
