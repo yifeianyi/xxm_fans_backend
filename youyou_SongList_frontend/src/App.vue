@@ -53,6 +53,7 @@
               </el-input>
               
               <el-button @click="resetFilters" type="warning" class="reset-button">重置</el-button>
+              <el-button @click="getRandomSong" type="success" class="random-button">盲盒</el-button>
             </div>
           </div>
         </div>
@@ -73,6 +74,31 @@
         </el-table>
       </div>
     </div>
+    
+    <!-- 盲盒歌曲弹窗 -->
+    <el-dialog
+      v-model="showRandomSongDialog"
+      title="盲盒歌曲"
+      width="500px"
+      custom-class="random-song-dialog"
+    >
+      <div v-if="randomSong" class="random-song-content">
+        <h3>{{ randomSong.song_name }}</h3>
+        <p>歌手: {{ randomSong.singer }}</p>
+        <p>语言: {{ randomSong.language }}</p>
+        <p>曲风: {{ randomSong.style }}</p>
+        <p v-if="randomSong.note">备注: {{ randomSong.note }}</p>
+      </div>
+      <div v-else>
+        <p>暂无符合条件的歌曲</p>
+      </div>
+      <template #footer>
+        <span class="dialog-footer">
+          <el-button @click="showRandomSongDialog = false">关闭</el-button>
+          <el-button type="primary" @click="getRandomSong">再抽一次</el-button>
+        </span>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -95,6 +121,10 @@ export default {
     const searchText = ref('')
     const headIconUrl = ref('/favicon.ico')
     const backgroundUrl = ref('')
+    
+    // 盲盒相关
+    const showRandomSongDialog = ref(false)
+    const randomSong = ref(null)
 
     // 获取所有语言列表
     const fetchLanguages = async () => {
@@ -179,6 +209,41 @@ export default {
       searchText.value = ''
       fetchSongs() // 重新获取所有歌曲
     }
+    
+    // 获取随机歌曲（盲盒功能）
+    const getRandomSong = async () => {
+      try {
+        const params = new URLSearchParams()
+        // 应用当前的筛选条件
+        if (selectedLanguage.value) {
+          params.append('language', selectedLanguage.value)
+        }
+        if (selectedStyle.value) {
+          params.append('style', selectedStyle.value)
+        }
+        if (searchText.value) {
+          params.append('search', searchText.value)
+        }
+        
+        const response = await fetch(`/api/youyou/random-song/?${params.toString()}`)
+        if (response.ok) {
+          const data = await response.json()
+          randomSong.value = data
+          showRandomSongDialog.value = true
+        } else if (response.status === 404) {
+          randomSong.value = null
+          showRandomSongDialog.value = true
+        } else {
+          console.error('获取随机歌曲失败，HTTP状态:', response.status)
+          randomSong.value = null
+          showRandomSongDialog.value = true
+        }
+      } catch (error) {
+        console.error('获取随机歌曲失败:', error)
+        randomSong.value = null
+        showRandomSongDialog.value = true
+      }
+    }
 
     const fetchSiteSettings = async () => {
       try {
@@ -236,7 +301,10 @@ export default {
       backgroundUrl,
       filterSongs,
       searchSongs,
-      resetFilters
+      resetFilters,
+      getRandomSong,
+      showRandomSongDialog,
+      randomSong
     }
   }
 }
@@ -331,6 +399,12 @@ export default {
   min-width: 80px;
 }
 
+.random-button {
+  flex-shrink: 0;
+  min-width: 80px;
+  margin-left: 10px;
+}
+
 .table-container {
   max-width: 1200px;
   margin: 0 auto;
@@ -374,6 +448,25 @@ export default {
   border-color: #409EFF;
 }
 
+.random-song-content h3 {
+  font-size: 24px;
+  margin-bottom: 15px;
+  color: #333;
+}
+
+.random-song-content p {
+  font-size: 16px;
+  margin: 8px 0;
+  color: #666;
+}
+
+.dialog-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 20px;
+}
+
 @media (max-width: 768px) {
   .header h1 {
     font-size: 2rem;
@@ -415,9 +508,14 @@ export default {
     width: 100%;
   }
   
-  .reset-button {
-    width: 100%;
+  .reset-button, .random-button {
+    width: 48%;
     flex-shrink: 0;
+    margin-left: 0;
+  }
+  
+  .reset-button {
+    margin-right: 4%;
   }
   
   .filters-container {

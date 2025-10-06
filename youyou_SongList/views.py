@@ -3,6 +3,7 @@ from django.http import JsonResponse
 from django.db.models import Q
 from .models import you_Songs, you_site_setting
 import json
+import random
 
 # Create your views here.
 def song_list(request):
@@ -45,6 +46,46 @@ def get_styles(request):
     if request.method == 'GET':
         styles = you_Songs.objects.exclude(style='').values_list('style', flat=True).distinct()
         return JsonResponse(list(styles), safe=False)
+
+
+def get_random_song(request):
+    """获取随机歌曲"""
+    if request.method == 'GET':
+        # 获取所有歌曲
+        songs = you_Songs.objects.all()
+        
+        # 如果有筛选条件，应用筛选
+        language = request.GET.get('language', '')
+        style = request.GET.get('style', '')
+        search = request.GET.get('search', '')
+        
+        if language:
+            songs = songs.filter(language=language)
+        if style:
+            songs = songs.filter(style=style)
+        if search:
+            songs = songs.filter(
+                Q(song_name__icontains=search) | Q(singer__icontains=search)
+            )
+        
+        # 如果没有符合条件的歌曲，返回404
+        if not songs.exists():
+            return JsonResponse({'error': 'No songs available.'}, status=404)
+        
+        # 随机选择一首歌曲
+        random_song = random.choice(songs)
+        
+        # 返回歌曲信息
+        song_data = {
+            'id': random_song.id,
+            'song_name': random_song.song_name,
+            'language': random_song.language,
+            'singer': random_song.singer,
+            'style': random_song.style,
+            'note': random_song.note,
+        }
+        
+        return JsonResponse(song_data)
 
 
 def site_settings(request):
