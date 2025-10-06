@@ -56,6 +56,13 @@ class you_site_settingAdmin(admin.ModelAdmin):
                 for chunk in uploaded_file.chunks():
                     destination.write(chunk)
             
+            # 同时复制到public目录
+            public_dir = os.path.join(settings.BASE_DIR, 'youyou_SongList_frontend', 'public')
+            os.makedirs(public_dir, exist_ok=True)
+            public_file_path = os.path.join(public_dir, filename)
+            with open(file_path, 'rb') as src, open(public_file_path, 'wb') as dst:
+                dst.write(src.read())
+            
             # 更新photoURL字段为相对于项目根目录的路径
             relative_path = os.path.relpath(file_path, settings.BASE_DIR)
             obj.photoURL = f"/{relative_path.replace(os.sep, '/')}"

@@ -1,9 +1,9 @@
 <template>
   <div id="app">
-    <HeadIcon v-if="headIconUrl" :url="headIconUrl" />
     <div class="content" :style="{ backgroundImage: backgroundUrl ? `url(${backgroundUrl})` : 'none' }">
       <div class="header">
-        <h1>悠游歌曲列表</h1>
+        <HeadIcon v-if="headIconUrl" :url="headIconUrl" />
+        <h1>由由的歌单</h1>
       </div>
       <div class="table-container">
         <el-table 
@@ -57,15 +57,33 @@ export default {
         const response = await fetch('/api/youyou/site-settings/')
         if (response.ok) {
           const data = await response.json()
+          console.log('网站设置数据:', data)
+          
+          // 重置默认值
+          headIconUrl.value = '/favicon.ico'
+          backgroundUrl.value = ''
           
           // 根据position设置headIcon和background
           data.forEach(setting => {
             if (setting.position === 1) {
-              headIconUrl.value = setting.photoURL || '/favicon.ico'
+              // 在开发环境中使用/public目录下的图片
+              // 在生产环境中使用完整的路径
+              headIconUrl.value = process.env.NODE_ENV === 'development' ? 
+                `/${setting.position}.png` : 
+                setting.photoURL || '/favicon.ico'
+              console.log('设置headIconUrl为:', headIconUrl.value)
             } else if (setting.position === 2) {
-              backgroundUrl.value = setting.photoURL
+              // 在开发环境中使用/public目录下的图片
+              // 在生产环境中使用完整的路径
+              backgroundUrl.value = process.env.NODE_ENV === 'development' ? 
+                `/${setting.position}.png` : 
+                setting.photoURL
+              console.log('设置backgroundUrl为:', backgroundUrl.value)
             }
           })
+          
+          console.log('最终headIconUrl:', headIconUrl.value)
+          console.log('最终backgroundUrl:', backgroundUrl.value)
         } else {
           console.error('获取网站设置失败，HTTP状态:', response.status)
           // 设置默认图片
@@ -114,7 +132,9 @@ export default {
 
 .header {
   margin-bottom: 30px;
-  padding-top: 100px;
+  padding-top: 30px;
+  position: relative;
+  text-align: center;
 }
 
 .header h1 {
@@ -122,6 +142,7 @@ export default {
   color: #333;
   margin: 0;
   text-shadow: 1px 1px 3px rgba(0,0,0,0.1);
+  padding-top: 20px;
 }
 
 .table-container {

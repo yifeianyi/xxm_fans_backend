@@ -24,23 +24,21 @@ export default {
 
 <style scoped>
 .head-icon {
-  position: fixed;
-  top: 20px;
-  left: 50%;
-  transform: translateX(-50%);
+  position: relative;
   z-index: 1000;
-  width: 80px;
-  height: 80px;
+  width: 240px;
+  height: 240px;
   border-radius: 50%;
   background-color: white;
   padding: 5px;
   box-shadow: 0 4px 12px rgba(0,0,0,0.15);
   transition: transform 0.3s ease;
   border: 2px solid #409EFF;
+  margin: 0 auto;
 }
 
 .head-icon:hover {
-  transform: translateX(-50%) scale(1.05);
+  transform: scale(1.05);
 }
 
 .head-icon img {
