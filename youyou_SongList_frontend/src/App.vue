@@ -221,7 +221,7 @@ export default {
   background-size: cover;
   background-position: center;
   min-height: 100vh;
-  background-color: rgba(255, 255, 255, 0.9);
+  background-color: rgba(255, 255, 255, 0.3);
   background-blend-mode: overlay;
   width: 100%;
   box-sizing: border-box;
