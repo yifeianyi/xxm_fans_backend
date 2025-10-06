@@ -321,17 +321,27 @@ export default {
   position: relative;
   width: 100%;
   overflow-x: hidden;
+  margin: 0;
+  padding: 0;
 }
 
 .content {
-  padding: 20px;
+  padding: 0;
+  margin: 0;
   background-size: cover;
   background-position: center;
+  background-repeat: no-repeat;
   min-height: 100vh;
+  height: 100%;
   background-color: rgba(255, 255, 255, 0.3);
   background-blend-mode: overlay;
   width: 100%;
   box-sizing: border-box;
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
 }
 
 .header {
@@ -354,7 +364,7 @@ export default {
   margin: 0 auto 20px;
   padding: 0 20px;
   width: 100%;
-  box-sizing: border-box; /* 确保padding包含在宽度内 */
+  box-sizing: border-box;
 }
 
 .filters-wrapper {
@@ -376,9 +386,9 @@ export default {
 }
 
 .filter-select {
-  flex-shrink: 1; /* 允许筛选框缩小 */
+  flex-shrink: 1;
   width: 200px;
-  max-width: 30%; /* 限制最大宽度 */
+  max-width: 30%;
 }
 
 .search-container {
@@ -386,12 +396,12 @@ export default {
   flex: 1;
   gap: 10px;
   min-width: 0;
-  align-items: center; /* 垂直居中 */
+  align-items: center;
 }
 
 .search-input {
   flex: 1;
-  min-width: 0; /* 防止输入框溢出 */
+  min-width: 0;
 }
 
 .reset-button {
