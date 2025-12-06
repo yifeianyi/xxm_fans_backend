@@ -4,7 +4,7 @@
     <div class="content">
       <div class="header">
         <HeadIcon v-if="headIconUrl" :url="headIconUrl" />
-        <h1>由由的歌单</h1>
+        <h1>乐游的歌单</h1>
       </div>
       <div class="filters-container">
         <div class="filters-wrapper">
