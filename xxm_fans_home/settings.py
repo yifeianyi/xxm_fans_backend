@@ -47,6 +47,7 @@ INSTALLED_APPS = [
     'main',
     'fansDIY',
     'youyou_SongList',
+    'bingjie_SongList',
     'rest_framework',
     # 'drf_yasg',
 ]
