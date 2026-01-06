@@ -150,3 +150,71 @@ class SiteSettings(models.Model):
         if self.favicon:
             return self.favicon.url
         return None
+
+
+# 数据分析相关模型
+class WorkStatic(models.Model):
+    """作品静态信息表"""
+    platform = models.CharField(max_length=50, verbose_name="平台")
+    work_id = models.CharField(max_length=100, verbose_name="作品ID")
+    title = models.CharField(max_length=500, verbose_name="标题")
+    author = models.CharField(max_length=200, verbose_name="作者")
+    publish_time = models.DateTimeField(verbose_name="发布时间")
+    cover_url = models.URLField(max_length=500, blank=True, null=True, verbose_name="封面URL")
+
+    class Meta:
+        verbose_name = "作品静态信息"
+        verbose_name_plural = "作品静态信息"
+        unique_together = ("platform", "work_id")
+        ordering = ['-publish_time']
+
+    def __str__(self):
+        return f"{self.title} - {self.author}"
+
+
+class WorkMetricsHour(models.Model):
+    """作品小时级指标表"""
+    platform = models.CharField(max_length=50, verbose_name="平台")
+    work_id = models.CharField(max_length=100, verbose_name="作品ID")
+    crawl_time = models.DateTimeField(verbose_name="爬取时间")
+    view_count = models.IntegerField(default=0, verbose_name="播放数")
+    like_count = models.IntegerField(default=0, verbose_name="点赞数")
+    coin_count = models.IntegerField(default=0, verbose_name="投币数")
+    favorite_count = models.IntegerField(default=0, verbose_name="收藏数")
+    danmaku_count = models.IntegerField(default=0, verbose_name="弹幕数")
+    comment_count = models.IntegerField(default=0, verbose_name="评论数")
+    session_id = models.IntegerField(verbose_name="会话ID")
+    ingest_time = models.DateTimeField(auto_now_add=True, verbose_name="入库时间")
+
+    class Meta:
+        verbose_name = "作品小时指标"
+        verbose_name_plural = "作品小时指标"
+        ordering = ['-crawl_time']
+        indexes = [
+            models.Index(fields=['platform', 'work_id']),
+            models.Index(fields=['crawl_time']),
+            models.Index(fields=['session_id']),
+        ]
+
+    def __str__(self):
+        return f"{self.work_id} @ {self.crawl_time}"
+
+
+class CrawlSession(models.Model):
+    """爬取会话表"""
+    source = models.CharField(max_length=50, verbose_name="数据源")
+    node_id = models.CharField(max_length=100, verbose_name="节点ID")
+    start_time = models.DateTimeField(verbose_name="开始时间")
+    end_time = models.DateTimeField(blank=True, null=True, verbose_name="结束时间")
+    total_work_count = models.IntegerField(default=0, verbose_name="总作品数")
+    success_count = models.IntegerField(default=0, verbose_name="成功数")
+    fail_count = models.IntegerField(default=0, verbose_name="失败数")
+    note = models.TextField(blank=True, null=True, verbose_name="备注")
+
+    class Meta:
+        verbose_name = "爬取会话"
+        verbose_name_plural = "爬取会话"
+        ordering = ['-start_time']
+
+    def __str__(self):
+        return f"{self.source} - {self.node_id} @ {self.start_time}"

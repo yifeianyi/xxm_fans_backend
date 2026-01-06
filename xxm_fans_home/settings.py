@@ -92,6 +92,13 @@ DATABASES = {
         'OPTIONS': {
             'timeout': 20,
         }
+    },
+    'view_data_db': {
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': BASE_DIR / 'view_data.sqlite3',
+        'OPTIONS': {
+            'timeout': 20,
+        }
     }
 }
 
@@ -144,6 +151,9 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'xxm_fans_frontend', 'public', 'covers')
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# 数据库路由配置
+DATABASE_ROUTERS = ['main.db_router.ViewDataDbRouter']
 # ✅ 统一 JSON 格式响应，防止 400 Bad Request
 REST_FRAMEWORK = {
     'DEFAULT_RENDERER_CLASSES': [
