@@ -32,10 +32,13 @@ class BilibiliImporter:
         :return: (results, remaining_parts, conflict_info)
         """
         print(f"[BV:{bvid}] 开始导入")
+        print(f"[BV:{bvid}] 参数: selected_song_id={selected_song_id}, pending_parts={'None' if pending_parts is None else len(pending_parts)}")
         
         # 如果没有待处理分P，则解析整个BV
         if pending_parts is None:
+            print(f"[BV:{bvid}] 开始解析分P信息")
             pending_parts = self._parse_bv_parts(bvid)
+            print(f"[BV:{bvid}] 解析完成，找到 {len(pending_parts)} 个分P")
         
         results = []
         cur_song_counts = defaultdict(int)
@@ -66,14 +69,18 @@ class BilibiliImporter:
         """解析BV的所有分P信息"""
         # Step 1: 获取分P信息
         pagelist_url = f"https://api.bilibili.com/x/player/pagelist?bvid={bvid}"
-        response = requests.get(pagelist_url, headers=self.headers)
-        response.raise_for_status()
-        json_data = response.json()
+        try:
+            response = requests.get(pagelist_url, headers=self.headers, timeout=10)
+            response.raise_for_status()
+            json_data = response.json()
+        except requests.exceptions.RequestException as e:
+            print(f"[BV:{bvid}] 获取分P信息失败: {e}")
+            return []
         
         # Step 2: 获取视频总封面（用于 fallback）
         fallback_cover_url = None
         try:
-            video_info = requests.get(f"https://api.bilibili.com/x/web-interface/view?bvid={bvid}", headers=self.headers).json()
+            video_info = requests.get(f"https://api.bilibili.com/x/web-interface/view?bvid={bvid}", headers=self.headers, timeout=10).json()
             if video_info["code"] == 0:
                 fallback_cover_url = video_info["data"]["pic"]
         except Exception as e:
@@ -276,20 +283,31 @@ class BilibiliImporter:
             year = performed_date.strftime("%Y")
             month = performed_date.strftime("%m")
             
-            # 本地封面目录根（已迁移到前端public目录）
-            BASE_DIR = os.path.join(".", "xxm_fans_frontend", "public", "covers")
+            # 本地封面目录根（已迁移到media/cover目录）
+            # 使用相对路径
+            BASE_DIR = os.path.join("..", "..", "media", "cover")
             save_dir = os.path.join(BASE_DIR, year, month)
-            os.makedirs(save_dir, exist_ok=True)
+            
+            # 确保目录存在
+            try:
+                os.makedirs(save_dir, exist_ok=True)
+            except Exception as dir_error:
+                print(f"创建目录失败: {dir_error}, 使用临时目录")
+                # 如果创建目录失败，使用临时目录
+                import tempfile
+                save_dir = tempfile.gettempdir()
             
             filename = f"{date_str}.jpg"
             file_path = os.path.join(save_dir, filename)
-            local_path = f"/covers/{year}/{month}/{filename}"
+            local_path = f"/cover/{year}/{month}/{filename}"
             
             # 如果文件已存在，直接返回本地路径
             if os.path.exists(file_path):
+                print(f"封面已存在: {local_path}")
                 return local_path
             
             # 下载图片
+            print(f"开始下载封面: {cover_url}")
             response = requests.get(cover_url, headers=self.headers, timeout=10)
             response.raise_for_status()
             image_data = response.content
@@ -301,6 +319,9 @@ class BilibiliImporter:
             print(f"封面已下载: {local_path}")
             return local_path
             
+        except requests.exceptions.RequestException as e:
+            print(f"封面下载网络错误: {e}")
+            return cover_url  # 返回原始URL作为备选
         except Exception as e:
             print(f"封面下载失败: {e}")
             return cover_url  # 返回原始URL作为备选
