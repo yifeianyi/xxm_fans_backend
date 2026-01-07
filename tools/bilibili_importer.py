@@ -15,14 +15,6 @@ class BilibiliImporter:
             "User-Agent": "Mozilla/5.0"
         }
     
-    def is_url_valid(self, url):
-        """检测图片 URL 是否有效"""
-        try:
-            res = requests.head(url, timeout=3)
-            return res.status_code == 200
-        except Exception:
-            return False
-    
     def import_bv_song(self, bvid, selected_song_id=None, pending_parts=None):
         """
         导入BV歌曲，支持循环处理
@@ -36,9 +28,12 @@ class BilibiliImporter:
         
         # 如果没有待处理分P，则解析整个BV
         if pending_parts is None:
-            print(f"[BV:{bvid}] 开始解析分P信息")
-            pending_parts = self._parse_bv_parts(bvid)
-            print(f"[BV:{bvid}] 解析完成，找到 {len(pending_parts)} 个分P")
+            try:
+                pending_parts = self._parse_bv_parts(bvid)
+                print(f"[BV:{bvid}] 解析完成，找到 {len(pending_parts)} 个分P")
+            except Exception as e:
+                print(f"[BV:{bvid}] 解析过程中发生异常: {e}")
+                return [], [], None
         
         results = []
         cur_song_counts = defaultdict(int)
@@ -60,36 +55,69 @@ class BilibiliImporter:
         
         # 处理剩余分P（包括没有 selected_song_id 的情况）
         parts_to_process = remaining_parts if selected_song_id else pending_parts
-        results.extend(self._process_remaining_parts(bvid, parts_to_process, cur_song_counts))
+        print(f"[BV:{bvid}] 开始处理剩余分P，共 {len(parts_to_process)} 个")
+        new_results = self._process_remaining_parts(bvid, parts_to_process, cur_song_counts)
+        results.extend(new_results)
+        print(f"[BV:{bvid}] 剩余分P处理完成，新增 {len(new_results)} 条")
         
         print(f"[BV:{bvid}] 导入完成，共导入 {len(results)} 条")
         return results, [], conflict_info
     
     def _parse_bv_parts(self, bvid):
         """解析BV的所有分P信息"""
+        print(f"[BV:{bvid}] 开始解析分P信息")
+        
         # Step 1: 获取分P信息
         pagelist_url = f"https://api.bilibili.com/x/player/pagelist?bvid={bvid}"
         try:
-            response = requests.get(pagelist_url, headers=self.headers, timeout=10)
+            print(f"[BV:{bvid}] 请求分P信息API: {pagelist_url}")
+            response = requests.get(pagelist_url, headers=self.headers, timeout=5)
             response.raise_for_status()
             json_data = response.json()
+            print(f"[BV:{bvid}] 分P信息API响应成功")
+        except requests.exceptions.Timeout:
+            print(f"[BV:{bvid}] 获取分P信息超时")
+            return []
         except requests.exceptions.RequestException as e:
+            print(f"[BV:{bvid}] 获取分P信息网络错误: {e}")
+            return []
+        except Exception as e:
             print(f"[BV:{bvid}] 获取分P信息失败: {e}")
             return []
         
-        # Step 2: 获取视频总封面（用于 fallback）
+        # Step 2: 获取视频总封面
         fallback_cover_url = None
         try:
-            video_info = requests.get(f"https://api.bilibili.com/x/web-interface/view?bvid={bvid}", headers=self.headers, timeout=10).json()
-            if video_info["code"] == 0:
-                fallback_cover_url = video_info["data"]["pic"]
+            print(f"[BV:{bvid}] 请求视频信息API")
+            response = requests.get(f"https://api.bilibili.com/x/web-interface/view?bvid={bvid}", headers=self.headers, timeout=3)
+            response.raise_for_status()
+            video_info = response.json()
+            if video_info.get("code") == 0 and video_info.get("data"):
+                fallback_cover_url = video_info["data"].get("pic")
+                print(f"[BV:{bvid}] 获取总封面成功: {fallback_cover_url}")
+            else:
+                print(f"[BV:{bvid}] 视频信息API返回错误: {video_info.get('message', '未知错误')}")
+        except requests.exceptions.Timeout:
+            print(f"[BV:{bvid}] 获取总封面超时，将使用默认封面")
+        except requests.exceptions.RequestException as e:
+            print(f"[BV:{bvid}] 获取总封面网络错误: {e}，将使用默认封面")
         except Exception as e:
-            print(f"[BV:{bvid}] 获取总封面失败: {e}")
+            print(f"[BV:{bvid}] 获取总封面失败: {e}，将使用默认封面")
         
-        # 解析所有分P信息
+# 解析所有分P信息并下载封面
         pending_parts = []
-        if json_data["code"] == 0:
+        if json_data.get("code") == 0 and isinstance(json_data.get("data"), list):
             print(f"[BV:{bvid}] 开始解析 {len(json_data['data'])} 个分P")
+            
+            # 如果没有获取到封面，使用默认值
+            if not fallback_cover_url:
+                print(f"[BV:{bvid}] 警告：没有获取到总封面，将使用分P默认封面")
+            
+            # 先收集所有有效的分P信息
+            valid_parts = []
+            total_parts = len(json_data["data"])
+            valid_count = 0
+            skipped_count = 0
             for page_info in json_data["data"]:
                 page = page_info["page"]
                 cid = page_info["cid"]
@@ -105,36 +133,54 @@ class BilibiliImporter:
                         song_name = re.sub(r"\d{4}年\d{1,2}月\d{1,2}日", "", title).strip("- ").strip()
                         song_name = song_name.split("-")[0].strip()
                         print(f"[BV:{bvid}] 成功解析: {song_name} @ {performed_date}")
+                        valid_count += 1
+                        
+                        # 所有分P都使用总封面
+                        valid_parts.append({
+                            "page": page,
+                            "cid": cid,
+                            "title": title,
+                            "song_name": song_name,
+                            "performed_date": performed_date,
+                            "part_url": f"https://player.bilibili.com/player.html?bvid={bvid}&p={page}",
+                            "cover_url": fallback_cover_url,
+                        })
                     except Exception as e:
                         print(f"[BV:{bvid}] 日期解析失败: {e} - 标题: {title}")
-                        performed_date = None
-                        song_name = title.strip()
+                        skipped_count += 1
                 else:
                     print(f"[BV:{bvid}] 分P标题不含时间: {title}")
-                    performed_date = None
-                    song_name = title.strip()
-                
-                part_url = f"https://player.bilibili.com/player.html?bvid={bvid}&p={page}"
-                
-                # ✅ 优先尝试分P封面图（截图）
-                preferred_cover = f"https://i0.hdslb.com/bfs/frame/{cid}.jpg"
-                cover_url = preferred_cover if self.is_url_valid(preferred_cover) else fallback_cover_url
-                
-                if performed_date is not None:
-                    pending_parts.append({
-                        "page": page,
-                        "cid": cid,
-                        "title": title,
-                        "song_name": song_name,
-                        "performed_date": performed_date.strftime("%Y-%m-%d"),
-                        "part_url": part_url,
-                        "cover_url": cover_url,
-                    })
-                    print(f"[BV:{bvid}] 添加到待处理列表: {song_name}")
-                else:
-                    print(f"[BV:{bvid}] 跳过无效分P: {title}")
+                    skipped_count += 1
             
-            print(f"[BV:{bvid}] 解析完成，共 {len(pending_parts)} 个有效分P")
+            # Step 4: 下载封面（每个日期只下载一次）
+            downloaded_covers = {}
+            for part in valid_parts:
+                performed_date = part["performed_date"]
+                date_str = performed_date.strftime("%Y-%m-%d")
+                
+                # 如果这个日期的封面还没下载过
+                if date_str not in downloaded_covers:
+                    print(f"[BV:{bvid}] 下载封面: {date_str}")
+                    final_cover_url = self.download_and_save_cover(part["cover_url"], performed_date)
+                    # 如果下载失败，使用原始URL
+                    if not final_cover_url or final_cover_url == part["cover_url"]:
+                        print(f"[BV:{bvid}] 封面下载失败，使用原始URL: {part['cover_url']}")
+                        final_cover_url = part["cover_url"]
+                    downloaded_covers[date_str] = final_cover_url
+                else:
+                    print(f"[BV:{bvid}] 使用已下载的封面: {date_str}")
+                    final_cover_url = downloaded_covers[date_str]
+                
+                # 更新分P信息中的封面路径
+                part["cover_url"] = final_cover_url
+                part["performed_date"] = performed_date.strftime("%Y-%m-%d")
+                pending_parts.append(part)
+                print(f"[BV:{bvid}] 添加到待处理列表: {part['song_name']}")
+            
+            print(f"[BV:{bvid}] 解析完成，共 {len(pending_parts)} 个有效分P (总计: {total_parts}, 有效: {valid_count}, 跳过: {skipped_count})")
+        else:
+            print(f"[BV:{bvid}] API返回数据格式错误: code={json_data.get('code')}, data类型={type(json_data.get('data'))}")
+            return []
         
         return pending_parts
     
@@ -169,16 +215,13 @@ class BilibiliImporter:
                     count = cur_song_counts[song_name]
                     note = f"同批版本 {count}" if count > 1 else None
                     
-                    # ✅ 下载并保存封面
-                    final_cover_url = self.download_and_save_cover(cover_url, performed_date)
-                    
-                    # ✅ 创建记录
+                    # ✅ 创建记录（封面已提前下载）
                     SongRecord.objects.create(
                         song=song_obj,
                         performed_at=performed_date,
                         url=part_url,
                         notes=note,
-                        cover_url=final_cover_url
+                        cover_url=cover_url  # 直接使用已下载的封面路径
                     )
                     
                     results.append({
@@ -186,7 +229,7 @@ class BilibiliImporter:
                         "url": part_url,
                         "note": note,
                         "created_song": created_song,
-                        "cover_url": final_cover_url
+                        "cover_url": cover_url
                     })
             
             except Songs.DoesNotExist:
@@ -206,8 +249,10 @@ class BilibiliImporter:
     def _process_remaining_parts(self, bvid, parts_to_process, cur_song_counts):
         """处理剩余分P"""
         results = []
+        print(f"[BV:{bvid}] _process_remaining_parts 开始，共 {len(parts_to_process)} 个分P")
         
-        for part in parts_to_process:
+        for i, part in enumerate(parts_to_process):
+            print(f"[BV:{bvid}] 处理第 {i+1}/{len(parts_to_process)} 个分P")
             song_name = part["song_name"]
             performed_date = datetime.strptime(part["performed_date"], "%Y-%m-%d").date()
             part_url = part["part_url"]
@@ -250,16 +295,13 @@ class BilibiliImporter:
             count = cur_song_counts[song_name]
             note = f"同批版本 {count}" if count > 1 else None
             
-            # ✅ 下载并保存封面
-            final_cover_url = self.download_and_save_cover(cover_url, performed_date)
-            
-            # ✅ 创建记录
+            # ✅ 创建记录（封面已提前下载）
             SongRecord.objects.create(
                 song=song_obj,
                 performed_at=performed_date,
                 url=part_url,
                 notes=note,
-                cover_url=final_cover_url
+                cover_url=cover_url  # 直接使用已下载的封面路径
             )
             
             results.append({
@@ -267,7 +309,7 @@ class BilibiliImporter:
                 "url": part_url,
                 "note": note,
                 "created_song": created_song,
-                "cover_url": final_cover_url
+                "cover_url": cover_url
             })
         
         return results
@@ -308,9 +350,16 @@ class BilibiliImporter:
             
             # 下载图片
             print(f"开始下载封面: {cover_url}")
-            response = requests.get(cover_url, headers=self.headers, timeout=10)
-            response.raise_for_status()
-            image_data = response.content
+            try:
+                response = requests.get(cover_url, headers=self.headers, timeout=5)
+                response.raise_for_status()
+                image_data = response.content
+            except requests.exceptions.Timeout:
+                print(f"封面下载超时: {cover_url}")
+                return cover_url
+            except requests.exceptions.RequestException as e:
+                print(f"封面下载网络错误: {e}")
+                return cover_url
             
             # 保存图片
             with open(file_path, "wb") as f:
