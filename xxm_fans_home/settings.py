@@ -29,9 +29,8 @@ SECRET_KEY = os.getenv('DJANGO_SECRET_KEY', 'django-insecure-9n&grh)z2lxmykh9nj_
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.getenv('DJANGO_DEBUG', 'True').lower() == 'true'
-
 # 从环境变量读取允许的主机，用逗号分隔
-ALLOWED_HOSTS_STR = os.getenv('DJANGO_ALLOWED_HOSTS', 'localhost,127.0.0.1')
+ALLOWED_HOSTS_STR = os.getenv('DJANGO_ALLOWED_HOSTS', 'localhost,127.0.0.1,172.27.171.134')
 ALLOWED_HOSTS = [host.strip() for host in ALLOWED_HOSTS_STR.split(',') if host.strip()]
 
 
@@ -46,8 +45,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'main',
     'fansDIY',
-    'youyou_SongList',
-    'bingjie_SongList',
+    'songlist',  # 统一的歌单应用（合并了bingjie_SongList和youyou_SongList）
     'rest_framework',
     # 'drf_yasg',
 ]
@@ -96,6 +94,13 @@ DATABASES = {
     'view_data_db': {
         'ENGINE': 'django.db.backends.sqlite3',
         'NAME': BASE_DIR / 'view_data.sqlite3',
+        'OPTIONS': {
+            'timeout': 20,
+        }
+    },
+    'songlist_db': {
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': BASE_DIR / 'songlist.sqlite3',
         'OPTIONS': {
             'timeout': 20,
         }
@@ -153,7 +158,7 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'xxm_fans_frontend', 'public', 'covers')
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # 数据库路由配置
-DATABASE_ROUTERS = ['main.db_router.ViewDataDbRouter']
+DATABASE_ROUTERS = ['xxm_fans_home.db_routers.MultiDbRouter']
 # ✅ 统一 JSON 格式响应，防止 400 Bad Request
 REST_FRAMEWORK = {
     'DEFAULT_RENDERER_CLASSES': [
