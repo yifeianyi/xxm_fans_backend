@@ -325,9 +325,9 @@ class BilibiliImporter:
             year = performed_date.strftime("%Y")
             month = performed_date.strftime("%m")
             
-            # 本地封面目录根（已迁移到media/cover目录）
+            # 本地封面目录根（已迁移到media/covers目录）
             # 使用相对路径
-            BASE_DIR = os.path.join("..", "..", "media", "cover")
+            BASE_DIR = os.path.join("..", "..", "media", "covers")
             save_dir = os.path.join(BASE_DIR, year, month)
             
             # 确保目录存在
@@ -341,7 +341,7 @@ class BilibiliImporter:
             
             filename = f"{date_str}.jpg"
             file_path = os.path.join(save_dir, filename)
-            local_path = f"/cover/{year}/{month}/{filename}"
+            local_path = f"/covers/{year}/{month}/{filename}"
             
             # 如果文件已存在，直接返回本地路径
             if os.path.exists(file_path):
