@@ -1,7 +1,8 @@
 from django.urls import path, include
 from . import views
 from .views import SongListView, SongRecordListView, top_songs_api, style_list_api, tag_list_api, random_song_api, recommendation_api
-
+from django.conf import settings
+from django.conf.urls.static import static
 urlpatterns = [
     path('', views.index, name='index'),
     path('api/songs/', SongListView.as_view(), name='song-list'),

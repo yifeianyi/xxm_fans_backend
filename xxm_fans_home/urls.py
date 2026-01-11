@@ -38,8 +38,11 @@ from rest_framework import permissions
 urlpatterns = [
     path('',include('main.urls')),
     path('api/fansDIY/', include('fansDIY.urls')),
-    path('api/youyou/', include('youyou_SongList.urls')),
-    path('api/bingjie/', include('bingjie_SongList.urls')),
+    # 保持API兼容性：冰洁和乐游API都指向songlist应用
+    path('api/youyou/', include('songlist.urls')),
+    path('api/bingjie/', include('songlist.urls')),
+    # 新增：songlist独立路由
+    path('api/songlist/', include('songlist.urls')),
     path('admin/', admin.site.urls),
     # 为youyou_SongList_frontend/photos目录提供静态文件服务
     re_path(r'^youyou_SongList_frontend/photos/(?P<path>.*)$', serve, {
@@ -49,10 +52,14 @@ urlpatterns = [
     re_path(r'^bingjie_SongList_frontend/photos/(?P<path>.*)$', serve, {
         'document_root': settings.BASE_DIR / 'bingjie_SongList_frontend' / 'photos',
     }),
+    # 为songlist_frontend/photos目录提供静态文件服务
+    re_path(r'^songlist_frontend/photos/(?P<path>.*)$', serve, {
+        'document_root': settings.BASE_DIR / 'songlist_frontend' / 'photos',
+    }),
     # re_path(r'^swagger(?P<format>\.json|\.yaml)$', schema_view.without_ui(cache_timeout=0), name='schema-json'),
     # path('swagger/', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),
     # path('redoc/', schema_view.with_ui('redoc', cache_timeout=0), name='schema-redoc'),
-    
+
 ]
 
 # 在开发环境中提供媒体文件服务
