@@ -48,12 +48,12 @@
   - [x] 迁移bingjie_Songs数据到新的Song表
   - [x] 迁移you_Songs数据到新的Song表
   - [x] 迁移bingjie_site_setting数据到新的SiteSetting表
-  - [x] 迁移you_site_setting数据到新的SiteSetting表
-- [ ] 验证数据完整性
-  - [ ] 检查数据数量是否一致
-  - [ ] 检查数据内容是否正确
-  - [ ] 检查是否有重复数据
-- [ ] 备份原始数据
+  - [x] 迁移youyou_site_setting数据到新的SiteSetting表
+- [x] 验证数据完整性
+  - [x] 检查数据数量是否一致
+  - [x] 检查数据内容是否正确
+  - [x] 检查是否有重复数据
+- [x] 备份原始数据
 
 ### 任务 1.4：实现视图和URL
 - [x] 创建视图函数
@@ -74,45 +74,45 @@
 - [x] 编写单元测试
   - [x] 测试Song模型
   - [x] 测试SiteSetting模型
-  - [ ] 测试所有视图函数
+  - [x] 测试所有视图函数
 - [x] 编写集成测试脚本
   - [x] 测试API兼容性
   - [x] 测试所有API端点
   - [x] 测试数据查询
-- [ ] 执行测试
-  - [ ] 测试/api/bingjie/songs/
-  - [ ] 测试/api/youyou/songs/
-  - [ ] 测试所有其他API端点
+- [x] 执行测试
+  - [x] 测试/api/bingjie/songs/
+  - [x] 测试/api/youyou/songs/
+  - [x] 测试所有其他API端点
 
 ### 任务 1.6：删除旧应用
-- [ ] 备份bingjie_SongList应用
-- [ ] 备份youyou_SongList应用
-- [ ] 从INSTALLED_APPS中移除bingjie_SongList
-- [ ] 从INSTALLED_APPS中移除youyou_SongList
-- [ ] 从xxm_fans_home/urls.py中移除旧的路由配置
-- [ ] 删除bingjie_SongList目录
-- [ ] 删除youyou_SongList目录
-- [ ] 删除bingjie_SongList_frontend目录（如果存在）
-- [ ] 删除youyou_SongList_frontend目录（如果存在）
-- [ ] 更新相关文档
+- [x] 备份bingjie_SongList应用
+- [x] 备份youyou_SongList应用
+- [x] 从INSTALLED_APPS中移除bingjie_SongList
+- [x] 从INSTALLED_APPS中移除youyou_SongList
+- [x] 从xxm_fans_home/urls.py中移除旧的路由配置
+- [x] 删除bingjie_SongList目录
+- [x] 删除youyou_SongList目录
+- [x] 删除bingjie_SongList_frontend目录（如果存在）
+- [x] 删除youyou_SongList_frontend目录（如果存在）
+- [x] 更新相关文档
 
 ### 任务 1.7：验证阶段
-- [ ] 执行数据库迁移
-  - [ ] 创建songlist数据库
-  - [ ] 执行迁移文件
-  - [ ] 验证迁移状态
-- [ ] 执行数据迁移
-  - [ ] 备份原始数据
-  - [ ] 执行迁移脚本
-  - [ ] 验证数据完整性
-- [ ] 执行API测试
-  - [ ] 启动Django服务
-  - [ ] 执行测试脚本
-  - [ ] 手动测试API端点
-- [ ] 验证管理后台
-  - [ ] 访问管理后台
-  - [ ] 测试数据操作
-  - [ ] 验证功能正常
+- [x] 执行数据库迁移
+  - [x] 创建songlist数据库
+  - [x] 执行迁移文件
+  - [x] 验证迁移状态
+- [x] 执行数据迁移
+  - [x] 备份原始数据
+  - [x] 执行迁移脚本
+  - [x] 验证数据完整性
+- [x] 执行API测试
+  - [x] 启动Django服务
+  - [x] 执行测试脚本
+  - [x] 手动测试API端点
+- [x] 验证管理后台
+  - [x] 访问管理后台
+  - [x] 测试数据操作
+  - [x] 验证功能正常
 
 ### 注意事项
 

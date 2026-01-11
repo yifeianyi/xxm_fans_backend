@@ -45,9 +45,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'main',
     'fansDIY',
-    'youyou_SongList',
-    'bingjie_SongList',
-    'songlist',  # 新增：统一的歌单应用
+    'songlist',  # 统一的歌单应用（合并了bingjie_SongList和youyou_SongList）
     'rest_framework',
     # 'drf_yasg',
 ]
