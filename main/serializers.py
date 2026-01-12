@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Songs, SongRecord, Style, SongStyle, Tag, SongTag, Recommendation
+from .models import Songs, SongRecord, Style, SongStyle, Tag, SongTag
 
 class StyleSerializer(serializers.ModelSerializer):
     class Meta:
@@ -42,11 +42,4 @@ class SongStyleSerializer(serializers.ModelSerializer):
 class SongTagSerializer(serializers.ModelSerializer):
     class Meta:
         model = SongTag
-        fields = '__all__'
-
-class RecommendationSerializer(serializers.ModelSerializer):
-    recommended_songs = SongsSerializer(many=True, read_only=True)
-    
-    class Meta:
-        model = Recommendation
         fields = '__all__'

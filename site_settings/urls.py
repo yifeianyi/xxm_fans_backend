@@ -1,0 +1,13 @@
+from django.urls import path
+from site_settings.api.views import SiteSettingsView, RecommendationListView, RecommendationDetailView
+
+app_name = 'site_settings'
+
+urlpatterns = [
+    # 网站设置
+    path('settings/', SiteSettingsView.as_view(), name='site-settings'),
+
+    # 推荐语
+    path('recommendations/', RecommendationListView.as_view(), name='recommendation-list'),
+    path('recommendations/<int:pk>/', RecommendationDetailView.as_view(), name='recommendation-detail'),
+]

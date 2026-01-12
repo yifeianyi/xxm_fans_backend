@@ -25,66 +25,12 @@ from .models import (
     SongTag,
     ViewBaseMess,
     ViewRealTimeInformation,
-    Recommendation,
-    SiteSettings,
     WorkStatic,
     WorkMetricsHour,
     CrawlSession,
 )
-from .forms import BVImportForm, SongRecordForm, SongStyleForm, SongTagForm, SiteSettingsForm
+from .forms import BVImportForm, SongRecordForm, SongStyleForm, SongTagForm
 from .utils import import_bv_song
-
-# 注册SiteSettings模型到Django管理后台
-@admin.register(SiteSettings)
-class SiteSettingsAdmin(admin.ModelAdmin):
-    form = SiteSettingsForm
-    list_display = ('id', 'favicon_preview', 'updated_at')
-    fields = ('favicon',)
-    
-    def favicon_preview(self, obj):
-        if obj.favicon:
-            return mark_safe(f'<img src="{obj.favicon.url}" style="height: 30px;" />')
-        return "未设置"
-    favicon_preview.short_description = "网站图标预览"
-    
-    def save_model(self, request, obj, form, change):
-        super().save_model(request, obj, form, change)
-        # 如果上传了图标文件，尝试转换为favicon.ico
-        if obj.favicon:
-            self.convert_to_favicon(obj)
-    
-    def convert_to_favicon(self, obj):
-        """将上传的图片转换为favicon.ico格式"""
-        import os
-        from PIL import Image
-        
-        try:
-            # 获取上传文件的路径
-            image_path = obj.favicon.path
-            # 获取covers目录的路径
-            covers_dir = os.path.dirname(image_path)
-            # favicon.ico的路径
-            favicon_path = os.path.join(covers_dir, 'favicon.ico')
-            
-            # 打开图片并转换为favicon格式
-            img = Image.open(image_path)
-            # 转换为RGB模式（如果需要）
-            if img.mode != 'RGB':
-                img = img.convert('RGB')
-            # 调整大小为32x32
-            img = img.resize((32, 32), Image.Resampling.LANCZOS)
-            # 保存为ICO格式
-            img.save(favicon_path, format='ICO')
-        except Exception as e:
-            # 如果转换失败，不影响正常保存
-            pass
-    
-    class Media:
-        css = {
-            'all': ('admin/css/drag-drop.css',)
-        }
-        js = ('admin/js/drag-drop.js',)
-
 
 # 构建默认的style和SongStyle表单管理界面
 # admin.site.register(Style)
@@ -356,40 +302,6 @@ class SongTagAdmin(admin.ModelAdmin):
         return render(request, 'admin/batch_add_song_tags.html', context)
     
 
-from django.contrib.admin.widgets import FilteredSelectMultiple
-
-class RecommendationForm(forms.ModelForm):
-    class Meta:
-        model = Recommendation
-        fields = '__all__'
-        widgets = {
-            'recommended_songs': FilteredSelectMultiple("歌曲", is_stacked=False),
-        }
-
-@admin.register(Recommendation)
-class RecommendationAdmin(admin.ModelAdmin):
-    form = RecommendationForm
-    list_display = ('content_preview', 'is_active', 'updated_at', 'recommended_songs_count')
-    list_filter = ('is_active', 'updated_at')
-    search_fields = ('content',)
-    fields = ('content', 'recommended_songs', 'is_active')
-    
-    class Media:
-        css = {
-            'all': ('admin/css/widgets.css', 'admin/css/recommendation.css'),
-        }
-        js = ('admin/js/jquery.init.js', 'admin/js/recommendation.js')
-    
-    @admin.display(description="推荐语预览")
-    def content_preview(self, obj):
-        if len(obj.content) > 50:
-            return obj.content[:50] + '...'
-        return obj.content
-        
-    @admin.display(description="推荐歌曲数量")
-    def recommended_songs_count(self, obj):
-        return obj.recommended_songs.count()
-    
 """
     自定义admin界面
     1. 显示歌手、最近演唱时间、歌名、演唱次数、语言

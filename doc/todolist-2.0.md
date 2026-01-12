@@ -334,65 +334,66 @@
 
 ---
 
-## 阶段 4：site_settings 应用创建（2-3 天）
+## 阶段 4：site_settings 应用创建（2-3 天） ✅ 已完成
 
 ### 4.1 创建 site_settings 应用
 
-- [ ] 创建 site_settings 应用
-  - [ ] 运行 `python manage.py startapp site_settings`
-  - [ ] 创建目录结构
-  - [ ] 创建 `models/` 目录
-  - [ ] 创建 `services/` 目录
-  - [ ] 创建 `api/` 目录
-  - [ ] 创建 `admin/` 目录
+- [x] 创建 site_settings 应用
+  - [x] 运行 `python manage.py startapp site_settings`
+  - [x] 创建目录结构
+  - [x] 创建 `models/` 目录
+  - [x] 创建 `services/` 目录
+  - [x] 创建 `api/` 目录
+  - [x] 创建 `admin/` 目录
 
 - [x] 创建模型文件
-  - [ ] 创建 `models/__init__.py`
-  - [ ] 创建 `models/settings.py`
-    - [ ] 实现 `SiteSettings` 模型
-    - [ ] 实现 `Recommendation` 模型
-    - [ ] 添加外键关联
+  - [x] 创建 `models/__init__.py`
+  - [x] 创建 `models/settings.py`
+    - [x] 实现 `SiteSettings` 模型
+    - [x] 实现 `Recommendation` 模型
+    - [x] 添加外键关联
 
 - [x] 创建服务层
-  - [ ] 创建 `services/__init__.py`
-  - [ ] 创建 `services/settings_service.py`
-    - [ ] 实现 `SettingsService` 类
-    - [ ] 实现 `RecommendationService` 类
-    - [ ] 添加缓存装饰器
+  - [x] 创建 `services/__init__.py`
+  - [x] 创建 `services/settings_service.py`
+    - [x] 实现 `SettingsService` 类
+    - [x] 实现 `RecommendationService` 类
+    - [x] 添加缓存装饰器
 
 - [x] 创建 API 视图
-  - [ ] 创建 `api/__init__.py`
-  - [ ] 创建 `api/serializers.py`
-    - [ ] 实现 `SiteSettingsSerializer`
-    - [ ] 实现 `RecommendationSerializer`
-  - [ ] 创建 `api/views.py`
-    - [ ] 实现网站设置 API
-    - [ ] 实现推荐语 API
-    - [ ] 使用统一响应格式
+  - [x] 创建 `api/__init__.py`
+  - [x] 创建 `api/serializers.py`
+    - [x] 实现 `SiteSettingsSerializer`
+    - [x] 实现 `RecommendationSerializer`
+  - [x] 创建 `api/views.py`
+    - [x] 实现网站设置 API
+    - [x] 实现推荐语 API
+    - [x] 使用统一响应格式
 
 - [x] 创建 Admin
-  - [ ] 创建 `admin/__init__.py`
-  - [ ] 创建 `admin/settings_admin.py`
-    - [ ] 实现 `SiteSettingsAdmin`
-    - [ ] 实现 `RecommendationAdmin`
+  - [x] 创建 `admin/__init__.py`
+  - [x] 创建 `admin/settings_admin.py`
+    - [x] 实现 `SiteSettingsAdmin`
+    - [x] 实现 `RecommendationAdmin`
 
 - [x] 创建 URL 配置
-  - [ ] 创建 `site_settings/urls.py`
-  - [ ] 配置 API 路由
+  - [x] 创建 `site_settings/urls.py`
+  - [x] 配置 API 路由
 
 - [x] 数据迁移
-  - [ ] 运行 `python manage.py makemigrations site_settings`
-  - [ ] 运行 `python manage.py migrate site_settings`
-  - [ ] 验证数据库表结构
+  - [x] 运行 `python manage.py makemigrations site_settings`
+  - [x] 运行 `python manage.py migrate site_settings`
+  - [x] 验证数据库表结构
 
 - [x] 编写单元测试
-  - [ ] 测试 SettingsService
-  - [ ] 测试 RecommendationService
-  - [ ] 测试 API 视图
+  - [x] 测试 SettingsService
+  - [x] 测试 RecommendationService
+  - [x] 测试 API 视图
   - [x] 测试 Admin
 
 - [x] 编写文档
-  - [ ] site_settings 应用文档
+  - [x] site_settings 应用文档
+  - [x] site_settings 功能测试报告(包括 admin 部分的功能)
   - [x] API 文档更新
 
 **验收标准：**
@@ -441,20 +442,20 @@
   - [ ] 创建 `admin/diy_admin.py`
     - [ ] 拆分 Admin 类
 
-- [x] 编写单元测试
+- [ ] 编写单元测试
   - [ ] 测试 DIYService
   - [ ] 测试 API 视图
-  - [x] 测试 Admin
+  - [ ] 测试 Admin
 
-- [x] 编写文档
+- [ ] 编写文档
   - [ ] fansDIY 应用文档
-  - [x] API 文档更新
+  - [ ] API 文档更新
 
 **验收标准：**
-- [x] 所有功能正常
-- [x] API 测试通过
-- [x] Admin 后台正常
-- [x] 单元测试通过
+- [ ] 所有功能正常
+- [ ] API 测试通过
+- [ ] Admin 后台正常
+- [ ] 单元测试通过
 
 ---
 
@@ -560,7 +561,7 @@
 
 ### 8.2 文档更新
 
-- [x] API 文档更新
+- [ ] API 文档更新
   - [ ] 更新 API 文档
   - [ ] 添加新 API 说明
   - [ ] 更新 API 示例
@@ -581,8 +582,8 @@
   - [ ] 更新功能列表
 
 **验收标准：**
-- [x] 所有测试通过
-- [x] 文档完善
+- [ ] 所有测试通过
+- [ ] 文档完善
 
 ---
 
@@ -596,7 +597,7 @@
   - [ ] 备份 `songlist.sqlite3`
   - [ ] 验证备份完整性
 
-- [x] 数据迁移脚本
+- [ ] 数据迁移脚本
   - [ ] 编写数据迁移脚本
   - [ ] 测试数据迁移
   - [ ] 验证数据完整性
@@ -639,9 +640,9 @@
   - [ ] 验证数据一致性
 
 **验收标准：**
-- [x] 数据迁移成功
-- [x] 服务正常运行
-- [x] 无严重 bug
+- [ ] 数据迁移成功
+- [ ] 服务正常运行
+- [ ] 无严重 bug
 
 ---
 
