@@ -1,25 +1,24 @@
 from django.db import models
 
 
-class Song(models.Model):
-    """统一的歌曲模型 - 用于冰洁和乐游的歌单"""
+class BaseSong(models.Model):
+    """歌曲基类"""
     song_name = models.CharField(max_length=200, verbose_name='歌曲名称')
-    singer = models.CharField(max_length=100, verbose_name='歌手')
+    singer = models.CharField(max_length=100, verbose_name='原唱歌手')
     language = models.CharField(max_length=50, verbose_name='语言')
     style = models.CharField(max_length=50, verbose_name='曲风')
     note = models.TextField(blank=True, verbose_name='备注')
 
     class Meta:
-        verbose_name = '歌曲'
-        verbose_name_plural = '歌曲'
+        abstract = True
         ordering = ['song_name']
 
     def __str__(self):
         return self.song_name
 
 
-class SiteSetting(models.Model):
-    """网站设置模型 - 用于冰洁和乐游的网站设置"""
+class BaseSiteSetting(models.Model):
+    """网站设置基类"""
     photo_url = models.CharField(max_length=500, verbose_name='图片URL')
     position = models.IntegerField(
         verbose_name='位置',
@@ -30,8 +29,35 @@ class SiteSetting(models.Model):
     )
 
     class Meta:
-        verbose_name = '网站设置'
-        verbose_name_plural = '网站设置'
+        abstract = True
 
     def __str__(self):
         return f"设置 - 位置: {self.get_position_display()}"
+
+
+class YouyouSong(BaseSong):
+    """乐游歌曲表"""
+    class Meta:
+        verbose_name = '乐游歌曲'
+        verbose_name_plural = '乐游歌曲'
+
+
+class BingjieSong(BaseSong):
+    """冰洁歌曲表"""
+    class Meta:
+        verbose_name = '冰洁歌曲'
+        verbose_name_plural = '冰洁歌曲'
+
+
+class YouyouSiteSetting(BaseSiteSetting):
+    """乐游网站设置表"""
+    class Meta:
+        verbose_name = '乐游网站设置'
+        verbose_name_plural = '乐游网站设置'
+
+
+class BingjieSiteSetting(BaseSiteSetting):
+    """冰洁网站设置表"""
+    class Meta:
+        verbose_name = '冰洁网站设置'
+        verbose_name_plural = '冰洁网站设置'
