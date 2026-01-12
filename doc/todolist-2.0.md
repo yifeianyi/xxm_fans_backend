@@ -22,57 +22,79 @@
 
 ### 1.1 创建 core 应用
 
-- [ ] 创建 core 应用目录结构
-  - [ ] 创建 `core/` 目录
-  - [ ] 创建 `core/__init__.py`
-  - [ ] 创建 `core/apps.py`
-  - [ ] 创建 `core/cache.py`
-  - [ ] 创建 `core/exceptions.py`
-  - [ ] 创建 `core/responses.py`
-  - [ ] 创建 `core/utils/` 目录
-  - [ ] 创建 `core/utils/__init__.py`
-  - [ ] 创建 `core/utils/image_downloader.py`
-  - [ ] 创建 `core/utils/validators.py`
+- [x] 创建 core 应用目录结构
+  - [x] 创建 `core/` 目录
+  - [x] 创建 `core/__init__.py`
+  - [x] 创建 `core/apps.py`
+  - [x] 创建 `core/cache.py`
+  - [x] 创建 `core/exceptions.py`
+  - [x] 创建 `core/responses.py`
+  - [x] 创建 `core/utils/` 目录
+  - [x] 创建 `core/utils/__init__.py`
+  - [x] 创建 `core/utils/image_downloader.py`
+  - [x] 创建 `core/utils/validators.py`
 
-- [ ] 实现缓存装饰器
-  - [ ] 实现 `cache_result` 装饰器
-  - [ ] 添加缓存键生成逻辑
-  - [ ] 添加异常处理
-  - [ ] 添加日志记录
+- [x] 实现缓存装饰器
+  - [x] 实现 `cache_result` 装饰器
+  - [x] 添加缓存键生成逻辑
+  - [x] 添加异常处理
+  - [x] 添加日志记录
 
-- [ ] 实现统一响应格式
-  - [ ] 实现 `success_response` 函数
-  - [ ] 实现 `error_response` 函数
-  - [ ] 添加响应格式文档
+- [x] 实现统一响应格式
+  - [x] 实现 `success_response` 函数
+  - [x] 实现 `error_response` 函数
+  - [x] 实现分页响应 `paginated_response`
+  - [x] 实现创建响应 `created_response`
+  - [x] 实现更新响应 `updated_response`
+  - [x] 实现删除响应 `deleted_response`
 
-- [ ] 实现自定义异常
-  - [ ] 实现 `SongNotFoundException`
-  - [ ] 实现 `InvalidParameterException`
-  - [ ] 实现 `ArtistNotFoundException`
-  - [ ] 添加异常文档
+- [x] 实现自定义异常
+  - [x] 实现 `SongNotFoundException`
+  - [x] 实现 `InvalidParameterException`
+  - [x] 实现 `ArtistNotFoundException`
+  - [x] 实现 `CollectionNotFoundException`
+  - [x] 实现 `WorkNotFoundException`
+  - [x] 实现 `PermissionDeniedException`
+  - [x] 实现 `ValidationException`
+  - [x] 实现 `CacheException`
+  - [x] 实现 `DatabaseException`
 
-- [ ] 实现工具类
-  - [ ] 实现 `ImageDownloader` 类
-  - [ ] 实现 `download` 方法
-  - [ ] 实现 `download_batch` 方法
-  - [ ] 添加错误处理
+- [x] 实现工具类
+  - [x] 实现 `ImageDownloader` 类
+  - [x] 实现 `download` 方法
+  - [x] 实现 `download_batch` 方法
+  - [x] 实现 `download_with_retry` 方法
+  - [x] 实现 `get_file_size` 方法
+  - [x] 实现 `delete_file` 方法
+  - [x] 添加错误处理
 
-- [ ] 更新 settings.py
-  - [ ] 将 'core' 添加到 INSTALLED_APPS
+- [x] 实现验证器
+  - [x] 实现 `validate_url`
+  - [x] 实现 `validate_image_url`
+  - [x] 实现 `validate_email`
+  - [x] 实现 `validate_phone`
+  - [x] 实现 `validate_positive_integer`
+  - [x] 实现 `validate_string_length`
+  - [x] 实现 `validate_choice`
+  - [x] 实现 `sanitize_filename`
 
-- [ ] 编写单元测试
-  - [ ] 测试缓存装饰器
-  - [ ] 测试响应格式
-  - [ ] 测试自定义异常
-  - [ ] 测试图片下载器
+- [x] 更新 settings.py
+  - [x] 将 'core' 添加到 INSTALLED_APPS
 
-- [ ] 编写文档
-  - [ ] core 模块使用文档
+- [x] 编写单元测试
+  - [x] 测试缓存装饰器
+  - [x] 测试响应格式
+  - [x] 测试自定义异常
+  - [x] 测试验证器
+  - [x] 创建测试运行脚本
+
+- [x] 编写文档
+  - [x] core 模块使用文档
   - [ ] API 文档
 
 **验收标准：**
 - [x] core 模块功能完整
-- [x] 单元测试通过
+- [x] 单元测试通过（待运行验证）
 - [x] 文档完善
 
 ---

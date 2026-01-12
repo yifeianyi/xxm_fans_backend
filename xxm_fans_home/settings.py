@@ -30,6 +30,7 @@ SECRET_KEY = os.getenv('DJANGO_SECRET_KEY', 'django-insecure-9n&grh)z2lxmykh9nj_
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.getenv('DJANGO_DEBUG', 'True').lower() == 'true'
 # 从环境变量读取允许的主机，用逗号分隔
+# 添加 WSL 相关的主机名和 IP，使 Windows 可以访问
 ALLOWED_HOSTS_STR = os.getenv('DJANGO_ALLOWED_HOSTS', 'localhost,127.0.0.1,172.27.171.134')
 ALLOWED_HOSTS = [host.strip() for host in ALLOWED_HOSTS_STR.split(',') if host.strip()]
 
@@ -43,6 +44,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'core',  # 核心模块 - 提供跨应用共享的功能
     'main',
     'fansDIY',
     'songlist',  # 统一的歌单应用（合并了bingjie_SongList和youyou_SongList）

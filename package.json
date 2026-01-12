@@ -1,5 +1,6 @@
 {
   "dependencies": {
+    "iflow": "^1.0.0-alpha.41",
     "opencode-ai": "^1.1.11"
   }
 }
