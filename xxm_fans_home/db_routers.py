@@ -5,7 +5,7 @@ class MultiDbRouter:
 
     # 数据库映射配置
     DATABASE_MAPPING = {
-        'default': ['main', 'fansDIY'],
+        'default': ['main', 'fansDIY', 'song_management'],
         'view_data_db': ['main'],  # main应用的部分模型（数据分析相关）
         'songlist_db': ['songlist'],
     }

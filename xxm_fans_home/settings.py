@@ -34,6 +34,10 @@ DEBUG = os.getenv('DJANGO_DEBUG', 'True').lower() == 'true'
 ALLOWED_HOSTS_STR = os.getenv('DJANGO_ALLOWED_HOSTS', 'localhost,127.0.0.1,172.27.171.134')
 ALLOWED_HOSTS = [host.strip() for host in ALLOWED_HOSTS_STR.split(',') if host.strip()]
 
+# 添加测试服务器
+if 'testserver' not in ALLOWED_HOSTS:
+    ALLOWED_HOSTS.append('testserver')
+
 
 # Application definition
 
@@ -48,6 +52,7 @@ INSTALLED_APPS = [
     'main',
     'fansDIY',
     'songlist',  # 统一的歌单应用（合并了bingjie_SongList和youyou_SongList）
+    'song_management',  # 歌曲管理应用 - 从 main 拆分出来
     'rest_framework',
     # 'drf_yasg',
 ]
@@ -91,6 +96,12 @@ DATABASES = {
         'NAME': BASE_DIR / 'db.sqlite3',
         'OPTIONS': {
             'timeout': 20,
+        },
+        'TEST': {
+            'NAME': BASE_DIR / 'test_db.sqlite3',
+            'OPTIONS': {
+                'timeout': 20,
+            }
         }
     },
     'view_data_db': {
@@ -98,6 +109,9 @@ DATABASES = {
         'NAME': BASE_DIR / 'view_data.sqlite3',
         'OPTIONS': {
             'timeout': 20,
+        },
+        'TEST': {
+            'NAME': BASE_DIR / 'test_view_data_db.sqlite3',
         }
     },
     'songlist_db': {
@@ -105,6 +119,9 @@ DATABASES = {
         'NAME': BASE_DIR / 'songlist.sqlite3',
         'OPTIONS': {
             'timeout': 20,
+        },
+        'TEST': {
+            'NAME': BASE_DIR / 'test_songlist_db.sqlite3',
         }
     }
 }
@@ -169,6 +186,9 @@ REST_FRAMEWORK = {
     'DEFAULT_PARSER_CLASSES': [
         'rest_framework.parsers.JSONParser',
     ],
+    # 禁用默认分页
+    'PAGE_SIZE': None,
+    'DEFAULT_PAGINATION_CLASS': None,
 }
 # Redis 缓存配置
 # CACHES = {

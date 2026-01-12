@@ -36,7 +36,8 @@ from rest_framework import permissions
 # )
 
 urlpatterns = [
-    path('',include('main.urls')),
+    path('',include('main.urls')),  # main 应用路由
+    path('api/song-management/', include('song_management.urls')),  # song_management 应用路由
     path('api/fansDIY/', include('fansDIY.urls')),
     # 保持API兼容性：冰洁和乐游API都指向songlist应用
     path('api/youyou/', include('songlist.urls')),
