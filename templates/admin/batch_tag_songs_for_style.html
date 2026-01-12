@@ -1,0 +1,94 @@
+{% extends "admin/base_site.html" %}
+{% load i18n %}
+
+{% block extrahead %}
+{{ block.super }}
+{{ media }}
+<style>
+    .batch-form {
+        max-width: 800px;
+        margin: 20px auto;
+        padding: 20px;
+        background: #fff;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+    }
+    .batch-form h2 {
+        margin-top: 0;
+        color: #333;
+    }
+    .batch-form label {
+        font-weight: bold;
+        display: block;
+        margin-bottom: 5px;
+    }
+    .batch-form select, .batch-form input[type="text"] {
+        width: 100%;
+        padding: 8px;
+        margin-bottom: 15px;
+        border: 1px solid #ccc;
+        border-radius: 3px;
+    }
+    .batch-form .buttons {
+        margin-top: 20px;
+    }
+    .batch-form button {
+        padding: 10px 20px;
+        background: #417690;
+        color: white;
+        border: none;
+        border-radius: 3px;
+        cursor: pointer;
+    }
+    .batch-form button:hover {
+        background: #205067;
+    }
+    .batch-form a {
+        margin-left: 10px;
+        color: #417690;
+    }
+</style>
+{% endblock %}
+
+{% block breadcrumbs %}
+<div class="breadcrumbs">
+    <a href="{% url 'admin:index' %}">{% trans 'Home' %}</a>
+    &rsaquo; <a href="{% url 'admin:app_list' app_label='song_management' %}">Song_management</a>
+    &rsaquo; <a href="{% url 'admin:song_management_style_changelist' %}">曲风</a>
+    &rsaquo; 批量标记歌曲
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="batch-form">
+    <h1>批量标记歌曲 - 曲风</h1>
+    
+    <form method="post">
+        {% csrf_token %}
+        
+        <label for="id_style">选择曲风:</label>
+        <select name="style" id="id_style" required>
+            <option value="">-- 请选择曲风 --</option>
+            {% for style in all_styles %}
+            <option value="{{ style.id }}" {% if selected_style and selected_style.id == style.id %}selected{% endif %}>{{ style.name }}</option>
+            {% endfor %}
+        </select>
+        
+        <label for="id_songs">选择要标记的歌曲:</label>
+        <select name="songs" id="id_songs" multiple size="15" required>
+            {% for song in all_songs %}
+            <option value="{{ song.id }}">{{ song.song_name }} - {{ song.singer }}</option>
+            {% endfor %}
+        </select>
+        
+        <p style="color: #666; font-size: 12px;">
+            提示：按住 Ctrl 键可以多选歌曲
+        </p>
+        
+        <div class="buttons">
+            <button type="submit">确定</button>
+            <a href="{% url 'admin:song_management_style_changelist' %}">取消</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

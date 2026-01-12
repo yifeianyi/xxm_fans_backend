@@ -27,62 +27,56 @@ class StyleAdmin(admin.ModelAdmin):
     """曲风管理"""
     list_display = ['id', 'name', 'description']
     search_fields = ['name']
-    actions = ['batch_tag_songs_action']
+    change_list_template = 'admin/style_change_list.html'
     
-    def batch_tag_songs_action(self, request, queryset):
-        """批量标记歌曲"""
-        class SelectSongsForm(forms.Form):
-            songs = forms.ModelMultipleChoiceField(
-                queryset=Song.objects.all(),
-                widget=admin.widgets.FilteredSelectMultiple("歌曲", is_stacked=False),
-                required=True,
-                label="选择要标记的歌曲"
-            )
+    def get_urls(self):
+        urls = super().get_urls()
+        custom_urls = [
+            path('batch-tag-songs/', self.admin_site.admin_view(self.batch_tag_songs_view), name='batch_tag_songs_for_style'),
+        ]
+        return custom_urls + urls
+    
+    def batch_tag_songs_view(self, request):
+        """曲风批量标记歌曲页面"""
+        all_styles = Style.objects.all()
+        all_songs = Song.objects.all().order_by('song_name')
+        selected_style = None
         
-        if 'apply' in request.POST:
-            form = SelectSongsForm(request.POST)
-            if form.is_valid():
-                songs = form.cleaned_data['songs']
-                count = 0
-                for style in queryset:
-                    for song in songs:
-                        # 使用get_or_create避免重复添加
-                        song_style, created = SongStyle.objects.get_or_create(
-                            song=song,
-                            style=style
-                        )
-                        if created:
-                            count += 1
-                self.message_user(request, f"已成功为 {songs.count()} 首歌添加了 {count} 个曲风!")
+        if request.method == 'POST':
+            style_id = request.POST.get('style')
+            song_ids = request.POST.getlist('songs')
+            
+            if not style_id or not song_ids:
+                self.message_user(request, '请选择曲风和歌曲', level=messages.WARNING)
+            else:
+                style = Style.objects.get(id=style_id)
+                songs = Song.objects.filter(id__in=song_ids)
+                
+                created_count = 0
+                for song in songs:
+                    song_style, created = SongStyle.objects.get_or_create(
+                        song=song,
+                        style=style
+                    )
+                    if created:
+                        created_count += 1
+                
+                self.message_user(
+                    request,
+                    f'成功为 {songs.count()} 首歌曲添加了曲风「{style.name}」，共创建 {created_count} 个新关联。',
+                    messages.SUCCESS
+                )
                 return HttpResponseRedirect(reverse('admin:song_management_style_changelist'))
-        else:
-            form = SelectSongsForm()
-            # 过滤掉已经与选中曲风关联的歌曲
-            if queryset.exists():
-                # 如果只选择了一个曲风，过滤掉已关联的歌曲
-                if queryset.count() == 1:
-                    style = queryset.first()
-                    existing_song_ids = SongStyle.objects.filter(style=style).values_list('song', flat=True)
-                    form.fields['songs'].queryset = Song.objects.exclude(id__in=existing_song_ids)
-        
-        media = self.media + form.media
         
         context = dict(
             self.admin_site.each_context(request),
-            form=form,
-            styles=queryset,
-            title="批量标记歌曲",
-            media=media
+            all_styles=all_styles,
+            all_songs=all_songs,
+            selected_style=selected_style,
+            title='批量标记歌曲 - 曲风',
+            opts=self.model._meta,
         )
-        return render(request, 'admin/batch_tag_songs.html', context)
-    
-    batch_tag_songs_action.short_description = "为选中的曲风批量标记歌曲"
-    
-    class Media:
-        js = ('admin/js/jquery.init.js',)
-        css = {
-            'all': ('admin/css/widgets.css',)
-        }
+        return render(request, 'admin/batch_tag_songs_for_style.html', context)
 
 
 @admin.register(Tag)
@@ -90,62 +84,56 @@ class TagAdmin(admin.ModelAdmin):
     """标签管理"""
     list_display = ['id', 'name']
     search_fields = ['name']
-    actions = ['batch_tag_songs_action']
+    change_list_template = 'admin/tag_change_list.html'
     
-    def batch_tag_songs_action(self, request, queryset):
-        """批量标记歌曲"""
-        class SelectSongsForm(forms.Form):
-            songs = forms.ModelMultipleChoiceField(
-                queryset=Song.objects.all(),
-                widget=admin.widgets.FilteredSelectMultiple("歌曲", is_stacked=False),
-                required=True,
-                label="选择要标记的歌曲"
-            )
+    def get_urls(self):
+        urls = super().get_urls()
+        custom_urls = [
+            path('batch-tag-songs/', self.admin_site.admin_view(self.batch_tag_songs_view), name='batch_tag_songs_for_tag'),
+        ]
+        return custom_urls + urls
+    
+    def batch_tag_songs_view(self, request):
+        """标签批量标记歌曲页面"""
+        all_tags = Tag.objects.all()
+        all_songs = Song.objects.all().order_by('song_name')
+        selected_tag = None
         
-        if 'apply' in request.POST:
-            form = SelectSongsForm(request.POST)
-            if form.is_valid():
-                songs = form.cleaned_data['songs']
-                count = 0
-                for tag in queryset:
-                    for song in songs:
-                        # 使用get_or_create避免重复添加
-                        song_tag, created = SongTag.objects.get_or_create(
-                            song=song,
-                            tag=tag
-                        )
-                        if created:
-                            count += 1
-                self.message_user(request, f"已成功为 {songs.count()} 首歌添加了 {count} 个标签!")
+        if request.method == 'POST':
+            tag_id = request.POST.get('tag')
+            song_ids = request.POST.getlist('songs')
+            
+            if not tag_id or not song_ids:
+                self.message_user(request, '请选择标签和歌曲', level=messages.WARNING)
+            else:
+                tag = Tag.objects.get(id=tag_id)
+                songs = Song.objects.filter(id__in=song_ids)
+                
+                created_count = 0
+                for song in songs:
+                    song_tag, created = SongTag.objects.get_or_create(
+                        song=song,
+                        tag=tag
+                    )
+                    if created:
+                        created_count += 1
+                
+                self.message_user(
+                    request,
+                    f'成功为 {songs.count()} 首歌曲添加了标签「{tag.name}」，共创建 {created_count} 个新关联。',
+                    messages.SUCCESS
+                )
                 return HttpResponseRedirect(reverse('admin:song_management_tag_changelist'))
-        else:
-            form = SelectSongsForm()
-            # 过滤掉已经与选中标签关联的歌曲
-            if queryset.exists():
-                # 如果只选择了一个标签，过滤掉已关联的歌曲
-                if queryset.count() == 1:
-                    tag = queryset.first()
-                    existing_song_ids = SongTag.objects.filter(tag=tag).values_list('song', flat=True)
-                    form.fields['songs'].queryset = Song.objects.exclude(id__in=existing_song_ids)
-        
-        media = self.media + form.media
         
         context = dict(
             self.admin_site.each_context(request),
-            form=form,
-            tags=queryset,
-            title="批量标记歌曲",
-            media=media
+            all_tags=all_tags,
+            all_songs=all_songs,
+            selected_tag=selected_tag,
+            title='批量标记歌曲 - 标签',
+            opts=self.model._meta,
         )
-        return render(request, 'admin/batch_tag_songs.html', context)
-    
-    batch_tag_songs_action.short_description = "为选中的标签批量标记歌曲"
-    
-    class Media:
-        js = ('admin/js/jquery.init.js',)
-        css = {
-            'all': ('admin/css/widgets.css',)
-        }
+        return render(request, 'admin/batch_tag_songs_for_tag.html', context)
 
 
 @admin.register(SongStyle)
