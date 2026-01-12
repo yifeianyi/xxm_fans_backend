@@ -6,7 +6,7 @@ class MultiDbRouter:
     # 数据库映射配置
     DATABASE_MAPPING = {
         'default': ['main', 'fansDIY', 'song_management'],
-        'view_data_db': ['main'],  # main应用的部分模型（数据分析相关）
+        'view_data_db': ['main', 'data_analytics'],  # main应用的部分模型（数据分析相关）
         'songlist_db': ['songlist'],
     }
 
@@ -26,7 +26,7 @@ class MultiDbRouter:
 
         # 普通路由：根据应用标签路由
         for db_name, apps in self.DATABASE_MAPPING.items():
-            if app_label in apps and db_name != 'view_data_db':
+            if app_label in apps:
                 return db_name
         return None
 
@@ -43,7 +43,7 @@ class MultiDbRouter:
 
         # 普通路由：根据应用标签路由
         for db_name, apps in self.DATABASE_MAPPING.items():
-            if app_label in apps and db_name != 'view_data_db':
+            if app_label in apps:
                 return db_name
         return None
 
@@ -67,10 +67,8 @@ class MultiDbRouter:
         # 特殊处理：main应用的数据分析模型
         if app_label == 'main' and model_name_lower in self.VIEW_DATA_MODELS:
             return db == 'view_data_db'
-        elif db == 'view_data_db':
-            return False
 
         # 普通路由：根据应用标签路由
         if db in self.DATABASE_MAPPING:
             return app_label in self.DATABASE_MAPPING[db]
-        return None
+        return False

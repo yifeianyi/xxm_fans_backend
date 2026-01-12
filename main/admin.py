@@ -815,41 +815,4 @@ class SongRecordAdmin(admin.ModelAdmin):
 
 
 # 数据分析相关模型的后台管理
-@admin.register(WorkStatic)
-class WorkStaticAdmin(admin.ModelAdmin):
-    list_display = ('title', 'author', 'platform', 'work_id', 'publish_time')
-    list_filter = ('platform', 'publish_time')
-    search_fields = ('title', 'author', 'work_id')
-    ordering = ['-publish_time']
-
-
-@admin.register(WorkMetricsHour)
-class WorkMetricsHourAdmin(admin.ModelAdmin):
-    list_display = ('work_id', 'platform', 'crawl_time', 'view_count', 'like_count', 
-                   'coin_count', 'favorite_count', 'danmaku_count', 'comment_count')
-    list_filter = ('platform', 'crawl_time', 'session_id')
-    search_fields = ('work_id',)
-    ordering = ['-crawl_time']
-    readonly_fields = ('ingest_time',)
-    
-    def get_readonly_fields(self, request, obj=None):
-        readonly = list(self.readonly_fields)
-        if obj:  # 编辑现有对象时
-            readonly.extend(['platform', 'work_id', 'crawl_time', 'session_id'])
-        return readonly
-
-
-@admin.register(CrawlSession)
-class CrawlSessionAdmin(admin.ModelAdmin):
-    list_display = ('source', 'node_id', 'start_time', 'end_time', 
-                   'total_work_count', 'success_count', 'fail_count')
-    list_filter = ('source', 'start_time')
-    search_fields = ('source', 'node_id')
-    ordering = ['-start_time']
-    readonly_fields = ('start_time',)
-    
-    def get_readonly_fields(self, request, obj=None):
-        readonly = list(self.readonly_fields)
-        if obj:  # 编辑现有对象时
-            readonly.append('start_time')
-        return readonly
+#@admin.register(WorkStatic)

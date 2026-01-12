@@ -53,6 +53,7 @@ INSTALLED_APPS = [
     'fansDIY',
     'songlist',  # 统一的歌单应用（合并了bingjie_SongList和youyou_SongList）
     'song_management',  # 歌曲管理应用 - 从 main 拆分出来
+    'data_analytics',  # 数据分析应用 - 从 main 拆分出来
     'rest_framework',
     # 'drf_yasg',
 ]
@@ -112,6 +113,7 @@ DATABASES = {
         },
         'TEST': {
             'NAME': BASE_DIR / 'test_view_data_db.sqlite3',
+            'DEPENDENCIES': [],
         }
     },
     'songlist_db': {
