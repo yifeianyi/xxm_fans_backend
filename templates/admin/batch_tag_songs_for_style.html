@@ -1,91 +1,344 @@
 {% extends "admin/base_site.html" %}
-{% load i18n %}
+{% load i18n admin_urls static admin_modify %}
 
-{% block extrahead %}
-{{ block.super }}
-{{ media }}
+{% block extrahead %}{{ block.super }}
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script>
+$(document).ready(function() {
+    var $availableSongs = $('#available_songs');
+    var $selectedSongs = $('#selected_songs');
+    
+    // 更新计数
+    function updateCounts() {
+        var availableCount = $availableSongs.find('option:visible').length;
+        var selectedCount = $selectedSongs.find('option').length;
+        
+        $('#available_count').text('共 ' + availableCount + ' 首歌曲');
+        $('#selected_count').text('共 ' + selectedCount + ' 首歌曲');
+    }
+    
+    // 添加选中的歌曲
+    function addSelectedSongs() {
+        var $selectedOptions = $availableSongs.find('option:selected');
+        
+        $selectedOptions.each(function() {
+            var $option = $(this);
+            // 检查是否已存在
+            if ($selectedSongs.find('option[value="' + $option.val() + '"]').length === 0) {
+                $selectedSongs.append($option.clone());
+            }
+        });
+        
+        updateCounts();
+    }
+    
+    // 移除选中的歌曲
+    function removeSelectedSongs() {
+        $selectedSongs.find('option:selected').remove();
+        updateCounts();
+    }
+    
+    // 添加所有歌曲
+    function addAllSongs() {
+        $availableSongs.find('option').each(function() {
+            var $option = $(this);
+            if ($selectedSongs.find('option[value="' + $option.val() + '"]').length === 0) {
+                $selectedSongs.append($option.clone());
+            }
+        });
+        updateCounts();
+    }
+    
+    // 清空已选歌曲
+    function clearAllSongs() {
+        $selectedSongs.empty();
+        updateCounts();
+    }
+    
+    // 全选待选歌曲
+    function selectAllAvailable() {
+        $availableSongs.find('option:visible').prop('selected', true);
+    }
+    
+    // 选择搜索结果
+    function selectFiltered() {
+        $availableSongs.find('option:visible').prop('selected', true);
+    }
+    
+    // 移除搜索结果
+    function removeFiltered() {
+        var searchTerm = $('#song_search').val().toLowerCase().trim();
+        if (searchTerm) {
+            $selectedSongs.find('option').each(function() {
+                var $option = $(this);
+                if ($option.text().toLowerCase().indexOf(searchTerm) !== -1) {
+                    $option.remove();
+                }
+            });
+            updateCounts();
+        }
+    }
+    
+    // 搜索功能（本地搜索）
+    function performSearch() {
+        var searchTerm = $('#song_search').val().toLowerCase().trim();
+        var $options = $availableSongs.find('option');
+        
+        if (searchTerm === '') {
+            $options.show();
+        } else {
+            $options.each(function() {
+                var $option = $(this);
+                var songName = $option.text().toLowerCase();
+                $option.toggle(songName.indexOf(searchTerm) !== -1);
+            });
+        }
+        
+        updateCounts();
+    }
+    
+    // 绑定事件
+    $('#add_selected').click(addSelectedSongs);
+    $('#remove_selected').click(removeSelectedSongs);
+    $('#add_all').click(addAllSongs);
+    $('#remove_all').click(clearAllSongs);
+    $('#clear_all').click(clearAllSongs);
+    $('#select_all').click(selectAllAvailable);
+    $('#select_filtered').click(selectFiltered);
+    $('#remove_filtered').click(removeFiltered);
+    
+    // 双击添加/移除
+    $availableSongs.dblclick(addSelectedSongs);
+    $selectedSongs.dblclick(removeSelectedSongs);
+    
+    // 搜索功能
+    $('#song_search').on('input', performSearch);
+    
+    // 初始化计数
+    updateCounts();
+    
+    // 表单提交前，确保已选歌曲被选中
+    $('#batch_tag_form').submit(function() {
+        $selectedSongs.find('option').prop('selected', true);
+        $availableSongs.find('option').prop('selected', false);
+    });
+});
+</script>
 <style>
-    .batch-form {
-        max-width: 800px;
-        margin: 20px auto;
-        padding: 20px;
-        background: #fff;
-        border: 1px solid #ddd;
-        border-radius: 4px;
-    }
-    .batch-form h2 {
-        margin-top: 0;
-        color: #333;
-    }
-    .batch-form label {
-        font-weight: bold;
-        display: block;
-        margin-bottom: 5px;
-    }
-    .batch-form select, .batch-form input[type="text"] {
-        width: 100%;
-        padding: 8px;
-        margin-bottom: 15px;
-        border: 1px solid #ccc;
-        border-radius: 3px;
-    }
-    .batch-form .buttons {
-        margin-top: 20px;
-    }
-    .batch-form button {
-        padding: 10px 20px;
-        background: #417690;
-        color: white;
-        border: none;
-        border-radius: 3px;
-        cursor: pointer;
-    }
-    .batch-form button:hover {
-        background: #205067;
-    }
-    .batch-form a {
-        margin-left: 10px;
-        color: #417690;
-    }
+.batch-form {
+    max-width: 1000px;
+    margin: 20px auto;
+    padding: 20px;
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}
+
+.batch-form h1 {
+    margin-top: 0;
+    color: #333;
+}
+
+.song-selector-container {
+    display: flex;
+    gap: 20px;
+    margin-bottom: 20px;
+}
+
+.song-selector-box {
+    flex: 1;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    padding: 15px;
+    background: #f9f9f9;
+}
+
+.song-selector-box h3 {
+    margin-top: 0;
+    margin-bottom: 10px;
+    color: #333;
+    font-size: 14px;
+}
+
+.song-selector-box select {
+    width: 100%;
+    height: 300px;
+    border: 1px solid #ccc;
+    border-radius: 3px;
+    padding: 5px;
+}
+
+.search-input {
+    width: 100%;
+    padding: 8px;
+    margin-bottom: 10px;
+    border: 1px solid #ccc;
+    border-radius: 3px;
+    box-sizing: border-box;
+}
+
+.button-group {
+    display: flex;
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.button-group button {
+    padding: 6px 12px;
+    border: 1px solid #ccc;
+    border-radius: 3px;
+    background: #fff;
+    cursor: pointer;
+    font-size: 12px;
+}
+
+.button-group button:hover {
+    background: #f0f0f0;
+}
+
+.style-selector {
+    margin-top: 20px;
+    padding: 15px;
+    background: #f9f9f9;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}
+
+.style-selector label {
+    display: inline-block;
+    margin-right: 10px;
+    font-weight: bold;
+}
+
+.submit-row {
+    margin-top: 20px;
+    padding: 10px 0;
+    border-top: 1px solid #ddd;
+}
+
+.selected-count {
+    font-size: 12px;
+    color: #666;
+    margin-top: 5px;
+}
+
+.search-info {
+    font-size: 12px;
+    color: #666;
+    margin-bottom: 5px;
+}
+
+.operation-buttons {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 10px;
+}
+
+.operation-buttons button {
+    padding: 8px 16px;
+    background: #417690;
+    color: white;
+    border: none;
+    border-radius: 3px;
+    cursor: pointer;
+}
+
+.operation-buttons button:hover {
+    background: #205067;
+}
+
+.submit-buttons button {
+    padding: 10px 20px;
+    background: #417690;
+    color: white;
+    border: none;
+    border-radius: 3px;
+    cursor: pointer;
+}
+
+.submit-buttons button:hover {
+    background: #205067;
+}
+
+.submit-buttons a {
+    margin-left: 10px;
+    color: #417690;
+}
 </style>
 {% endblock %}
 
 {% block breadcrumbs %}
 <div class="breadcrumbs">
-    <a href="{% url 'admin:index' %}">{% trans 'Home' %}</a>
-    &rsaquo; <a href="{% url 'admin:app_list' app_label='song_management' %}">Song_management</a>
-    &rsaquo; <a href="{% url 'admin:song_management_style_changelist' %}">曲风</a>
-    &rsaquo; 批量标记歌曲
+<a href="{% url 'admin:index' %}">{% translate 'Home' %}</a>
+&rsaquo; <a href="{% url 'admin:app_list' app_label='song_management' %}">Song_management</a>
+&rsaquo; <a href="{% url 'admin:song_management_style_changelist' %}">曲风</a>
+&rsaquo; 批量标记歌曲
 </div>
 {% endblock %}
 
 {% block content %}
 <div class="batch-form">
     <h1>批量标记歌曲 - 曲风</h1>
+    <p>选择曲风和歌曲，系统会为选中的歌曲添加指定的曲风。</p>
     
-    <form method="post">
+    <form method="post" id="batch_tag_form">
         {% csrf_token %}
         
-        <label for="id_style">选择曲风:</label>
-        <select name="style" id="id_style" required>
-            <option value="">-- 请选择曲风 --</option>
-            {% for style in all_styles %}
-            <option value="{{ style.id }}" {% if selected_style and selected_style.id == style.id %}selected{% endif %}>{{ style.name }}</option>
-            {% endfor %}
-        </select>
+        <!-- 曲风选择 -->
+        <div class="style-selector">
+            <label for="id_style">选择曲风:</label>
+            <select name="style" id="id_style" required>
+                <option value="">-- 请选择曲风 --</option>
+                {% for style in all_styles %}
+                <option value="{{ style.id }}" {% if selected_style and selected_style.id == style.id %}selected{% endif %}>{{ style.name }}</option>
+                {% endfor %}
+            </select>
+            <span style="margin-left: 10px; color: #666; font-size: 12px;">请选择要标记的曲风</span>
+        </div>
         
-        <label for="id_songs">选择要标记的歌曲:</label>
-        <select name="songs" id="id_songs" multiple size="15" required>
-            {% for song in all_songs %}
-            <option value="{{ song.id }}">{{ song.song_name }} - {{ song.singer }}</option>
-            {% endfor %}
-        </select>
+        <!-- 歌曲选择区域 -->
+        <div class="song-selector-container">
+            <!-- 左侧：待选歌曲 -->
+            <div class="song-selector-box">
+                <h3>待选歌曲</h3>
+                <input type="text" id="song_search" class="search-input" placeholder="输入歌曲名称搜索...">
+                <div class="search-info" id="search_info"></div>
+                <select name="available_songs" id="available_songs" multiple>
+                    {% for song in all_songs %}
+                    <option value="{{ song.id }}">{{ song.song_name }} - {{ song.singer }}</option>
+                    {% endfor %}
+                </select>
+                <div class="selected-count" id="available_count">共 {{ all_songs|length }} 首歌曲</div>
+                <div class="button-group">
+                    <button type="button" id="select_all">全选</button>
+                    <button type="button" id="select_filtered">选择搜索结果</button>
+                </div>
+            </div>
+            
+            <!-- 中间：操作按钮 -->
+            <div class="operation-buttons">
+                <button type="button" id="add_selected">→</button>
+                <button type="button" id="remove_selected">←</button>
+                <button type="button" id="add_all">全部→</button>
+                <button type="button" id="remove_all">全部←</button>
+            </div>
+            
+            <!-- 右侧：已选歌曲 -->
+            <div class="song-selector-box">
+                <h3>已选歌曲</h3>
+                <div style="height: 34px; margin-bottom: 10px;"></div>
+                <select name="songs" id="selected_songs" multiple>
+                </select>
+                <div class="selected-count" id="selected_count">共 0 首歌曲</div>
+                <div class="button-group">
+                    <button type="button" id="clear_all">清空</button>
+                    <button type="button" id="remove_filtered">移除搜索结果</button>
+                </div>
+            </div>
+        </div>
         
-        <p style="color: #666; font-size: 12px;">
-            提示：按住 Ctrl 键可以多选歌曲
-        </p>
-        
-        <div class="buttons">
+        <div class="submit-row submit-buttons">
             <button type="submit">确定</button>
             <a href="{% url 'admin:song_management_style_changelist' %}">取消</a>
         </div>

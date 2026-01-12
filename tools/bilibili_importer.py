@@ -4,7 +4,7 @@ import os
 from datetime import datetime
 from collections import defaultdict
 from django.conf import settings
-from main.models import SongRecord, Songs
+from song_management.models import SongRecord as SongRecord, Song as Songs
 from django.core.exceptions import MultipleObjectsReturned
 
 class BilibiliImporter:

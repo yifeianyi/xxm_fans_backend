@@ -9,13 +9,11 @@ from .serializers import (
 )
 from .views import (
     SongListView,
-    SongDetailView,
     SongRecordListView,
-    StyleListView,
-    TagListView,
-    TopSongsView,
-    RandomSongView,
-    LanguageListView,
+    style_list_api,
+    tag_list_api,
+    top_songs_api,
+    random_song_api,
 )
 
 __all__ = [
@@ -24,11 +22,9 @@ __all__ = [
     'StyleSerializer',
     'TagSerializer',
     'SongListView',
-    'SongDetailView',
     'SongRecordListView',
-    'StyleListView',
-    'TagListView',
-    'TopSongsView',
-    'RandomSongView',
-    'LanguageListView',
+    'style_list_api',
+    'tag_list_api',
+    'top_songs_api',
+    'random_song_api',
 ]

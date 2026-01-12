@@ -20,24 +20,9 @@ from django.conf import settings
 from django.conf.urls.static import static
 from django.views.static import serve
 from rest_framework import permissions
-# from drf_yasg.views import get_schema_view
-# from drf_yasg import openapi
-# schema_view = get_schema_view(
-#    openapi.Info(
-#       title="小满虫之家 API 文档",
-#       default_version='v1',
-#       description="咻咻满直播歌切数据接口",
-#       terms_of_service="https://xxm8777.com/terms/",
-#       contact=openapi.Contact(email="your_email@example.com"),
-#       license=openapi.License(name="MIT License"),
-#    ),
-#    public=True,
-#    permission_classes=(permissions.AllowAny,),
-# )
 
 urlpatterns = [
-    path('',include('main.urls')),  # main 应用路由
-    path('api/song-management/', include('song_management.urls')),  # song_management 应用路由
+    path('', include('song_management.urls')),  # song_management 应用路由（替代main）
     path('api/data-analytics/', include('data_analytics.urls')),  # data_analytics 应用路由
     path('api/site-settings/', include('site_settings.urls')),  # site_settings 应用路由
     path('api/fansDIY/', include('fansDIY.urls')),
@@ -59,10 +44,6 @@ urlpatterns = [
     re_path(r'^songlist_frontend/photos/(?P<path>.*)$', serve, {
         'document_root': settings.BASE_DIR / 'songlist_frontend' / 'photos',
     }),
-    # re_path(r'^swagger(?P<format>\.json|\.yaml)$', schema_view.without_ui(cache_timeout=0), name='schema-json'),
-    # path('swagger/', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),
-    # path('redoc/', schema_view.with_ui('redoc', cache_timeout=0), name='schema-redoc'),
-
 ]
 
 # 在开发环境中提供媒体文件服务

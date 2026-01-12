@@ -2,64 +2,53 @@
 API 序列化器
 """
 from rest_framework import serializers
-from ..models import Song, SongRecord, Style, Tag
-
-
-class SongSerializer(serializers.ModelSerializer):
-    """歌曲序列化器"""
-    styles = serializers.ListField(read_only=True)
-    tags = serializers.ListField(read_only=True)
-
-    class Meta:
-        model = Song
-        fields = [
-            'id',
-            'song_name',
-            'singer',
-            'last_performed',
-            'perform_count',
-            'language',
-            'styles',
-            'tags',
-        ]
-
-
-class SongRecordSerializer(serializers.ModelSerializer):
-    """演唱记录序列化器"""
-    song_name = serializers.CharField(source='song.song_name', read_only=True)
-
-    class Meta:
-        model = SongRecord
-        fields = [
-            'id',
-            'song',
-            'song_name',
-            'performed_at',
-            'url',
-            'notes',
-            'cover_url',
-        ]
+from ..models import Song, SongRecord, Style, SongStyle, Tag, SongTag
 
 
 class StyleSerializer(serializers.ModelSerializer):
-    """曲风序列化器"""
-    song_count = serializers.SerializerMethodField()
-
     class Meta:
         model = Style
-        fields = ['id', 'name', 'description', 'song_count']
-
-    def get_song_count(self, obj):
-        return obj.style_songs.count()
+        fields = '__all__'
 
 
 class TagSerializer(serializers.ModelSerializer):
-    """标签序列化器"""
-    song_count = serializers.SerializerMethodField()
-
     class Meta:
         model = Tag
-        fields = ['id', 'name', 'description', 'song_count']
+        fields = '__all__'
 
-    def get_song_count(self, obj):
-        return obj.tag_songs.count()
+
+class SongRecordSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = SongRecord
+        fields = '__all__'
+        read_only_fields = ('song',)  # song字段在创建时由URL中的song_id确定
+
+
+class SongSerializer(serializers.ModelSerializer):
+    styles = serializers.SerializerMethodField()
+    tags = serializers.SerializerMethodField()
+    records = SongRecordSerializer(many=True, read_only=True)
+    
+    class Meta:
+        model = Song
+        fields = '__all__'
+    
+    def get_styles(self, obj):
+        """获取歌曲的曲风名称列表"""
+        return obj.styles
+        
+    def get_tags(self, obj):
+        """获取歌曲的标签名称列表"""
+        return obj.tags
+
+
+class SongStyleSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = SongStyle
+        fields = '__all__'
+
+
+class SongTagSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = SongTag
+        fields = '__all__'
