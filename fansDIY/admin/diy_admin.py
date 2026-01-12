@@ -5,13 +5,14 @@ from django.urls import path
 from django.shortcuts import render, redirect
 from django import forms
 from django.utils.safestring import mark_safe
-from .models import Collection, Work
-from .forms import BVImportForm
-from .utils import import_bv_work
 
-# Register your models here.
+from fansDIY.models import Collection, Work
+from fansDIY.forms import BVImportForm
+from fansDIY.utils import import_bv_work
+
 
 class WorkInline(admin.TabularInline):
+    """作品内联"""
     model = Work
     extra = 0
     fields = ['title', 'author', 'position', 'display_order', 'cover_url_preview']
@@ -24,8 +25,10 @@ class WorkInline(admin.TabularInline):
         return "-"
     cover_url_preview.short_description = "封面预览"
 
+
 @admin.register(Collection)
 class CollectionAdmin(admin.ModelAdmin):
+    """合集管理"""
     list_display = ['name', 'works_count', 'position', 'display_order', 'created_at', 'updated_at']
     list_filter = ['created_at', 'updated_at']
     search_fields = ['name']
@@ -45,6 +48,7 @@ class CollectionAdmin(admin.ModelAdmin):
 
 @admin.register(Work)
 class WorkAdmin(admin.ModelAdmin):
+    """作品管理"""
     list_display = ['title', 'author', 'collection', 'position', 'display_order', 'cover_url_preview', 'view_url_link', 'notes_preview']
     list_filter = ['collection', 'author']
     search_fields = ['title', 'author', 'collection__name', 'notes']
@@ -97,6 +101,7 @@ class WorkAdmin(admin.ModelAdmin):
         return my_urls + urls
 
     def import_bv_view(self, request):
+        """导入B站作品视图"""
         if request.method == "POST":
             form = BVImportForm(request.POST)
             if form.is_valid():
