@@ -22,9 +22,10 @@ from django.views.static import serve
 from rest_framework import permissions
 
 urlpatterns = [
-    path('', include('song_management.urls')),  # song_management 应用路由（替代main）
+    path('api/', include('song_management.urls')),  # song_management 应用路由（替代main）
     path('api/data-analytics/', include('data_analytics.urls')),  # data_analytics 应用路由
     path('api/site-settings/', include('site_settings.urls')),  # site_settings 应用路由
+    path('api/recommendation/', include('site_settings.urls')),  # 推荐接口路由
     path('api/fansDIY/', include('fansDIY.urls')),
     # 保持API兼容性：冰洁和乐游API都指向songlist应用
     path('api/youyou/', include('songlist.urls')),

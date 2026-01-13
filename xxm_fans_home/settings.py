@@ -156,9 +156,6 @@ CACHES = {
     'default': {
         'BACKEND': 'django.core.cache.backends.redis.RedisCache',
         'LOCATION': 'redis://127.0.0.1:6379/0',
-        'OPTIONS': {
-            'CLIENT_CLASS': 'django_redis.client.DefaultClient',
-        },
         'TIMEOUT': 300,
         'KEY_PREFIX': 'xxm_fans_home',
     }
@@ -181,6 +178,7 @@ REST_FRAMEWORK = {
         'rest_framework.filters.SearchFilter',
         'rest_framework.filters.OrderingFilter',
     ],
+    'EXCEPTION_HANDLER': 'core.middleware.custom_exception_handler',
 }
 
 # Logging settings
