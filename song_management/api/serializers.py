@@ -27,16 +27,15 @@ class SongRecordSerializer(serializers.ModelSerializer):
 class SongSerializer(serializers.ModelSerializer):
     styles = serializers.SerializerMethodField()
     tags = serializers.SerializerMethodField()
-    records = SongRecordSerializer(many=True, read_only=True)
-    
+
     class Meta:
         model = Song
         fields = '__all__'
-    
+
     def get_styles(self, obj):
         """获取歌曲的曲风名称列表"""
         return obj.styles
-        
+
     def get_tags(self, obj):
         """获取歌曲的标签名称列表"""
         return obj.tags
