@@ -575,14 +575,30 @@ class SongAdmin(admin.ModelAdmin):
             if form.is_valid():
                 selected_records = form.cleaned_data['records']
                 with transaction.atomic():
+                    # 创建新歌曲
+                    new_song = Song.objects.create(
+                        song_name=song.song_name,
+                        singer=None,
+                        language=song.language
+                    )
+
+                    # 将选中的演唱记录转移到新歌曲
                     for record in selected_records:
-                        new_song = Song.objects.create(
-                            song_name=song.song_name,
-                            singer=None,
-                            language=song.language
-                        )
                         record.song = new_song
                         record.save()
+
+                    # 更新新歌曲的统计字段
+                    new_song.perform_count = new_song.records.count()
+                    latest_record = new_song.records.order_by('-performed_at').first()
+                    new_song.last_performed = latest_record.performed_at if latest_record else None
+                    new_song.save()
+
+                    # 更新原歌曲的统计字段
+                    song.perform_count = song.records.count()
+                    latest_record = song.records.order_by('-performed_at').first()
+                    song.last_performed = latest_record.performed_at if latest_record else None
+                    song.save()
+
                 self.message_user(request, f"已成功拆分 {len(selected_records)} 条演唱记录")
                 return redirect('admin:song_management_song_changelist')
         else:
