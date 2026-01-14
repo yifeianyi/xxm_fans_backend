@@ -29,7 +29,7 @@ class SongListView(generics.ListAPIView):
     serializer_class = SongSerializer
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
     search_fields = ['song_name', 'singer']
-    ordering_fields = ['singer', 'last_performed', 'perform_count']
+    ordering_fields = ['singer', 'last_performed', 'perform_count', 'first_perform']
     ordering = ['-last_performed']
 
     def get_queryset(self):
@@ -130,7 +130,7 @@ class SongListView(generics.ListAPIView):
         # 应用排序
         if ordering:
             # 验证排序字段是否在允许的范围内
-            allowed_ordering_fields = ['singer', 'last_performed', 'perform_count']
+            allowed_ordering_fields = ['singer', 'last_performed', 'perform_count', 'first_perform']
             # 处理降序字段（以-开头）
             order_field = ordering.lstrip('-')
             if order_field in allowed_ordering_fields:
@@ -340,6 +340,7 @@ def random_song_api(request):
             "song_name": song.song_name,
             "singer": song.singer,
             "styles": styles,
+            "first_perform": song.first_perform,
             "last_performed": song.last_performed,
             "perform_count": song.perform_count,
             "language": song.language,
