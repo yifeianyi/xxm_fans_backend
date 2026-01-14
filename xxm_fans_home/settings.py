@@ -88,10 +88,30 @@ WSGI_APPLICATION = 'xxm_fans_home.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
+# 获取项目根目录（xxm_fans_home目录）
+PROJECT_ROOT = BASE_DIR.parent.parent
+
+# 数据库目录
+DATA_DIR = PROJECT_ROOT / 'data'
+
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'NAME': str(DATA_DIR / 'db.sqlite3'),
+        'OPTIONS': {
+            'timeout': 20,
+        },
+    },
+    'view_data_db': {
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': str(DATA_DIR / 'view_data.sqlite3'),
+        'OPTIONS': {
+            'timeout': 20,
+        },
+    },
+    'songlist_db': {
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': str(DATA_DIR / 'songlist.sqlite3'),
         'OPTIONS': {
             'timeout': 20,
         },
@@ -221,3 +241,6 @@ LOGGING = {
         },
     },
 }
+
+# Database routers
+DATABASE_ROUTERS = ['xxm_fans_home.db_routers.MultiDbRouter']
