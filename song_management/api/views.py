@@ -318,6 +318,7 @@ def top_songs_api(request):
             'song_name': s.song_name,
             'singer': s.singer,
             'perform_count': s.recent_count,
+            'first_perform': s.first_perform,
             'last_performed': s.last_performed,
         }
         for s in qs

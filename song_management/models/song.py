@@ -8,6 +8,7 @@ class Song(models.Model):
     """歌曲模型"""
     song_name = models.CharField(max_length=200, verbose_name='歌曲名称')
     singer = models.CharField(max_length=200, blank=True, null=True, verbose_name='歌手')
+    first_perform = models.DateField(blank=True, null=True, verbose_name='首次演唱时间')
     last_performed = models.DateField(blank=True, null=True, verbose_name='最近演唱时间')
     perform_count = models.IntegerField(default=0, verbose_name='演唱次数')
     language = models.CharField(max_length=50, blank=True, null=True, verbose_name='语言')

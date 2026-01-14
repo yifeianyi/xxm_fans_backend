@@ -351,6 +351,10 @@ class SongAdmin(admin.ModelAdmin):
     def language_display(self, obj):
         return obj.language
 
+    @admin.display(description="首次演唱时间", ordering="first_perform")
+    def first_performed_display(self, obj):
+        return obj.first_perform
+
     @admin.display(description="最近演唱时间", ordering="last_performed")
     def last_performed_display(self, obj):
         return obj.last_performed
@@ -533,11 +537,20 @@ class SongAdmin(admin.ModelAdmin):
 
             master_song = Song.objects.get(id=master_id)
             other_songs = selected_songs.exclude(id=master_id)
-            
+
             for song in other_songs:
                 SongRecord.objects.filter(song=song).update(song=master_song)
             total_add = other_songs.aggregate(Sum('perform_count'))['perform_count__sum'] or 0
             master_song.perform_count += total_add
+
+            # 从演唱记录中获取最早的演唱时间
+            earliest_record = master_song.records.order_by('performed_at').first()
+            master_song.first_perform = earliest_record.performed_at if earliest_record else None
+
+            # 从演唱记录中获取最新的演唱时间
+            latest_record = master_song.records.order_by('-performed_at').first()
+            master_song.last_performed = latest_record.performed_at if latest_record else None
+
             master_song.save()
             other_songs.delete()
 
@@ -591,12 +604,16 @@ class SongAdmin(admin.ModelAdmin):
                     new_song.perform_count = new_song.records.count()
                     latest_record = new_song.records.order_by('-performed_at').first()
                     new_song.last_performed = latest_record.performed_at if latest_record else None
+                    earliest_record = new_song.records.order_by('performed_at').first()
+                    new_song.first_perform = earliest_record.performed_at if earliest_record else None
                     new_song.save()
 
                     # 更新原歌曲的统计字段
                     song.perform_count = song.records.count()
                     latest_record = song.records.order_by('-performed_at').first()
                     song.last_performed = latest_record.performed_at if latest_record else None
+                    earliest_record = song.records.order_by('performed_at').first()
+                    song.first_perform = earliest_record.performed_at if earliest_record else None
                     song.save()
 
                 self.message_user(request, f"已成功拆分 {len(selected_records)} 条演唱记录")
