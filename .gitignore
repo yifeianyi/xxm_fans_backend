@@ -46,6 +46,9 @@ db.sqlite3
 # 管理命令编译文件
 **/management/commands/__pycache__/
 
+# test 缓存
+test/__pycache__/
+
 # 临时备份文件
 *~
 *.bak
@@ -94,7 +97,7 @@ dist-ssr/
 *.tmp
 
 # 测试文件
-test/*
+# test/*
 test_*.py
 db.sqlite3
 
@@ -105,4 +108,4 @@ xxm_fans_frontend/package-lock.json
 *.jpg
 doc/bug/*
 
-./iflow
+.iflow/*

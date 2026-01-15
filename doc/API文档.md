@@ -1,53 +1,113 @@
 # XXM Fans Home API 文档
 
-## 目录
+## 基础信息
 
-- [音乐管理 API (main)](#音乐管理-api-main)
-- [粉丝二创作品 API (fansDIY)](#粉丝二创作品-api-fansdiy)
-- [优优歌曲列表 API (youyou)](#优优歌曲列表-api-youyou)
-- [冰洁歌曲列表 API (bingjie)](#冰洁歌曲列表-api-bingjie)
+- **基础URL**: `http://127.0.0.1:8000`
+- **响应格式**: JSON
+- **字符编码**: UTF-8
+
+## 统一响应格式
+
+### 成功响应
+
+```json
+{
+  "code": 200,
+  "message": "操作成功",
+  "data": { ... }
+}
+```
+
+### 分页响应
+
+```json
+{
+  "code": 200,
+  "message": "获取成功",
+  "data": {
+    "total": 100,
+    "page": 1,
+    "page_size": 50,
+    "results": [ ... ]
+  }
+}
+```
+
+### 错误响应
+
+```json
+{
+  "code": 400,
+  "message": "操作失败",
+  "errors": { ... }
+}
+```
+
+### 状态码说明
+
+| 状态码 | 说明 |
+|--------|------|
+| 200 | 操作成功 |
+| 201 | 创建成功 |
+| 400 | 请求参数错误 |
+| 403 | 权限不足 |
+| 404 | 资源不存在 |
+| 422 | 数据验证失败 |
+| 500 | 服务器内部错误 |
 
 ---
 
-## 音乐管理 API (main)
+## 歌曲管理 API
 
 ### 1. 获取歌曲列表
 
-**接口地址**: `GET /api/songs/`
-
-**功能描述**: 获取歌曲列表，支持搜索、分页和多条件筛选
+**接口**: `GET /api/songs/`
 
 **请求参数**:
 
-| 参数名 | 类型 | 必填 | 说明 |
-|--------|------|------|------|
-| q | string | 否 | 搜索关键词（歌名或歌手） |
-| page | int | 否 | 页码，默认为1 |
-| limit | int | 否 | 每页数量，默认为50，最大50 |
-| ordering | string | 否 | 排序字段：`singer`（歌手）、`last_performed`（最近演唱）、`perform_count`（演唱次数），默认按最近演唱倒序 |
-| styles | string | 否 | 曲风筛选，多个曲风用逗号分隔 |
-| tags | string | 否 | 标签筛选，多个标签用逗号分隔 |
-| language | string | 否 | 语言筛选，多个语言用逗号分隔 |
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| page | int | 否 | 页码，默认 1 |
+| limit | int | 否 | 每页数量，默认 50，最大 50 |
+| q | string | 否 | 搜索关键词（歌曲名或歌手） |
+| language | string | 否 | 语言过滤，多个用逗号分隔 |
+| styles | string | 否 | 曲风过滤，多个用逗号分隔 |
+| tags | string | 否 | 标签过滤，多个用逗号分隔 |
+| ordering | string | 否 | 排序字段（singer, last_performed, perform_count） |
 
 **响应示例**:
 
 ```json
 {
-  "total": 1250,
-  "page": 1,
-  "page_size": 50,
-  "results": [
-    {
-      "id": 1,
-      "song_name": "歌曲名称",
-      "singer": "歌手名",
-      "language": "中文",
-      "perform_count": 15,
-      "last_performed": "2025-12-15",
-      "styles": ["流行", "抒情"],
-      "tags": ["经典", "热门"]
-    }
-  ]
+  "code": 200,
+  "message": "获取歌曲列表成功",
+  "data": {
+    "total": 1349,
+    "page": 1,
+    "page_size": 50,
+    "results": [
+      {
+        "id": 222,
+        "song_name": "11",
+        "singer": "邓紫棋",
+        "language": "国语",
+        "last_performed": "2025-10-26",
+        "perform_count": 17,
+        "styles": ["流行"],
+        "tags": [],
+        "records": [
+          {
+            "id": 17878,
+            "performed_at": "2025-10-26",
+            "url": "https://player.bilibili.com/player.html?bvid=BV1W2smz9Eb2&p=3",
+            "notes": null,
+            "cover_url": "/covers/2025/10/2025-10-26.jpg",
+            "song": 222
+          }
+        ]
+      }
+    ]
+  }
 }
 ```
 
@@ -55,33 +115,37 @@
 
 ### 2. 获取歌曲演唱记录
 
-**接口地址**: `GET /api/songs/<song_id>/records/`
-
-**功能描述**: 获取指定歌曲的演唱记录列表
+**接口**: `GET /api/songs/{song_id}/records/`
 
 **请求参数**:
 
-| 参数名 | 类型 | 必填 | 说明 |
-|--------|------|------|------|
-| page | int | 否 | 页码，默认为1 |
-| page_size | int | 否 | 每页数量，默认为20 |
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| song_id | int | 是 | 歌曲 ID |
+| page | int | 否 | 页码，默认 1 |
+| page_size | int | 否 | 每页数量，默认 20 |
 
 **响应示例**:
 
 ```json
 {
-  "total": 30,
-  "page": 1,
-  "page_size": 20,
-  "results": [
-    {
-      "id": 1,
-      "song_id": 1,
-      "performed_at": "2025-12-15",
-      "duration": "3:45",
-      "cover_url": "/covers/2025/12/2025-12-15.jpg"
-    }
-  ]
+  "code": 200,
+  "message": "获取演唱记录成功",
+  "data": {
+    "total": 17,
+    "page": 1,
+    "page_size": 3,
+    "results": [
+      {
+        "id": 17878,
+        "performed_at": "2025-10-26",
+        "url": "https://player.bilibili.com/player.html?bvid=BV1W2smz9Eb2&p=3",
+        "notes": null,
+        "cover_url": "/covers/2025/10/2025-10-26.jpg",
+        "song": 222
+      }
+    ]
+  }
 }
 ```
 
@@ -89,160 +153,126 @@
 
 ### 3. 获取曲风列表
 
-**接口地址**: `GET /api/styles/`
-
-**功能描述**: 获取所有曲风名称列表
-
-**请求参数**: 无
+**接口**: `GET /api/styles/`
 
 **响应示例**:
 
 ```json
-[
-  "流行",
-  "抒情",
-  "摇滚",
-  "民谣",
-  "电子"
-]
+{
+  "code": 200,
+  "message": "获取曲风列表成功",
+  "data": ["RAP", "儿歌", "古风", "戏腔", "摇滚", "民族", "流行", "美声"]
+}
 ```
 
 ---
 
 ### 4. 获取标签列表
 
-**接口地址**: `GET /api/tags/`
-
-**功能描述**: 获取所有标签名称列表
-
-**请求参数**: 无
+**接口**: `GET /api/tags/`
 
 **响应示例**:
 
 ```json
-[
-  "经典",
-  "热门",
-  "新歌",
-  "怀旧",
-  "治愈"
-]
+{
+  "code": 200,
+  "message": "获取标签列表成功",
+  "data": ["Ban位", "remix", "儿歌", "助眠", "小甜歌", "有清唱", "渣女三部曲", "满绝", "老歌"]
+}
 ```
 
 ---
 
-### 5. 获取热歌榜
+### 5. 获取排行榜
 
-**接口地址**: `GET /api/top_songs/`
-
-**功能描述**: 获取热门歌曲排行榜
+**接口**: `GET /api/top_songs/`
 
 **请求参数**:
 
-| 参数名 | 类型 | 必填 | 说明 |
-|--------|------|------|------|
-| range | string | 否 | 时间范围：`all`（全部）、`1m`（1个月）、`3m`（3个月）、`1y`（1年）、`10d`（10天）、`20d`（20天）、`30d`（30天），默认为`all` |
-| limit | int | 否 | 返回数量，默认为10 |
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| range | string | 否 | 时间范围（all, 1m, 3m, 1y, 10d, 20d, 30d），默认 all |
+| limit | int | 否 | 返回数量，默认 10 |
 
 **响应示例**:
 
 ```json
-[
-  {
-    "id": 1,
-    "song_name": "歌曲名称",
-    "singer": "歌手名",
-    "perform_count": 25,
-    "last_performed": "2025-12-20"
-  }
-]
+{
+  "code": 200,
+  "message": "获取排行榜成功",
+  "data": [
+    {
+      "id": 222,
+      "song_name": "11",
+      "singer": "邓紫棋",
+      "perform_count": 17,
+      "last_performed": "2025-10-26"
+    }
+  ]
+}
 ```
 
 ---
 
 ### 6. 获取随机歌曲
 
-**接口地址**: `GET /api/random-song/`
-
-**功能描述**: 随机返回一首歌曲
-
-**请求参数**: 无
+**接口**: `GET /api/random-song/`
 
 **响应示例**:
 
 ```json
 {
-  "id": 123,
-  "song_name": "歌曲名称",
-  "singer": "歌手名",
-  "styles": ["流行", "抒情"],
-  "last_performed": "2025-12-10",
-  "perform_count": 8,
-  "language": "中文"
+  "code": 200,
+  "message": "获取随机歌曲成功",
+  "data": {
+    "id": 448,
+    "song_name": "蜀绣",
+    "singer": "李宇春",
+    "styles": ["流行", "古风"],
+    "last_performed": "2023-06-06",
+    "perform_count": 10,
+    "language": "国语"
+  }
 }
 ```
 
 ---
 
-### 7. 获取推荐语
-
-**接口地址**: `GET /api/recommendation/`
-
-**功能描述**: 获取当前激活的推荐语及推荐歌曲
-
-**请求参数**: 无
-
-**响应示例**:
-
-```json
-{
-  "content": "欢迎来到热歌榜！今天推荐几首经典歌曲给大家。",
-  "recommended_songs": [
-    {
-      "id": 1,
-      "song_name": "歌曲名称",
-      "singer": "歌手名",
-      "perform_count": 20
-    }
-  ]
-}
-```
-
----
-
-## 粉丝二创作品 API (fansDIY)
+## 粉丝二创 API
 
 ### 1. 获取合集列表
 
-**接口地址**: `GET /api/fansDIY/collections/`
-
-**功能描述**: 获取粉丝二创作品合集列表
+**接口**: `GET /api/fansDIY/collections/`
 
 **请求参数**:
 
-| 参数名 | 类型 | 必填 | 说明 |
-|--------|------|------|------|
-| page | int | 否 | 页码，默认为1 |
-| limit | int | 否 | 每页数量，默认为20 |
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| page | int | 否 | 页码，默认 1 |
+| limit | int | 否 | 每页数量，默认 20 |
 
 **响应示例**:
 
 ```json
 {
-  "total": 15,
-  "page": 1,
-  "page_size": 20,
-  "results": [
-    {
-      "id": 1,
-      "name": "合集名称",
-      "works_count": 25,
-      "position": 1,
-      "display_order": 1,
-      "created_at": "2025-01-01T00:00:00Z",
-      "updated_at": "2025-01-10T00:00:00Z"
-    }
-  ]
+  "code": 200,
+  "message": "获取合集列表成功",
+  "data": {
+    "total": 3,
+    "page": 1,
+    "page_size": 3,
+    "results": [
+      {
+        "id": 3,
+        "name": "test3",
+        "works_count": 1,
+        "position": 0,
+        "display_order": 0,
+        "created_at": "2026-01-12T21:58:21.750013Z",
+        "updated_at": "2026-01-12T21:58:21.750021Z"
+      }
+    ]
+  }
 }
 ```
 
@@ -250,23 +280,29 @@
 
 ### 2. 获取合集详情
 
-**接口地址**: `GET /api/fansDIY/collections/<collection_id>/`
+**接口**: `GET /api/fansDIY/collections/{collection_id}/`
 
-**功能描述**: 获取指定合集的详细信息
+**请求参数**:
 
-**请求参数**: 无
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| collection_id | int | 是 | 合集 ID |
 
 **响应示例**:
 
 ```json
 {
-  "id": 1,
-  "name": "合集名称",
-  "works_count": 25,
-  "position": 1,
-  "display_order": 1,
-  "created_at": "2025-01-01T00:00:00Z",
-  "updated_at": "2025-01-10T00:00:00Z"
+  "code": 200,
+  "message": "获取合集详情成功",
+  "data": {
+    "id": 3,
+    "name": "test3",
+    "works_count": 1,
+    "position": 0,
+    "display_order": 0,
+    "created_at": "2026-01-12T21:58:21.750013Z",
+    "updated_at": "2026-01-12T21:58:21.750021Z"
+  }
 }
 ```
 
@@ -274,41 +310,43 @@
 
 ### 3. 获取作品列表
 
-**接口地址**: `GET /api/fansDIY/works/`
-
-**功能描述**: 获取粉丝二创作品列表
+**接口**: `GET /api/fansDIY/works/`
 
 **请求参数**:
 
-| 参数名 | 类型 | 必填 | 说明 |
-|--------|------|------|------|
-| page | int | 否 | 页码，默认为1 |
-| limit | int | 否 | 每页数量，默认为20 |
-| collection | int | 否 | 合集ID，用于筛选特定合集的作品 |
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| page | int | 否 | 页码，默认 1 |
+| limit | int | 否 | 每页数量，默认 20 |
+| collection | int | 否 | 合集 ID，用于筛选 |
 
 **响应示例**:
 
 ```json
 {
-  "total": 50,
-  "page": 1,
-  "page_size": 20,
-  "results": [
-    {
-      "id": 1,
-      "title": "作品标题",
-      "cover_url": "/covers/work1.jpg",
-      "view_url": "https://example.com/video1",
-      "author": "作者名",
-      "notes": "作品备注",
-      "position": 1,
-      "display_order": 1,
-      "collection": {
+  "code": 200,
+  "message": "获取作品列表成功",
+  "data": {
+    "total": 1,
+    "page": 1,
+    "page_size": 20,
+    "results": [
+      {
         "id": 1,
-        "name": "合集名称"
+        "title": "作品标题",
+        "cover_url": "https://example.com/cover.jpg",
+        "view_url": "https://example.com/work",
+        "author": "作者",
+        "notes": "备注",
+        "position": 0,
+        "display_order": 0,
+        "collection": {
+          "id": 1,
+          "name": "合集名称"
+        }
       }
-    }
-  ]
+    ]
+  }
 }
 ```
 
@@ -316,381 +354,354 @@
 
 ### 4. 获取作品详情
 
-**接口地址**: `GET /api/fansDIY/works/<work_id>/`
+**接口**: `GET /api/fansDIY/works/{work_id}/`
 
-**功能描述**: 获取指定作品的详细信息
+**请求参数**:
 
-**请求参数**: 无
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| work_id | int | 是 | 作品 ID |
 
 **响应示例**:
 
 ```json
 {
-  "id": 1,
-  "title": "作品标题",
-  "cover_url": "/covers/work1.jpg",
-  "view_url": "https://example.com/video1",
-  "author": "作者名",
-  "notes": "作品备注",
-  "position": 1,
-  "display_order": 1,
-  "collection": {
+  "code": 200,
+  "message": "获取作品详情成功",
+  "data": {
     "id": 1,
-    "name": "合集名称"
+    "title": "作品标题",
+    "cover_url": "https://example.com/cover.jpg",
+    "view_url": "https://example.com/work",
+    "author": "作者",
+    "notes": "备注",
+    "position": 0,
+    "display_order": 0,
+    "collection": {
+      "id": 1,
+      "name": "合集名称"
+    }
   }
 }
 ```
 
 ---
 
-## 优优歌曲列表 API (youyou)
+## 网站设置 API
 
-### 1. 获取歌曲列表
+### 1. 获取推荐内容
 
-**接口地址**: `GET /api/youyou/songs/`
-
-**功能描述**: 获取优优的歌曲列表，支持筛选和搜索
+**接口**: `GET /api/recommendation/`
 
 **请求参数**:
 
-| 参数名 | 类型 | 必填 | 说明 |
-|--------|------|------|------|
-| language | string | 否 | 语言筛选 |
-| style | string | 否 | 曲风筛选 |
-| search | string | 否 | 搜索关键词（歌名或歌手） |
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| all | boolean | 否 | 是否返回所有推荐，默认 false |
+| is_active | boolean | 否 | 是否只返回激活的推荐 |
 
 **响应示例**:
 
 ```json
-[
-  {
+{
+  "code": 200,
+  "message": "获取推荐语列表成功",
+  "data": [
+    {
+      "id": 1,
+      "content": "站长墙裂推荐（欢迎多点点）！！！",
+      "recommended_songs": [849, 585, 645, 1165],
+      "recommended_songs_details": [
+        {
+          "id": 849,
+          "song_name": "宠坏",
+          "singer": "小潘潘",
+          "language": "国语"
+        },
+        {
+          "id": 585,
+          "song_name": "梦一场",
+          "singer": "那英",
+          "language": "国语"
+        },
+        {
+          "id": 645,
+          "song_name": "爱河",
+          "singer": "ZaZaZsu咂咂苏",
+          "language": "国语"
+        },
+        {
+          "id": 1165,
+          "song_name": "过客",
+          "singer": "周思涵",
+          "language": "国语"
+        }
+      ],
+      "is_active": true,
+      "created_at": "2026-01-14T06:43:26.183678+08:00",
+      "updated_at": "2026-01-14T06:43:26.183708+08:00"
+    }
+  ]
+}
+```
+
+---
+
+### 2. 获取网站设置
+
+**接口**: `GET /api/site-settings/settings/`
+
+**响应示例**:
+
+```json
+{
+  "code": 200,
+  "message": "获取网站设置成功",
+  "data": {
+    "id": 1,
+    "favicon": "/static/favicon.ico",
+    "created_at": "2026-01-14T06:43:26.183678+08:00",
+    "updated_at": "2026-01-14T06:43:26.183708+08:00"
+  }
+}
+```
+
+---
+
+## 数据分析 API
+
+### 1. 获取作品列表
+
+**接口**: `GET /api/data-analytics/works/`
+
+**请求参数**:
+
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| platform | string | 否 | 平台过滤 |
+| is_valid | boolean | 否 | 是否有效 |
+| limit | int | 否 | 返回数量，默认 100 |
+| offset | int | 否 | 偏移量，默认 0 |
+
+**响应示例**:
+
+```json
+{
+  "code": 200,
+  "message": "操作成功",
+  "data": [
+    {
+      "id": 1,
+      "platform": "bilibili",
+      "work_id": "BV1234567890",
+      "title": "作品标题",
+      "publish_time": "2026-01-14T06:43:26.183678+08:00",
+      "is_valid": true
+    }
+  ]
+}
+```
+
+---
+
+### 2. 获取作品指标汇总
+
+**接口**: `GET /api/data-analytics/works/{platform}/{work_id}/metrics/summary/`
+
+**请求参数**:
+
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| platform | string | 是 | 平台 |
+| work_id | string | 是 | 作品 ID |
+| start_time | string | 否 | 开始时间 |
+| end_time | string | 否 | 结束时间 |
+
+**响应示例**:
+
+```json
+{
+  "code": 200,
+  "message": "操作成功",
+  "data": {
+    "view_count": 10000,
+    "like_count": 500,
+    "comment_count": 100,
+    "share_count": 50
+  }
+}
+```
+
+---
+
+## 歌单 API（模板化）
+
+### 1. 获取歌手歌曲列表
+
+**接口**: `GET /api/songlist/songs/?artist={artist}`
+
+**请求参数**:
+
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| artist | string | 是 | 歌手标识（youyou, bingjie等） |
+
+**响应示例**:
+
+```json
+{
+  "code": 200,
+  "message": "获取成功",
+  "data": [
+    {
+      "id": 1,
+      "song_name": "歌曲名称",
+      "singer": "歌手",
+      "language": "国语",
+      "styles": ["流行"],
+      "tags": []
+    }
+  ]
+}
+```
+
+---
+
+### 2. 获取歌手语言列表
+
+**接口**: `GET /api/songlist/languages/?artist={artist}`
+
+**请求参数**:
+
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| artist | string | 是 | 歌手标识（youyou, bingjie等） |
+
+**响应示例**:
+
+```json
+{
+  "code": 200,
+  "message": "获取成功",
+  "data": ["国语", "英语", "日语"]
+}
+```
+
+---
+
+### 3. 获取歌手曲风列表
+
+**接口**: `GET /api/songlist/styles/?artist={artist}`
+
+**请求参数**:
+
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| artist | string | 是 | 歌手标识（youyou, bingjie等） |
+
+**响应示例**:
+
+```json
+{
+  "code": 200,
+  "message": "获取成功",
+  "data": ["流行", "古风", "摇滚"]
+}
+```
+
+---
+
+### 4. 获取歌手随机歌曲
+
+**接口**: `GET /api/songlist/random/?artist={artist}`
+
+**请求参数**:
+
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| artist | string | 是 | 歌手标识（youyou, bingjie等） |
+
+**响应示例**:
+
+```json
+{
+  "code": 200,
+  "message": "获取成功",
+  "data": {
     "id": 1,
     "song_name": "歌曲名称",
-    "language": "中文",
-    "singer": "歌手名",
-    "style": "流行",
-    "note": "备注信息"
+    "singer": "歌手",
+    "language": "国语",
+    "styles": ["流行"]
   }
-]
+}
 ```
 
 ---
 
-### 2. 获取语言列表
+### 5. 获取歌手网站设置
 
-**接口地址**: `GET /api/youyou/languages/`
-
-**功能描述**: 获取所有可用语言
-
-**请求参数**: 无
-
-**响应示例**:
-
-```json
-[
-  "中文",
-  "日语",
-  "英语"
-]
-```
-
----
-
-### 3. 获取曲风列表
-
-**接口地址**: `GET /api/youyou/styles/`
-
-**功能描述**: 获取所有曲风
-
-**请求参数**: 无
-
-**响应示例**:
-
-```json
-[
-  "流行",
-  "抒情",
-  "摇滚",
-  "民谣"
-]
-```
-
----
-
-### 4. 获取随机歌曲
-
-**接口地址**: `GET /api/youyou/random-song/`
-
-**功能描述**: 随机返回一首歌曲，支持筛选条件
+**接口**: `GET /api/songlist/settings/?artist={artist}`
 
 **请求参数**:
 
-| 参数名 | 类型 | 必填 | 说明 |
-|--------|------|------|------|
-| language | string | 否 | 语言筛选 |
-| style | string | 否 | 曲风筛选 |
-| search | string | 否 | 搜索关键词 |
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| artist | string | 是 | 歌手标识（youyou, bingjie等） |
 
 **响应示例**:
 
 ```json
 {
-  "id": 123,
-  "song_name": "歌曲名称",
-  "language": "中文",
-  "singer": "歌手名",
-  "style": "流行",
-  "note": "备注信息"
-}
-```
-
-**错误响应** (404):
-
-```json
-{
-  "error": "No songs available."
-}
-```
-
----
-
-### 5. 获取网站设置
-
-**接口地址**: `GET /api/youyou/site-settings/`
-
-**功能描述**: 获取优优的网站设置信息
-
-**请求参数**: 无
-
-**响应示例**:
-
-```json
-[
-  {
-    "id": 1,
-    "position": 1,
-    "photoURL": "1.png",
-    "other_field": "其他字段值"
+  "code": 200,
+  "message": "获取成功",
+  "data": {
+    "site_name": "网站名称",
+    "description": "网站描述",
+    "favicon": "/static/favicon.ico"
   }
-]
+}
 ```
 
 ---
 
-### 6. 获取网站图标
+## 错误处理
 
-**接口地址**: `GET /api/youyou/favicon.ico`
-
-**功能描述**: 获取网站的favicon图标
-
-**请求参数**: 无
-
-**响应**: 重定向到对应的图片文件或返回404
-
----
-
-## 冰洁歌曲列表 API (bingjie)
-
-### 1. 获取歌曲列表
-
-**接口地址**: `GET /api/bingjie/songs/`
-
-**功能描述**: 获取冰洁的歌曲列表，支持筛选和搜索
-
-**请求参数**:
-
-| 参数名 | 类型 | 必填 | 说明 |
-|--------|------|------|------|
-| language | string | 否 | 语言筛选 |
-| style | string | 否 | 曲风筛选 |
-| search | string | 否 | 搜索关键词（歌名或歌手） |
-
-**响应示例**:
+### 404 错误示例
 
 ```json
-[
-  {
-    "id": 1,
-    "song_name": "歌曲名称",
-    "language": "中文",
-    "singer": "歌手名",
-    "style": "流行",
-    "note": "备注信息"
+{
+  "code": 404,
+  "message": "合集不存在: 99999"
+}
+```
+
+### 参数错误示例
+
+```json
+{
+  "code": 400,
+  "message": "参数无效",
+  "errors": {
+    "song_id": ["该字段是必填项"]
   }
-]
-```
-
----
-
-### 2. 获取语言列表
-
-**接口地址**: `GET /api/bingjie/languages/`
-
-**功能描述**: 获取所有可用语言
-
-**请求参数**: 无
-
-**响应示例**:
-
-```json
-[
-  "中文",
-  "日语",
-  "英语"
-]
-```
-
----
-
-### 3. 获取曲风列表
-
-**接口地址**: `GET /api/bingjie/styles/`
-
-**功能描述**: 获取所有曲风
-
-**请求参数**: 无
-
-**响应示例**:
-
-```json
-[
-  "流行",
-  "抒情",
-  "摇滚",
-  "民谣"
-]
-```
-
----
-
-### 4. 获取随机歌曲
-
-**接口地址**: `GET /api/bingjie/random-song/`
-
-**功能描述**: 随机返回一首歌曲，支持筛选条件
-
-**请求参数**:
-
-| 参数名 | 类型 | 必填 | 说明 |
-|--------|------|------|------|
-| language | string | 否 | 语言筛选 |
-| style | string | 否 | 曲风筛选 |
-| search | string | 否 | 搜索关键词 |
-
-**响应示例**:
-
-```json
-{
-  "id": 123,
-  "song_name": "歌曲名称",
-  "language": "中文",
-  "singer": "歌手名",
-  "style": "流行",
-  "note": "备注信息"
-}
-```
-
-**错误响应** (404):
-
-```json
-{
-  "error": "No songs available."
 }
 ```
 
 ---
 
-### 5. 获取网站设置
+## 注意事项
 
-**接口地址**: `GET /api/bingjie/site-settings/`
-
-**功能描述**: 获取冰洁的网站设置信息
-
-**请求参数**: 无
-
-**响应示例**:
-
-```json
-[
-  {
-    "id": 1,
-    "position": 1,
-    "photoURL": "1.png",
-    "other_field": "其他字段值"
-  }
-]
-```
-
----
-
-### 6. 获取网站图标
-
-**接口地址**: `GET /api/bingjie/favicon.ico`
-
-**功能描述**: 获取网站的favicon图标
-
-**请求参数**: 无
-
-**响应**: 重定向到对应的图片文件或返回默认图标
-
----
-
-## 静态文件访问
-
-### 优优图片访问
-
-**接口地址**: `GET /youyou_SongList_frontend/photos/<path>`
-
-**功能描述**: 访问优优的图片资源
-
----
-
-### 冰洁图片访问
-
-**接口地址**: `GET /bingjie_SongList_frontend/photos/<path>`
-
-**功能描述**: 访问冰洁的图片资源
-
----
-
-## 通用说明
-
-### 响应格式
-
-所有API响应均为JSON格式，Content-Type为 `application/json; charset=utf-8`
-
-### 分页参数
-
-- `page`: 页码，从1开始
-- `limit` / `page_size`: 每页数量
-- 响应中包含 `total`（总数）、`page`（当前页）、`page_size`（每页数量）、`results`（数据列表）
-
-### 缓存策略
-
-部分API使用了Redis缓存以提升性能：
-- 曲风列表：缓存1小时
-- 标签列表：缓存1小时
-- 推荐语：缓存5分钟
-- 歌曲列表：缓存10分钟
-- 演唱记录：缓存10分钟
-
-### 错误响应
-
-错误响应格式：
-
-```json
-{
-  "error": "错误描述信息"
-}
-```
-
-常见HTTP状态码：
-- 200: 成功
-- 404: 资源不存在
-- 500: 服务器内部错误
+1. 所有时间格式均为 ISO 8601 格式
+2. 分页从 1 开始
+3. 列表接口默认返回 50 条记录（部分接口为 20 条）
+4. 封面 URL 默认格式：`/covers/{year}/{month}/{date}.jpg`
+5. B站视频链接格式：`https://player.bilibili.com/player.html?bvid={bvid}&p={p}`
 
 ---
 
 ## 更新日志
 
-- 2025-01-10: 初始版本，整理所有API接口
+- 2026-01-14: 统一响应格式，添加异常处理中间件
+- 2026-01-14: 修复 Redis 缓存配置错误
+- 2026-01-14: 添加推荐接口路由 `/api/recommendation/`
