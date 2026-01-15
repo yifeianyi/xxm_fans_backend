@@ -1,8 +1,7 @@
 """
-Data Analytics 服务层
+Services模块
 """
+from .bilibili_service import BilibiliWorkStaticImporter
 from .analytics_service import AnalyticsService
 
-__all__ = [
-    'AnalyticsService',
-]
+__all__ = ['BilibiliWorkStaticImporter', 'AnalyticsService']
