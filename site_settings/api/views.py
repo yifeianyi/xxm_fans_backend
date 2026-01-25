@@ -6,9 +6,9 @@ from rest_framework import status
 from core.responses import success_response, error_response, created_response, updated_response
 from core.exceptions import ValidationException, DatabaseException
 
-from site_settings.models import SiteSettings, Recommendation
-from site_settings.services import SettingsService, RecommendationService
-from site_settings.api.serializers import SiteSettingsSerializer, RecommendationSerializer
+from site_settings.models import SiteSettings, Recommendation, Milestone
+from site_settings.services import SettingsService, RecommendationService, MilestoneService
+from site_settings.api.serializers import SiteSettingsSerializer, RecommendationSerializer, MilestoneSerializer
 
 
 class SiteSettingsView(APIView):
@@ -162,6 +162,92 @@ class RecommendationDetailView(APIView):
         try:
             RecommendationService.delete_recommendation(pk)
             return success_response(data=None, message="删除推荐语成功")
+        except ValidationException as e:
+            return error_response(message=str(e), status_code=status.HTTP_400_BAD_REQUEST)
+        except DatabaseException as e:
+            return error_response(message=str(e), status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class MilestoneListView(APIView):
+    """里程碑列表视图"""
+
+    def get(self, request):
+        """
+        获取里程碑列表
+        """
+        try:
+            milestones = MilestoneService.get_all_milestones()
+            serializer = MilestoneSerializer(milestones, many=True)
+            return success_response(data=serializer.data, message="获取里程碑列表成功")
+        except DatabaseException as e:
+            return error_response(message=str(e), status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    def post(self, request):
+        """
+        创建里程碑
+        """
+        try:
+            serializer = MilestoneSerializer(data=request.data)
+            if not serializer.is_valid():
+                return error_response(message=serializer.errors, status_code=status.HTTP_400_BAD_REQUEST)
+
+            milestone = MilestoneService.create_milestone(
+                date=request.data.get('date'),
+                title=request.data.get('title'),
+                description=request.data.get('description'),
+                display_order=request.data.get('display_order', 0)
+            )
+            serializer = MilestoneSerializer(milestone)
+            return created_response(data=serializer.data, message="创建里程碑成功")
+        except ValidationException as e:
+            return error_response(message=str(e), status_code=status.HTTP_400_BAD_REQUEST)
+        except DatabaseException as e:
+            return error_response(message=str(e), status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class MilestoneDetailView(APIView):
+    """里程碑详情视图"""
+
+    def get(self, request, pk):
+        """
+        获取里程碑详情
+        """
+        try:
+            milestone = MilestoneService.get_milestone_by_id(pk)
+            if not milestone:
+                return error_response(message="里程碑不存在", status_code=status.HTTP_404_NOT_FOUND)
+
+            serializer = MilestoneSerializer(milestone)
+            return success_response(data=serializer.data, message="获取里程碑详情成功")
+        except DatabaseException as e:
+            return error_response(message=str(e), status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    def put(self, request, pk):
+        """
+        更新里程碑
+        """
+        try:
+            milestone = MilestoneService.update_milestone(
+                milestone_id=pk,
+                date=request.data.get('date'),
+                title=request.data.get('title'),
+                description=request.data.get('description'),
+                display_order=request.data.get('display_order')
+            )
+            serializer = MilestoneSerializer(milestone)
+            return updated_response(data=serializer.data, message="更新里程碑成功")
+        except ValidationException as e:
+            return error_response(message=str(e), status_code=status.HTTP_400_BAD_REQUEST)
+        except DatabaseException as e:
+            return error_response(message=str(e), status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    def delete(self, request, pk):
+        """
+        删除里程碑
+        """
+        try:
+            MilestoneService.delete_milestone(pk)
+            return success_response(data=None, message="删除里程碑成功")
         except ValidationException as e:
             return error_response(message=str(e), status_code=status.HTTP_400_BAD_REQUEST)
         except DatabaseException as e:

@@ -1,19 +1,54 @@
 from rest_framework import serializers
-from site_settings.models import SiteSettings, Recommendation
+from site_settings.models import SiteSettings, Recommendation, Milestone
 
 
 class SiteSettingsSerializer(serializers.ModelSerializer):
     """网站设置序列化器"""
     favicon_url = serializers.SerializerMethodField()
+    artist_avatar_url = serializers.SerializerMethodField()
 
     class Meta:
         model = SiteSettings
-        fields = ['id', 'favicon', 'favicon_url', 'created_at', 'updated_at']
+        fields = [
+            'id',
+            'favicon',
+            'favicon_url',
+            'artist_name',
+            'artist_avatar',
+            'artist_avatar_url',
+            'artist_birthday',
+            'artist_constellation',
+            'artist_location',
+            'artist_profession',
+            'artist_voice_features',
+            'bilibili_url',
+            'weibo_url',
+            'netease_music_url',
+            'youtube_url',
+            'qq_music_url',
+            'xiaohongshu_url',
+            'douyin_url',
+            'created_at',
+            'updated_at',
+        ]
         read_only_fields = ['id', 'created_at', 'updated_at']
 
     def get_favicon_url(self, obj):
         """获取favicon URL"""
         return obj.favicon_url()
+
+    def get_artist_avatar_url(self, obj):
+        """获取艺人头像URL"""
+        return obj.artist_avatar_url()
+
+
+class MilestoneSerializer(serializers.ModelSerializer):
+    """里程碑序列化器"""
+
+    class Meta:
+        model = Milestone
+        fields = ['id', 'date', 'title', 'description', 'display_order', 'created_at']
+        read_only_fields = ['id', 'created_at']
 
 
 class RecommendationSerializer(serializers.ModelSerializer):

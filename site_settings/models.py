@@ -1,3 +1,3 @@
-from .models.settings import SiteSettings, Recommendation
+from .models.settings import SiteSettings, Recommendation, Milestone
 
-__all__ = ['SiteSettings', 'Recommendation']
+__all__ = ['SiteSettings', 'Recommendation', 'Milestone']

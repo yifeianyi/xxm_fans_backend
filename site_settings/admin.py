@@ -1,25 +1,80 @@
 from django.contrib import admin
-from site_settings.models import SiteSettings, Recommendation
+from django import forms
+from site_settings.models import SiteSettings, Recommendation, Milestone
+
+
+class SiteSettingsForm(forms.ModelForm):
+    """网站设置表单"""
+    artist_profession = forms.CharField(
+        required=False,
+        widget=forms.Textarea(attrs={'rows': 3, 'placeholder': '请输入职业，用逗号分隔，例如：歌手, 配音演员, 唱见'}),
+        help_text='请输入职业，用逗号分隔'
+    )
+    artist_voice_features = forms.CharField(
+        required=False,
+        widget=forms.Textarea(attrs={'rows': 3, 'placeholder': '请输入声线特点，用逗号分隔，例如：甜美, 清脆, 有磁性'}),
+        help_text='请输入声线特点，用逗号分隔'
+    )
+
+    class Meta:
+        model = SiteSettings
+        fields = '__all__'
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if self.instance and self.instance.pk:
+            # 将 JSON 数组转换为逗号分隔的字符串
+            if self.instance.artist_profession is not None:
+                self.fields['artist_profession'].initial = ', '.join(self.instance.artist_profession) if self.instance.artist_profession else ''
+            if self.instance.artist_voice_features is not None:
+                self.fields['artist_voice_features'].initial = ', '.join(self.instance.artist_voice_features) if self.instance.artist_voice_features else ''
+
+    def clean_artist_profession(self):
+        """将逗号分隔的字符串转换为 JSON 数组"""
+        profession = self.cleaned_data.get('artist_profession', '')
+        if profession:
+            # 分割字符串，去除空格和空值
+            profession_list = [p.strip() for p in profession.split(',') if p.strip()]
+            return profession_list
+        return []
+
+    def clean_artist_voice_features(self):
+        """将逗号分隔的字符串转换为 JSON 数组"""
+        features = self.cleaned_data.get('artist_voice_features', '')
+        if features:
+            # 分割字符串，去除空格和空值
+            features_list = [f.strip() for f in features.split(',') if f.strip()]
+            return features_list
+        return []
 
 
 @admin.register(SiteSettings)
 class SiteSettingsAdmin(admin.ModelAdmin):
     """网站设置Admin"""
-    list_display = ['id', 'favicon_url', 'created_at', 'updated_at']
+    form = SiteSettingsForm
+    list_display = ['id', 'artist_name', 'artist_birthday', 'artist_constellation', 'artist_location', 'created_at', 'updated_at']
     list_filter = ['created_at', 'updated_at']
-    search_fields = []
+    search_fields = ['artist_name', 'artist_location']
     readonly_fields = ['created_at', 'updated_at']
 
-    def favicon_url(self, obj):
-        """显示favicon URL"""
-        return obj.favicon_url()
-    favicon_url.short_description = '图标URL'
-
-    def has_add_permission(self, request):
-        """限制只能创建一个网站设置"""
-        if SiteSettings.objects.exists():
-            return False
-        return super().has_add_permission(request)
+    fieldsets = (
+        ('基础设置', {
+            'fields': ('favicon',)
+        }),
+        ('艺人信息', {
+            'fields': ('artist_name', 'artist_avatar', 'artist_birthday', 'artist_constellation', 'artist_location')
+        }),
+        ('艺人特色', {
+            'fields': ('artist_profession', 'artist_voice_features')
+        }),
+        ('社交媒体', {
+            'fields': ('bilibili_url', 'weibo_url', 'netease_music_url', 'youtube_url', 'qq_music_url', 'xiaohongshu_url', 'douyin_url')
+        }),
+        ('系统信息', {
+            'fields': ('created_at', 'updated_at'),
+            'classes': ('collapse',)
+        }),
+    )
 
 
 @admin.register(Recommendation)
@@ -53,3 +108,13 @@ class RecommendationAdmin(admin.ModelAdmin):
         updated = queryset.update(is_active=False)
         self.message_user(request, f'成功停用 {updated} 条推荐语。')
     deactivate_recommendations.short_description = '停用选中的推荐语'
+
+
+@admin.register(Milestone)
+class MilestoneAdmin(admin.ModelAdmin):
+    """里程碑Admin"""
+    list_display = ['id', 'date', 'title', 'display_order', 'created_at']
+    list_filter = ['date', 'created_at']
+    search_fields = ['title', 'description']
+    ordering = ['-date', 'display_order']
+    readonly_fields = ['created_at']
