@@ -71,7 +71,7 @@ class SongListView(generics.ListAPIView):
         if styles:
             style_filter = Q()
             for style in styles:
-                style_filter |= Q(songstyle__style__name=style)
+                style_filter |= Q(song_styles__style__name=style)
             filters &= style_filter
 
         # 标签过滤
@@ -87,7 +87,7 @@ class SongListView(generics.ListAPIView):
         if tags:
             tag_filter = Q()
             for tag in tags:
-                tag_filter |= Q(songtag__tag__name=tag)
+                tag_filter |= Q(song_tags__tag__name=tag)
             filters &= tag_filter
 
         # 应用所有筛选条件
@@ -178,11 +178,12 @@ class SongRecordListView(generics.ListAPIView):
         # 构造缓存key
         cache_key = f"song_records:{song_id}:{page_num}:{page_size}"
 
-        # 尝试从缓存获取数据，处理Redis连接异常
+        # 尝试从缓存获取完整的分页数据，处理Redis连接异常
         try:
-            records = cache.get(cache_key)
-            if records is not None:
-                return success_response(data=records, message="获取演唱记录成功")
+            cached_data = cache.get(cache_key)
+            if cached_data is not None:
+                # 缓存中存储完整的分页对象
+                return success_response(data=cached_data, message="获取演唱记录成功（缓存）")
         except Exception as e:
             logger.warning(f"Cache get failed for song records: {e}")
 
@@ -208,9 +209,17 @@ class SongRecordListView(generics.ListAPIView):
                     record["cover_url"] = "/covers/default.jpg"
                 results.append(record)
 
-            # 尝试缓存结果，处理Redis连接异常
+            # 构建完整的分页响应对象
+            paginated_data = {
+                'results': results,
+                'total': paginator.count,
+                'page': page.number,
+                'page_size': page_size
+            }
+
+            # 缓存完整的分页对象，处理Redis连接异常
             try:
-                cache.set(cache_key, results, 600)
+                cache.set(cache_key, paginated_data, 600)
             except Exception as e:
                 logger.warning(f"Cache set failed for song records: {e}")
 

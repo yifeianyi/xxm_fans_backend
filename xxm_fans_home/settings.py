@@ -94,17 +94,11 @@ PROJECT_ROOT = BASE_DIR.parent.parent
 # 数据库目录
 DATA_DIR = PROJECT_ROOT / 'data'
 
+# SQLite 数据库配置
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
         'NAME': str(DATA_DIR / 'db.sqlite3'),
-        'OPTIONS': {
-            'timeout': 20,
-        },
-    },
-    'view_data_db': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': str(DATA_DIR / 'view_data.sqlite3'),
         'OPTIONS': {
             'timeout': 20,
         },
@@ -115,7 +109,7 @@ DATABASES = {
         'OPTIONS': {
             'timeout': 20,
         },
-    }
+    },
 }
 
 # Password validation
@@ -241,6 +235,3 @@ LOGGING = {
         },
     },
 }
-
-# Database routers
-DATABASE_ROUTERS = ['xxm_fans_home.db_routers.MultiDbRouter']

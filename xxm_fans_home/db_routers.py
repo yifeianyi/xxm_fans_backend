@@ -1,3 +1,53 @@
+"""
+数据库路由配置 - 实现读写分离
+"""
+import random
+from django.conf import settings
+
+class MasterSlaveRouter:
+    """
+    混合数据库路由
+    - songlist 应用：使用 SQLite3（songlist_db），不进行读写分离
+    - 其他应用：使用 MySQL 主从，实现读写分离
+    """
+
+    def db_for_read(self, model, **hints):
+        """读操作路由"""
+        # songlist 应用使用 SQLite3
+        if model._meta.app_label == 'songlist':
+            return 'songlist_db'
+        # 其他应用使用从库
+        return 'slave'
+
+    def db_for_write(self, model, **hints):
+        """写操作路由"""
+        # songlist 应用使用 SQLite3
+        if model._meta.app_label == 'songlist':
+            return 'songlist_db'
+        # 其他应用使用主库
+        return 'default'
+
+    def allow_relation(self, obj1, obj2, **hints):
+        """允许跨数据库关系"""
+        # songlist 应用内部的关系
+        if obj1._meta.app_label == 'songlist' and obj2._meta.app_label == 'songlist':
+            return True
+        # MySQL 主从之间的关系
+        db_set = {'default', 'slave'}
+        if obj1._state.db in db_set and obj2._state.db in db_set:
+            return True
+        # 不允许跨数据库的关系（songlist 和其他应用）
+        return None
+
+    def allow_migrate(self, db, app_label, model_name=None, **hints):
+        """控制数据库迁移"""
+        # songlist 应用只能迁移到 songlist_db（SQLite3）
+        if app_label == 'songlist':
+            return db == 'songlist_db'
+        # 其他应用只能迁移到 MySQL（default 和 slave）
+        return db in ('default', 'slave')
+
+
 class MultiDbRouter:
     """
     多数据库路由器，将不同应用的数据路由到对应的数据库
