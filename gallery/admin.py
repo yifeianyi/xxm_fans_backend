@@ -47,7 +47,7 @@ class GalleryAdmin(admin.ModelAdmin):
     form = GalleryAdminForm
 
     list_display = [
-        'id', 'title', 'parent', 'level',
+        'id', 'title', 'parent_id', 'level',
         'image_count', 'is_active', 'created_at',
         'manage_images_link'
     ]
@@ -135,6 +135,13 @@ class GalleryAdmin(admin.ModelAdmin):
         return html
     images_preview.short_description = '图片预览'
     images_preview.allow_tags = True
+
+    def parent_id(self, obj):
+        """显示父图集ID"""
+        if obj.parent:
+            return obj.parent.id
+        return '-'
+    parent_id.short_description = '父图集ID'
 
     def manage_images_link(self, obj):
         """图片管理链接"""
