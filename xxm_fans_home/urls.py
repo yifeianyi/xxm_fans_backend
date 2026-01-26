@@ -20,11 +20,12 @@ from django.conf import settings
 from django.conf.urls.static import static
 from django.views.static import serve
 from rest_framework import permissions
+from site_settings.api.views import SitemapView, RobotsTxtView
 
 urlpatterns = [
-    # SEO 相关
-    path('sitemap.xml', include('site_settings.urls')),
-    path('robots.txt', include('site_settings.urls')),
+    # SEO 相关 - 根路径访问（直接引入视图，不通过 site_settings.urls）
+    path('sitemap.xml', SitemapView.as_view(), name='sitemap'),
+    path('robots.txt', RobotsTxtView.as_view(), name='robots-txt'),
     # API 路由
     path('api/', include('song_management.urls')),  # song_management 应用路由（替代main）
     path('api/data-analytics/', include('data_analytics.urls')),  # data_analytics 应用路由

@@ -5,8 +5,6 @@ from site_settings.api.views import (
     RecommendationDetailView,
     MilestoneListView,
     MilestoneDetailView,
-    SitemapView,
-    RobotsTxtView
 )
 
 app_name = 'site_settings'
@@ -25,8 +23,4 @@ urlpatterns = [
     # 里程碑
     path('milestones/', MilestoneListView.as_view(), name='milestone-list'),
     path('milestones/<int:pk>/', MilestoneDetailView.as_view(), name='milestone-detail'),
-
-    # SEO 相关
-    path('sitemap.xml', SitemapView.as_view(), name='sitemap'),
-    path('robots.txt', RobotsTxtView.as_view(), name='robots-txt'),
 ]

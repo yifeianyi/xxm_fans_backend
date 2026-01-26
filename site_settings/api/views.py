@@ -357,6 +357,6 @@ Allow: /
 Disallow: /admin/
 Disallow: /api/
 
-Sitemap: https://www.xxm8777.cn/api/site-settings/sitemap.xml
+Sitemap: https://www.xxm8777.cn/sitemap.xml
 """
         return HttpResponse(content, content_type='text/plain')
