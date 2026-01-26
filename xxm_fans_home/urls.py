@@ -27,6 +27,7 @@ urlpatterns = [
     path('api/site-settings/', include('site_settings.urls')),  # site_settings 应用路由
     path('api/recommendation/', include('site_settings.urls')),  # 推荐接口路由
     path('api/fansDIY/', include('fansDIY.urls')),
+    path('api/gallery/', include('gallery.urls')),  # gallery 应用路由
     # 保持API兼容性：冰洁和乐游API都指向songlist应用
     path('api/youyou/', include('songlist.urls')),
     path('api/bingjie/', include('songlist.urls')),
@@ -44,6 +45,10 @@ urlpatterns = [
     # 为songlist_frontend/photos目录提供静态文件服务
     re_path(r'^songlist_frontend/photos/(?P<path>.*)$', serve, {
         'document_root': settings.BASE_DIR / 'songlist_frontend' / 'photos',
+    }),
+    # 为gallery目录提供静态文件服务
+    re_path(r'^gallery/(?P<path>.*)$', serve, {
+        'document_root': settings.MEDIA_ROOT / 'gallery',
     }),
 ]
 

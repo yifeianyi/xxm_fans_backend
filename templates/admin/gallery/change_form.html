@@ -1,0 +1,389 @@
+{% extends "admin/change_form.html" %}
+
+{% block extrahead %}
+{{ block.super }}
+<style>
+#images-section {
+    background: #f9f9f9;
+    padding: 20px;
+    border-radius: 8px;
+    margin-top: 20px;
+}
+
+.toolbar {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+}
+
+.toolbar button {
+    padding: 8px 16px;
+    border: 1px solid #ddd;
+    background: white;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+.toolbar button:hover {
+    background: #f0f0f0;
+}
+
+.toolbar button.primary {
+    background: #417690;
+    color: white;
+    border-color: #417690;
+}
+
+.toolbar button.primary:hover {
+    background: #3a6a80;
+}
+
+.images-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: 15px;
+    max-height: 600px;
+    overflow-y: auto;
+    padding: 10px;
+    background: white;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}
+
+.image-item {
+    position: relative;
+    aspect-ratio: 1;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    transition: transform 0.2s;
+}
+
+.image-item:hover {
+    transform: scale(1.05);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+}
+
+.image-item img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.image-info {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: rgba(0,0,0,0.7);
+    color: white;
+    padding: 5px;
+    font-size: 11px;
+    text-align: center;
+}
+
+.delete-btn {
+    position: absolute;
+    top: 5px;
+    right: 5px;
+    width: 24px;
+    height: 24px;
+    background: rgba(220, 53, 69, 0.9);
+    color: white;
+    border: none;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    opacity: 0;
+    transition: opacity 0.2s;
+}
+
+.image-item:hover .delete-btn {
+    opacity: 1;
+}
+
+.delete-btn:hover {
+    background: rgba(220, 53, 69, 1);
+}
+
+.empty-state {
+    text-align: center;
+    padding: 60px 20px;
+    color: #999;
+}
+
+.cover-badge {
+    position: absolute;
+    top: 5px;
+    left: 5px;
+    background: rgba(255, 193, 7, 0.9);
+    color: white;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: bold;
+}
+</style>
+{% endblock %}
+
+{% block after_field_sets %}
+{{ block.super }}
+
+<div id="images-section">
+    <h3 style="margin-top: 0; margin-bottom: 15px;">📸 图片管理</h3>
+
+    <div class="toolbar">
+        <button type="button" class="primary" onclick="uploadImage()">
+            ➕ 上传图片
+        </button>
+        <button type="button" onclick="updateCover()">
+            🖼️ 更新封面
+        </button>
+        <button type="button" onclick="refreshCount()">
+            🔄 刷新数量
+        </button>
+        <button type="button" onclick="refreshImages()">
+            📷 刷新列表
+        </button>
+    </div>
+
+    <div id="images-container">
+        <div class="empty-state">加载中...</div>
+    </div>
+</div>
+
+<script>
+const galleryId = '{{ original.id }}';
+const galleryFolderPath = '{{ original.folder_path }}';
+
+// 页面加载时获取图片
+document.addEventListener('DOMContentLoaded', function() {
+    loadImages();
+});
+
+// 加载图片列表
+function loadImages() {
+    fetch(`/api/gallery/${galleryId}/images/`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                renderImages(data.images);
+            } else {
+                document.getElementById('images-container').innerHTML =
+                    '<div class="empty-state">加载失败: ' + data.message + '</div>';
+            }
+        })
+        .catch(error => {
+            document.getElementById('images-container').innerHTML =
+                '<div class="empty-state">加载失败: ' + error.message + '</div>';
+        });
+}
+
+// 渲染图片
+function renderImages(images) {
+    const container = document.getElementById('images-container');
+
+    if (!images || images.length === 0) {
+        container.innerHTML = '<div class="empty-state">暂无图片<br><small>点击"上传图片"添加</small></div>';
+        return;
+    }
+
+    let html = '<div class="images-grid">';
+
+    // 封面图片
+    if (images.cover) {
+        html += `
+            <div class="image-item">
+                <img src="${images.cover.url}" alt="封面">
+                <div class="cover-badge">封面</div>
+                <div class="image-info">cover.jpg</div>
+            </div>
+        `;
+    }
+
+    // 其他图片
+    images.others.forEach(img => {
+        html += `
+            <div class="image-item">
+                <img src="${img.url}" alt="${img.filename}">
+                <button class="delete-btn" onclick="deleteImage('${img.filename}')" title="删除图片">×</button>
+                <div class="image-info">${img.filename}</div>
+            </div>
+        `;
+    });
+
+    html += '</div>';
+    container.innerHTML = html;
+}
+
+// 上传图片
+function uploadImage() {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/jpeg,image/jpg,image/png,image/webp,image/gif,video/mp4';
+
+    input.onchange = function() {
+        if (input.files.length === 0) return;
+
+        const file = input.files[0];
+
+        // 文件大小检查
+        if (file.size > 5 * 1024 * 1024) {
+            alert('图片大小不能超过 5MB');
+            return;
+        }
+
+        const formData = new FormData();
+        formData.append('image', file);
+
+        fetch(`/admin/gallery/gallery/${galleryId}/upload-image/`, {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken')
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('上传成功！');
+                loadImages();
+                // 刷新页面以更新图片数量
+                setTimeout(() => location.reload(), 500);
+            } else {
+                alert('上传失败: ' + data.message);
+            }
+        })
+        .catch(error => {
+            alert('上传失败: ' + error.message);
+        });
+    };
+
+    input.click();
+}
+
+// 删除图片
+function deleteImage(filename) {
+    if (!confirm(`确定要删除图片 "${filename}" 吗？`)) {
+        return;
+    }
+
+    fetch(`/admin/gallery/gallery/${galleryId}/delete-image/${filename}/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': getCookie('csrftoken')
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('删除成功！');
+            loadImages();
+            // 刷新页面以更新图片数量
+            setTimeout(() => location.reload(), 500);
+        } else {
+            alert('删除失败: ' + data.message);
+        }
+    })
+    .catch(error => {
+        alert('删除失败: ' + error.message);
+    });
+}
+
+// 更新封面
+function updateCover() {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/jpeg,image/jpg,image/png,image/webp,image/gif,video/mp4';
+
+    input.onchange = function() {
+        if (input.files.length === 0) return;
+
+        const file = input.files[0];
+
+        // 文件大小检查
+        if (file.size > 5 * 1024 * 1024) {
+            alert('图片大小不能超过 5MB');
+            return;
+        }
+
+        if (!confirm(`确定要将 "${file.name}" 设置为封面吗？`)) {
+            return;
+        }
+
+        const formData = new FormData();
+        formData.append('cover', file);
+
+        fetch(`/admin/gallery/gallery/${galleryId}/update-cover/`, {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken')
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('封面更新成功！');
+                loadImages();
+            } else {
+                alert('更新失败: ' + data.message);
+            }
+        })
+        .catch(error => {
+            alert('更新失败: ' + error.message);
+        });
+    };
+
+    input.click();
+}
+
+// 刷新图片数量
+function refreshCount() {
+    fetch(`/admin/gallery/gallery/${galleryId}/refresh-count/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': getCookie('csrftoken')
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('图片数量已刷新: ' + data.image_count);
+            setTimeout(() => location.reload(), 500);
+        } else {
+            alert('刷新失败');
+        }
+    })
+    .catch(error => {
+        alert('刷新失败: ' + error.message);
+    });
+}
+
+// 刷新图片列表
+function refreshImages() {
+    loadImages();
+}
+
+// 获取 CSRF token
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+</script>
+{% endblock %}
