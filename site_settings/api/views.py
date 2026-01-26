@@ -252,3 +252,111 @@ class MilestoneDetailView(APIView):
             return error_response(message=str(e), status_code=status.HTTP_400_BAD_REQUEST)
         except DatabaseException as e:
             return error_response(message=str(e), status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+from django.http import HttpResponse
+from django.template.loader import render_to_string
+from song_management.models import Song
+from gallery.models import Gallery
+
+
+class SitemapView(APIView):
+    """动态 Sitemap 视图"""
+
+    def get(self, request):
+        """生成 sitemap.xml"""
+        try:
+            # 基础 URL 列表
+            base_urls = [
+                {
+                    'loc': 'https://www.xxm8777.cn/',
+                    'lastmod': '2026-01-26',
+                    'changefreq': 'daily',
+                    'priority': '1.0'
+                },
+                {
+                    'loc': 'https://www.xxm8777.cn/about',
+                    'lastmod': '2026-01-26',
+                    'changefreq': 'weekly',
+                    'priority': '0.8'
+                },
+                {
+                    'loc': 'https://www.xxm8777.cn/songs',
+                    'lastmod': '2026-01-26',
+                    'changefreq': 'daily',
+                    'priority': '0.9'
+                },
+                {
+                    'loc': 'https://www.xxm8777.cn/gallery',
+                    'lastmod': '2026-01-26',
+                    'changefreq': 'daily',
+                    'priority': '0.8'
+                },
+                {
+                    'loc': 'https://www.xxm8777.cn/fansDIY',
+                    'lastmod': '2026-01-26',
+                    'changefreq': 'weekly',
+                    'priority': '0.7'
+                },
+                {
+                    'loc': 'https://www.xxm8777.cn/live',
+                    'lastmod': '2026-01-26',
+                    'changefreq': 'weekly',
+                    'priority': '0.7'
+                },
+                {
+                    'loc': 'https://www.xxm8777.cn/data',
+                    'lastmod': '2026-01-26',
+                    'changefreq': 'weekly',
+                    'priority': '0.6'
+                },
+            ]
+
+            # 添加歌曲页面
+            songs = Song.objects.all()
+            for song in songs:
+                base_urls.append({
+                    'loc': f'https://www.xxm8777.cn/songs/{song.id}',
+                    'lastmod': song.updated_at.strftime('%Y-%m-%d') if hasattr(song, 'updated_at') else '2026-01-26',
+                    'changefreq': 'monthly',
+                    'priority': '0.7'
+                })
+
+            # 添加图集页面
+            galleries = Gallery.objects.all()
+            for gallery in galleries:
+                base_urls.append({
+                    'loc': f'https://www.xxm8777.cn/gallery/{gallery.id}',
+                    'lastmod': gallery.updated_at.strftime('%Y-%m-%d') if hasattr(gallery, 'updated_at') else '2026-01-26',
+                    'changefreq': 'weekly',
+                    'priority': '0.6'
+                })
+
+            # 生成 XML
+            xml_content = render_to_string('sitemap.xml', {'urls': base_urls})
+            return HttpResponse(xml_content, content_type='application/xml')
+        except Exception as e:
+            # 返回基本的 sitemap
+            basic_urls = [
+                {'loc': 'https://www.xxm8777.cn/', 'priority': '1.0'},
+                {'loc': 'https://www.xxm8777.cn/about', 'priority': '0.8'},
+                {'loc': 'https://www.xxm8777.cn/songs', 'priority': '0.9'},
+            ]
+            xml_content = render_to_string('sitemap.xml', {'urls': basic_urls})
+            return HttpResponse(xml_content, content_type='application/xml')
+
+
+class RobotsTxtView(APIView):
+    """Robots.txt 视图"""
+
+    def get(self, request):
+        """生成 robots.txt"""
+        content = """User-agent: *
+Allow: /
+
+Disallow: /admin/
+Disallow: /api/
+
+Sitemap: https://www.xxm8777.cn/api/site-settings/sitemap.xml
+"""
+        return HttpResponse(content, content_type='text/plain')

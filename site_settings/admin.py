@@ -7,7 +7,7 @@ class SiteSettingsForm(forms.ModelForm):
     """网站设置表单"""
     artist_profession = forms.CharField(
         required=False,
-        widget=forms.Textarea(attrs={'rows': 3, 'placeholder': '请输入职业，用逗号分隔，例如：歌手, 配音演员, 唱见'}),
+        widget=forms.Textarea(attrs={'rows': 3, 'placeholder': '请输入职业，用逗号分隔，例如：歌手, 音乐主播, 唱见'}),
         help_text='请输入职业，用逗号分隔'
     )
     artist_voice_features = forms.CharField(

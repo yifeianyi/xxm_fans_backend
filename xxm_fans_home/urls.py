@@ -22,6 +22,10 @@ from django.views.static import serve
 from rest_framework import permissions
 
 urlpatterns = [
+    # SEO 相关
+    path('sitemap.xml', include('site_settings.urls')),
+    path('robots.txt', include('site_settings.urls')),
+    # API 路由
     path('api/', include('song_management.urls')),  # song_management 应用路由（替代main）
     path('api/data-analytics/', include('data_analytics.urls')),  # data_analytics 应用路由
     path('api/site-settings/', include('site_settings.urls')),  # site_settings 应用路由
