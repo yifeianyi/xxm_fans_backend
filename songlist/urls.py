@@ -8,5 +8,6 @@ urlpatterns = [
     path('styles/', views.style_list, name='style-list'),
     path('random-song/', views.random_song, name='random-song'),
     path('site-settings/', views.site_settings, name='site-settings'),
+    path('artist-info/', views.get_artist_info, name='artist-info'),
     path('favicon/', views.favicon, name='favicon'),
 ]

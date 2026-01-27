@@ -6,15 +6,17 @@ import json
 import random
 
 
-# 歌手配置字典
+# 歌手配置字典（包含模型和中文名称）
 ARTIST_CONFIG = {
     'youyou': {
         'song_model': YouyouSong,
         'setting_model': YouyouSiteSetting,
+        'name': '乐游',
     },
     'bingjie': {
         'song_model': BingjieSong,
         'setting_model': BingjieSiteSetting,
+        'name': '冰洁',
     },
 }
 
@@ -234,6 +236,21 @@ def random_song(request):
         }
 
         return JsonResponse(song_data)
+
+
+def get_artist_info(request):
+    """获取歌手信息（包括中文名称）"""
+    if request.method == 'GET':
+        artist = request.GET.get('artist', '')
+
+        if artist in ARTIST_CONFIG:
+            artist_info = {
+                'key': artist,
+                'name': ARTIST_CONFIG[artist]['name'],
+            }
+            return JsonResponse(artist_info)
+        else:
+            return JsonResponse({'error': 'Artist not found'}, status=404)
 
 
 def site_settings(request):
