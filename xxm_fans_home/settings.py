@@ -113,6 +113,9 @@ DATABASES = {
     },
 }
 
+# 数据库路由配置
+DATABASE_ROUTERS = ['xxm_fans_home.db_routers.SonglistRouter']
+
 # Password validation
 # https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators
 

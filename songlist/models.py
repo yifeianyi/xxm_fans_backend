@@ -40,7 +40,18 @@ def create_artist_models(artist_key, artist_name):
 
     setting_attrs = {
         '__module__': 'songlist.models',
-        'photo_url': models.CharField(max_length=500, verbose_name='图片URL'),
+        'photo': models.ImageField(
+            upload_to=f'songlist/{artist_key}/',
+            verbose_name='图片',
+            blank=True,
+            null=True
+        ),
+        'photo_url': models.CharField(
+            max_length=500,
+            verbose_name='图片URL',
+            blank=True,
+            help_text='如果上传了图片，此字段将自动填充'
+        ),
         'position': models.IntegerField(
             verbose_name='位置',
             choices=[
