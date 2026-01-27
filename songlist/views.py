@@ -99,14 +99,14 @@ def language_list(request):
         song_model = get_artist_model(artist, 'song')
 
         if song_model:
-            songs = song_model.exclude(language='')
+            songs = song_model.objects.exclude(language='')
             languages = songs.values_list('language', flat=True).distinct()
             return JsonResponse(list(languages), safe=False)
         else:
             # 合并所有表的语言
             all_languages = set()
             for artist_config in ARTIST_CONFIG.values():
-                languages = set(artist_config['song_model'].exclude(language='').values_list('language', flat=True))
+                languages = set(artist_config['song_model'].objects.exclude(language='').values_list('language', flat=True))
                 all_languages.update(languages)
             return JsonResponse(list(all_languages), safe=False)
 
@@ -119,14 +119,14 @@ def style_list(request):
         song_model = get_artist_model(artist, 'song')
 
         if song_model:
-            songs = song_model.exclude(style='')
+            songs = song_model.objects.exclude(style='')
             styles = songs.values_list('style', flat=True).distinct()
             return JsonResponse(list(styles), safe=False)
         else:
             # 合并所有表的曲风
             all_styles = set()
             for artist_config in ARTIST_CONFIG.values():
-                styles = set(artist_config['song_model'].exclude(style='').values_list('style', flat=True))
+                styles = set(artist_config['song_model'].objects.exclude(style='').values_list('style', flat=True))
                 all_styles.update(styles)
             return JsonResponse(list(all_styles), safe=False)
 
