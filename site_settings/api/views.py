@@ -312,25 +312,9 @@ class SitemapView(APIView):
                 },
             ]
 
-            # 添加歌曲页面
-            songs = Song.objects.all()
-            for song in songs:
-                base_urls.append({
-                    'loc': f'https://www.xxm8777.cn/songs/{song.id}',
-                    'lastmod': song.updated_at.strftime('%Y-%m-%d') if hasattr(song, 'updated_at') else '2026-01-26',
-                    'changefreq': 'monthly',
-                    'priority': '0.7'
-                })
-
-            # 添加图集页面
-            galleries = Gallery.objects.all()
-            for gallery in galleries:
-                base_urls.append({
-                    'loc': f'https://www.xxm8777.cn/gallery/{gallery.id}',
-                    'lastmod': gallery.updated_at.strftime('%Y-%m-%d') if hasattr(gallery, 'updated_at') else '2026-01-26',
-                    'changefreq': 'weekly',
-                    'priority': '0.6'
-                })
+            # 注意: 不再为每首歌曲和图集生成单独的详情页 URL
+            # 因为前端只有列表页面,没有单独的详情页面
+            # 用户可以通过歌曲列表页面查看所有歌曲信息
 
             # 生成 XML
             xml_content = render_to_string('sitemap.xml', {'urls': base_urls})
