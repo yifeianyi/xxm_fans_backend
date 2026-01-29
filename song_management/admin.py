@@ -685,7 +685,7 @@ class SongRecordAdmin(admin.ModelAdmin):
                 import json
                 conflict_info = None
                 while True:
-                    from tools.bilibili_importer import BilibiliImporter
+                    from .services.bilibili_import_service import BilibiliImporter
                     importer = BilibiliImporter()
 
                     result_list, remaining_parts, conflict_info = importer.import_bv_song(
