@@ -112,9 +112,12 @@ class Gallery(models.Model):
                 and f != 'cover.jpg'
             ])
 
+            from .utils import ThumbnailGenerator
+
             return [{
                 'filename': f,
                 'url': f"{self.folder_path}{f}",
+                'thumbnail_url': f"/api/gallery/thumbnail/?path={self.folder_path}{f}",
                 'title': f"{self.title} - {idx + 1}"
             } for idx, f in enumerate(image_files)]
         except Exception:

@@ -1,7 +1,10 @@
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
+from django.http import HttpResponse, FileResponse
+from django.core.files.storage import default_storage
 from core.responses import success_response, error_response
 from .models import Gallery
+from .utils import ThumbnailGenerator
 
 
 @api_view(['GET'])
@@ -104,6 +107,7 @@ def gallery_images(request, gallery_id):
         for img in images:
             image_list.append({
                 'url': img['url'],
+                'thumbnail_url': img.get('thumbnail_url', img['url']),  # 使用缩略图 URL
                 'title': img['title'],
                 'filename': img['filename'],
             })
@@ -154,3 +158,35 @@ def gallery_children_images(request, gallery_id):
         return error_response('图集不存在', status_code=404)
     except Exception as e:
         return error_response(str(e))
+
+
+@api_view(['GET'])
+def get_thumbnail(request):
+    """获取图片缩略图"""
+    image_path = request.GET.get('path')
+
+    if not image_path:
+        return HttpResponse('Missing path parameter', status=400)
+
+    # 生成缩略图
+    thumbnail_path = ThumbnailGenerator.generate_thumbnail(image_path)
+
+    # 返回缩略图
+    try:
+        if default_storage.exists(thumbnail_path):
+            file = default_storage.open(thumbnail_path, 'rb')
+            response = FileResponse(file)
+            response['Cache-Control'] = 'public, max-age=31536000'
+            response['Content-Type'] = 'image/webp'
+            return response
+        else:
+            # 降级到原图
+            if default_storage.exists(image_path):
+                file = default_storage.open(image_path, 'rb')
+                response = FileResponse(file)
+                response['Cache-Control'] = 'public, max-age=86400'
+                return response
+            else:
+                return HttpResponse('Image not found', status=404)
+    except Exception as e:
+        return HttpResponse(f'Error: {str(e)}', status=500)
