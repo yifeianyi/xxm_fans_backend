@@ -15,8 +15,13 @@ class CollectionSerializer(serializers.ModelSerializer):
 class WorkSerializer(serializers.ModelSerializer):
     """作品序列化器"""
     collection_name = serializers.CharField(source='collection.name', read_only=True)
+    cover_thumbnail_url = serializers.SerializerMethodField()
     
     class Meta:
         model = Work
         fields = '__all__'
         read_only_fields = ['id']
+
+    def get_cover_thumbnail_url(self, obj):
+        """获取封面缩略图 URL"""
+        return obj.get_cover_thumbnail_url()

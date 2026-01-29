@@ -24,6 +24,7 @@ def gallery_tree(request):
                 'title': gallery.title,
                 'description': gallery.description,
                 'cover_url': gallery.cover_url,
+                'cover_thumbnail_url': gallery.get_cover_thumbnail_url(),
                 'level': gallery.level,
                 'image_count': gallery.image_count,
                 'folder_path': gallery.folder_path,
@@ -60,6 +61,7 @@ def gallery_detail(request, gallery_id):
             'title': gallery.title,
             'description': gallery.description,
             'cover_url': gallery.cover_url,
+            'cover_thumbnail_url': gallery.get_cover_thumbnail_url(),
             'level': gallery.level,
             'image_count': gallery.image_count,
             'folder_path': gallery.folder_path,
@@ -81,6 +83,7 @@ def gallery_detail(request, gallery_id):
                 'title': child.title,
                 'description': child.description,
                 'cover_url': child.cover_url,
+                'cover_thumbnail_url': child.get_cover_thumbnail_url(),
                 'level': child.level,
                 'image_count': child.image_count,
                 'folder_path': child.folder_path,
@@ -105,9 +108,11 @@ def gallery_images(request, gallery_id):
         # 构建图片列表
         image_list = []
         for img in images:
+            # 使用核心缩略图生成器获取缩略图 URL
+            thumbnail_url = ThumbnailGenerator.get_thumbnail_url(img['url'])
             image_list.append({
                 'url': img['url'],
-                'thumbnail_url': img.get('thumbnail_url', img['url']),  # 使用缩略图 URL
+                'thumbnail_url': thumbnail_url,
                 'title': img['title'],
                 'filename': img['filename'],
             })
@@ -131,12 +136,16 @@ def gallery_children_images(request, gallery_id):
         # 如果是叶子节点，返回自己的图片
         if gallery.is_leaf():
             images = gallery.get_images()
+            # 为每张图片添加缩略图 URL
+            for img in images:
+                img['thumbnail_url'] = ThumbnailGenerator.get_thumbnail_url(img['url'])
             return success_response({
                 'gallery': {
                     'id': gallery.id,
                     'title': gallery.title,
                     'description': gallery.description,
                     'cover_url': gallery.cover_url,
+                    'cover_thumbnail_url': gallery.get_cover_thumbnail_url(),
                     'image_count': gallery.image_count,
                     'folder_path': gallery.folder_path,
                     'tags': gallery.tags,
@@ -147,6 +156,13 @@ def gallery_children_images(request, gallery_id):
 
         # 如果是父节点，返回所有子图集的图片
         children_images = gallery.get_all_children_images()
+        # 为每张图片添加缩略图 URL
+        for item in children_images:
+            item['gallery']['cover_thumbnail_url'] = ThumbnailGenerator.get_thumbnail_url(
+                item['gallery']['cover_url']
+            )
+            for img in item['images']:
+                img['thumbnail_url'] = ThumbnailGenerator.get_thumbnail_url(img['url'])
         total_images = sum(len(item['images']) for item in children_images)
 
         return success_response({

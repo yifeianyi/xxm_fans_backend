@@ -57,3 +57,11 @@ class SongRecord(models.Model):
 
     def __str__(self):
         return f"{self.song.song_name} @ {self.performed_at}"
+
+    def get_cover_thumbnail_url(self):
+        """获取封面缩略图 URL"""
+        if not self.cover_url:
+            return self.cover_url
+        
+        from core.thumbnail_generator import ThumbnailGenerator
+        return ThumbnailGenerator.get_thumbnail_url(self.cover_url)

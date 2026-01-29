@@ -18,10 +18,16 @@ class TagSerializer(serializers.ModelSerializer):
 
 
 class SongRecordSerializer(serializers.ModelSerializer):
+    cover_thumbnail_url = serializers.SerializerMethodField()
+
     class Meta:
         model = SongRecord
         fields = '__all__'
         read_only_fields = ('song',)  # song字段在创建时由URL中的song_id确定
+
+    def get_cover_thumbnail_url(self, obj):
+        """获取封面缩略图 URL"""
+        return obj.get_cover_thumbnail_url()
 
 
 class SongSerializer(serializers.ModelSerializer):

@@ -81,6 +81,14 @@ class Gallery(models.Model):
     def __str__(self):
         return self.title
 
+    def get_cover_thumbnail_url(self):
+        """获取封面缩略图 URL"""
+        if not self.cover_url:
+            return self.cover_url
+        
+        from .utils import ThumbnailGenerator
+        return ThumbnailGenerator.get_thumbnail_url(self.cover_url)
+
     def is_leaf(self):
         """判断是否为叶子节点（无子图集）"""
         return not self.children.exists()

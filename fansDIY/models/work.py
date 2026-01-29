@@ -24,6 +24,14 @@ class Work(models.Model):
     
     def __str__(self):
         return f"{self.title} - {self.author}"
+
+    def get_cover_thumbnail_url(self):
+        """获取封面缩略图 URL"""
+        if not self.cover_url:
+            return self.cover_url
+        
+        from core.thumbnail_generator import ThumbnailGenerator
+        return ThumbnailGenerator.get_thumbnail_url(self.cover_url)
     
     def save(self, *args, **kwargs):
         """保存时自动更新合集的作品数量"""
