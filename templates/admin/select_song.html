@@ -18,7 +18,7 @@
 <div class="breadcrumbs">
     <a href="{% url 'admin:index' %}">{% trans 'Home' %}</a>
     &rsaquo; <span>歌曲管理</span>
-    &rsaquo; <a href="{% url 'admin:main_songrecord_changelist' %}">演唱记录</a>
+    &rsaquo; <a href="{% url 'admin:song_management_songrecord_changelist' %}">演唱记录</a>
     &rsaquo; BV导入 - 选择歌曲
 </div>
 {% endblock %}
@@ -64,7 +64,7 @@
 
             <div class="submit-row">
                 <input type="submit" value="确认选择并继续导入" class="default" name="_save">
-                <a href="{% url 'admin:main_songrecord_changelist' %}" class="button cancel-link">取消</a>
+                <a href="{% url 'admin:song_management_songrecord_changelist' %}" class="button cancel-link">取消</a>
             </div>
         </form>
     </div>

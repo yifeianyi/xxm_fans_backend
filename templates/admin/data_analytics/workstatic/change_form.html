@@ -1,0 +1,305 @@
+{% extends "admin/change_form.html" %}
+
+{% block extrahead %}
+{{ block.super }}
+<style>
+    .bv-import-section {
+        background-color: #f8f9fa;
+        border: 1px solid #dee2e6;
+        border-radius: 4px;
+        padding: 15px;
+        margin-bottom: 20px;
+        margin-top: 20px;
+        position: static !important;
+        top: auto !important;
+        right: auto !important;
+        left: auto !important;
+        bottom: auto !important;
+        width: auto !important;
+        max-width: 100% !important;
+        box-shadow: none !important;
+        z-index: auto !important;
+        float: none !important;
+        clear: both !important;
+    }
+
+    .bv-import-section h3 {
+        margin-top: 0;
+        margin-bottom: 10px;
+        font-size: 14px;
+        font-weight: 600;
+    }
+
+    .bv-import-section .form-row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .bv-import-section .form-row input[type="text"] {
+        flex: 1;
+        max-width: 400px;
+    }
+
+    .bv-import-section .form-row button {
+        background-color: #417690;
+        color: white;
+        border: none;
+        padding: 8px 16px;
+        border-radius: 4px;
+        cursor: pointer;
+    }
+
+    .bv-import-section .form-row button:hover {
+        background-color: #325d72;
+    }
+
+    .bv-import-section .form-row button:disabled {
+        background-color: #cccccc;
+        cursor: not-allowed;
+    }
+
+    .bv-import-section .message {
+        margin-top: 10px;
+        padding: 8px;
+        border-radius: 4px;
+        font-size: 13px;
+    }
+
+    .bv-import-section .message.success {
+        background-color: #d4edda;
+        color: #155724;
+        border: 1px solid #c3e6cb;
+    }
+
+    .bv-import-section .message.error {
+        background-color: #f8d7da;
+        color: #721c24;
+        border: 1px solid #f5c6cb;
+    }
+
+    .bv-import-section .message.warning {
+        background-color: #fff3cd;
+        color: #856404;
+        border: 1px solid #ffeaa7;
+    }
+</style>
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        // 检查是否在添加页面
+        const isAddPage = window.location.pathname.includes('/add/');
+
+        console.log('========== BV 导入功能初始化 ==========');
+        console.log('当前页面路径:', window.location.pathname);
+        console.log('是否为添加页面:', isAddPage);
+
+        if (isAddPage) {
+            // 查找正确的表单 - 排除登出表单
+            const allForms = document.querySelectorAll('form');
+            let form = null;
+
+            console.log('页面上的表单总数:', allForms.length);
+
+            // 遍历所有表单，找到正确的添加表单
+            for (let i = 0; i < allForms.length; i++) {
+                const f = allForms[i];
+                const action = f.getAttribute('action') || '';
+                const id = f.getAttribute('id') || '';
+
+                console.log(`表单 ${i}: id=${id}, action=${action}`);
+
+                // 排除登出表单
+                if (id === 'logout-form' || action.includes('/logout/')) {
+                    console.log(`  → 跳过登出表单`);
+                    continue;
+                }
+
+                // 查找包含 WorkStatic 相关字段的表单
+                if (f.querySelector('#id_platform') ||
+                    f.querySelector('#id_work_id') ||
+                    f.querySelector('#id_title')) {
+                    form = f;
+                    console.log(`  → ✓ 找到正确的表单！`);
+                    break;
+                }
+            }
+
+            if (!form) {
+                // 如果没找到，尝试查找主内容区的表单
+                const mainContent = document.querySelector('#content-main');
+                if (mainContent) {
+                    form = mainContent.querySelector('form');
+                    console.log('在主内容区找到表单:', !!form);
+                }
+            }
+
+            console.log('最终找到的表单:', !!form);
+            console.log('表单元素:', form);
+
+            if (form) {
+                // 创建 BV 导入区域
+                const importSection = document.createElement('div');
+                importSection.className = 'bv-import-section';
+                importSection.id = 'bv-import-section-container';
+                importSection.innerHTML = `
+                        <h3>从 B 站导入作品信息</h3>
+                        <div class="form-row">
+                            <input type="text" id="bvid-input" placeholder="输入 BV 号，例如：BV1xx411c7mD" />
+                            <button type="button" id="import-bv-btn">导入</button>
+                        </div>
+                        <div id="import-message" class="message" style="display: none;"></div>
+                    `;
+
+                console.log('导入区域元素:', importSection);
+                console.log('导入区域父元素将设置为:', form);
+
+                // 查找第一个 fieldset
+                const fieldsets = form.querySelectorAll('fieldset');
+                console.log('找到 fieldset 数量:', fieldsets.length);
+
+                if (fieldsets.length > 0) {
+                    // 插入到第一个 fieldset 之前
+                    form.insertBefore(importSection, fieldsets[0]);
+                    console.log('✓ BV 导入区域已插入到第一个 fieldset 之前');
+                } else {
+                    // 如果没有 fieldset，查找第一个表单行
+                    const formRows = form.querySelectorAll('.form-row, .module');
+                    if (formRows.length > 0) {
+                        form.insertBefore(importSection, formRows[0]);
+                        console.log('✓ BV 导入区域已插入到第一个表单行之前');
+                    } else {
+                        // 插入到表单第一个子元素之后
+                        const firstChild = form.firstElementChild;
+                        if (firstChild) {
+                            form.insertBefore(importSection, firstChild.nextSibling);
+                            console.log('✓ BV 导入区域已插入到第一个子元素之后');
+                        } else {
+                            form.appendChild(importSection);
+                            console.log('✓ BV 导入区域已添加到表单末尾');
+                        }
+                    }
+                }
+
+                // 验证插入位置
+                setTimeout(() => {
+                    const insertedElement = document.getElementById('bv-import-section-container');
+                    console.log('插入后的元素:', insertedElement);
+                    console.log('插入后的父元素:', insertedElement ? insertedElement.parentElement : 'null');
+                    console.log('导入区域的计算位置:', insertedElement ? window.getComputedStyle(insertedElement).position : 'null');
+
+                    // 检查父元素是否正确
+                    if (insertedElement && insertedElement.parentElement) {
+                        const parentId = insertedElement.parentElement.id;
+                        const parentAction = insertedElement.parentElement.getAttribute('action') || '';
+                        console.log('父元素验证:', { id: parentId, action: parentAction });
+                        if (parentId === 'logout-form' || parentAction.includes('/logout/')) {
+                            console.error('❌ 错误：插入到了登出表单！');
+                        } else {
+                            console.log('✓ 父元素正确');
+                        }
+                    }
+                }, 100);
+
+                // 绑定导入按钮事件
+                const importBtn = document.getElementById('import-bv-btn');
+                const bvidInput = document.getElementById('bvid-input');
+                const messageDiv = document.getElementById('import-message');
+
+                console.log('导入按钮:', importBtn);
+                console.log('BV 输入框:', bvidInput);
+                console.log('消息区域:', messageDiv);
+
+                if (importBtn && bvidInput && messageDiv) {
+                    importBtn.addEventListener('click', function () {
+                        const bvid = bvidInput.value.trim();
+                        if (!bvid) {
+                            showMessage('请输入 BV 号', 'error');
+                            return;
+                        }
+
+                        importBtn.disabled = true;
+                        importBtn.textContent = '导入中...';
+                        showMessage('正在导入...', 'warning');
+
+                        // 发送 AJAX 请求
+                        fetch('/admin/data_analytics/workstatic/import-bv-api/', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/x-www-form-urlencoded',
+                                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                            },
+                            body: 'bvid=' + encodeURIComponent(bvid)
+                        })
+                            .then(response => response.json())
+                            .then(data => {
+                                if (data.success) {
+                                    // 填充表单
+                                    if (data.data) {
+                                        const formData = data.data;
+                                        if (formData.platform) {
+                                            const platformEl = document.getElementById('id_platform');
+                                            if (platformEl) platformEl.value = formData.platform;
+                                        }
+                                        if (formData.work_id) {
+                                            const workIdEl = document.getElementById('id_work_id');
+                                            if (workIdEl) workIdEl.value = formData.work_id;
+                                        }
+                                        if (formData.title) {
+                                            const titleEl = document.getElementById('id_title');
+                                            if (titleEl) titleEl.value = formData.title;
+                                        }
+                                        if (formData.author) {
+                                            const authorEl = document.getElementById('id_author');
+                                            if (authorEl) authorEl.value = formData.author;
+                                        }
+                                        if (formData.publish_time) {
+                                            const publishTimeEl = document.getElementById('id_publish_time');
+                                            if (publishTimeEl) publishTimeEl.value = formData.publish_time;
+                                        }
+                                        if (formData.cover_url) {
+                                            const coverUrlEl = document.getElementById('id_cover_url');
+                                            if (coverUrlEl) coverUrlEl.value = formData.cover_url;
+                                        }
+                                        if (formData.is_valid !== undefined) {
+                                            const isValidEl = document.getElementById('id_is_valid');
+                                            if (isValidEl) isValidEl.checked = formData.is_valid;
+                                        }
+                                    }
+                                    showMessage(data.message, 'success');
+                                } else {
+                                    showMessage(data.message, 'error');
+                                }
+                            })
+                            .catch(error => {
+                                showMessage('导入失败：' + error.message, 'error');
+                            })
+                            .finally(() => {
+                                importBtn.disabled = false;
+                                importBtn.textContent = '导入';
+                            });
+                    });
+                } else {
+                    console.error('❌ 导入按钮、输入框或消息区域未找到');
+                }
+
+                function showMessage(text, type) {
+                    messageDiv.textContent = text;
+                    messageDiv.className = 'message ' + type;
+                    messageDiv.style.display = 'block';
+
+                    // 3秒后自动隐藏成功消息
+                    if (type === 'success') {
+                        setTimeout(() => {
+                            messageDiv.style.display = 'none';
+                        }, 3000);
+                    }
+                }
+            } else {
+                console.error('❌ 未找到正确的表单');
+            }
+        } else {
+            console.log('不是添加页面，跳过 BV 导入功能');
+        }
+    });
+</script>
+{% endblock %}

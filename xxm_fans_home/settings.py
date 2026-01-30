@@ -111,10 +111,17 @@ DATABASES = {
             'timeout': 20,
         },
     },
+    'view_data_db': {
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': str(DATA_DIR / 'view_data.sqlite3'),
+        'OPTIONS': {
+            'timeout': 20,
+        },
+    },
 }
 
 # 数据库路由配置
-DATABASE_ROUTERS = ['xxm_fans_home.db_routers.SonglistRouter']
+DATABASE_ROUTERS = ['xxm_fans_home.db_routers.MultiDBRouter']
 
 # Password validation
 # https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators

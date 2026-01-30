@@ -19,6 +19,7 @@ class WorkMetricsHour(models.Model):
     ingest_time = models.DateTimeField(auto_now_add=True, verbose_name="入库时间")
 
     class Meta:
+        db_table = 'data_analytics_workmetricshour'
         verbose_name = "作品小时指标"
         verbose_name_plural = "作品小时指标"
         ordering = ['-crawl_time']

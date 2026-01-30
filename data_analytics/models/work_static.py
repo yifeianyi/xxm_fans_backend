@@ -15,6 +15,7 @@ class WorkStatic(models.Model):
     is_valid = models.BooleanField(default=True, verbose_name="投稿是否有效")
 
     class Meta:
+        db_table = 'data_analytics_workstatic'
         verbose_name = "作品静态信息"
         verbose_name_plural = "作品静态信息"
         unique_together = ("platform", "work_id")

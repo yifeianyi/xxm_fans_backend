@@ -5,32 +5,61 @@
     {{ form.as_p }}
     <button type="submit" class="default">导入</button>
 </form>
-<a href="{% url 'admin:main_songrecord_changelist' %}">← 返回歌曲记录列表</a>
+<a href="{% url 'admin:song_management_songrecord_changelist' %}">← 返回歌曲记录列表</a>
 
 <!-- 
     使用说明:
 -->
 <div style="margin-top: 20px; padding: 15px; background-color: #f8f9fa; border-radius: 5px;">
-    <h3>使用说明：</h3>
+    <h3>📋 使用说明：</h3>
     <ul>
-        <li><strong>BV号</strong>：从B站视频URL中获取，例如：BV1xx411c7mD</li>
-        <li><strong>格式</strong>：导入的视频需要符合 "" 的格式</li>
-        <li>系统会自动获取视频的标题、作者、封面等信息</li>
-        <li><strong>封面保存路径</strong>：封面会自动下载到 <code>xxm_fans_frontend/public/cover/year/month/</code> 目录下</li>
-        <li><strong>封面文件格式</strong>：<code>发布年-月-日.jpg</code></li>
-    </ul>
-    <h3 style="color: red;">重点提示：</h3>
-    <ul>
-        <li>如果导入的视频包含多个分P，系统会自动为每个分P创建单独的歌曲记录</li>
-        <li>如果曲库中不存在将要导入的歌曲：系统会自动在曲库中新创建对应歌曲，并把歌曲记录
+        <li><strong>BV号获取</strong>：从B站视频URL中获取，例如：<code>BV1xx411c7mD</code></li>
+        <li><strong>视频标题格式要求</strong>：分P标题必须符合 <code>歌曲名称-YYYY年M月D日</code> 的格式
             <ul>
-                <li>曲库中，自动创建的导入演唱记录对应的歌曲</li>
-                <li>新导入的演唱记录，系统自动把它归属到对应的歌曲名下</li>
+                <li>例如：<code>平凡之路-2025年1月15日</code></li>
+                <li>系统会自动解析歌曲名称和演唱日期</li>
+                <li>不符合此格式的分P将被跳过</li>
             </ul>
         </li>
-        <li>如果遇到同名歌曲冲突，系统会弹出选择页面，让你选择演唱记录归属到哪个版本的歌曲名下</li>
-
+        <li><strong>自动获取信息</strong>：系统会自动获取视频的封面、分P信息等</li>
+        <li><strong>封面处理</strong>：
+            <ul>
+                <li>使用视频总封面作为所有分P的封面</li>
+                <li>封面保存路径：<code>/media/covers/{year}/{month}/</code></li>
+                <li>封面文件格式：<code>YYYY-MM-DD.jpg</code></li>
+                <li>同一天的封面只下载一次，避免重复</li>
+            </ul>
+        </li>
+        <li><strong>多分P处理</strong>：如果视频包含多个分P，系统会自动为每个分P创建演唱记录</li>
     </ul>
+
+    <h3 style="color: #d9534f;">⚠️ 重点提示：</h3>
+    <ul>
+        <li><strong>歌曲自动创建</strong>：如果曲库中不存在该歌曲，系统会自动创建新歌曲</li>
+        <li><strong>同名歌曲冲突</strong>：
+            <ul>
+                <li>如果曲库中已存在同名歌曲，系统会弹出选择页面</li>
+                <li>显示所有候选歌曲（包含演唱次数、歌手、语言等信息）</li>
+                <li>选择后继续导入剩余分P</li>
+            </ul>
+        </li>
+        <li><strong>重复记录检查</strong>：
+            <ul>
+                <li>如果同一首歌曲在同一天已存在演唱记录，会自动跳过</li>
+                <li>不会创建重复的记录</li>
+            </ul>
+        </li>
+        <li><strong>批量导入</strong>：支持一次导入包含多个分P的视频，自动逐个处理</li>
+    </ul>
+
+    <h3 style="color: #5bc0de;">💡 使用示例：</h3>
+    <div style="background: #fff; padding: 10px; border-radius: 3px; font-family: monospace; font-size: 13px;">
+        视频URL：https://www.bilibili.com/video/BV1234567890<br>
+        分P标题：<br>
+        &nbsp;&nbsp;P1: 平凡之路-2025年1月15日<br>
+        &nbsp;&nbsp;P2: 光辉岁月-2025年1月15日<br>
+        &nbsp;&nbsp;P3: 海阔天空-2025年1月16日
+    </div>
 </div>
 </div>
 {% endblock %}

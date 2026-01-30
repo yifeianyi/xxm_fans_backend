@@ -39,6 +39,11 @@ class ThumbnailGenerator:
             'keep_aspect_ratio': True,
             'thumbnail_dir': 'settings/thumbnails/',
         },
+        'data_analytics': {
+            'thumbnail_size': (300, 300),  # 保持宽高比
+            'keep_aspect_ratio': True,
+            'thumbnail_dir': 'data_analytics/thumbnails/',
+        },
     }
 
     QUALITY = 85  # 图片质量
@@ -277,7 +282,11 @@ class ThumbnailGenerator:
         if not original_url:
             return original_url
 
+        # 移除 /media/ 前缀，获取存储路径
         original_path = original_url.lstrip('/')
+        if original_path.startswith('media/'):
+            original_path = original_path[len('media/'):]
+
         thumbnail_path = cls.generate_thumbnail(original_path)
 
         if thumbnail_path == original_path:

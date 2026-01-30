@@ -1,0 +1,144 @@
+{% extends "admin/base_site.html" %}
+{% load i18n admin_urls %}
+
+{% block extrahead %}{{ block.super }}
+<style>
+    .import-bv-container {
+        max-width: 800px;
+        margin: 0 auto;
+    }
+    .import-bv-form {
+        background: #fff;
+        padding: 20px;
+        border-radius: 5px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    .import-bv-title {
+        margin-top: 0;
+        margin-bottom: 20px;
+        padding-bottom: 10px;
+        border-bottom: 1px solid #eee;
+    }
+    .help-section {
+        margin-top: 30px;
+        padding: 15px;
+        background-color: #f8f9fa;
+        border-radius: 5px;
+        border-left: 4px solid #417690;
+    }
+    .help-section h3 {
+        margin-top: 0;
+        color: #417690;
+    }
+    .help-section ul {
+        margin: 10px 0;
+        padding-left: 20px;
+    }
+    .help-section li {
+        margin: 8px 0;
+        line-height: 1.6;
+    }
+    .help-section code {
+        background: #fff;
+        padding: 2px 6px;
+        border-radius: 3px;
+        font-family: 'Consolas', 'Monaco', monospace;
+        font-size: 13px;
+        color: #d63384;
+    }
+    .help-section ul ul {
+        margin: 5px 0;
+        padding-left: 20px;
+    }
+    .alert-section {
+        margin-top: 20px;
+        padding: 15px;
+        background-color: #fff3cd;
+        border: 1px solid #ffeaa7;
+        border-radius: 5px;
+        border-left: 4px solid #ffc107;
+    }
+    .alert-section h3 {
+        margin-top: 0;
+        color: #856404;
+    }
+    .example-section {
+        margin-top: 15px;
+        background: #fff;
+        padding: 10px;
+        border-radius: 3px;
+        font-family: 'Consolas', 'Monaco', monospace;
+        font-size: 13px;
+        border: 1px solid #dee2e6;
+    }
+</style>
+{% endblock %}
+
+{% block breadcrumbs %}
+<div class="breadcrumbs">
+    <a href="{% url 'admin:index' %}">{% trans 'Home' %}</a>
+    &rsaquo; <a href="{% url 'admin:app_list' app_label='data_analytics' %}">数据分析</a>
+    &rsaquo; <a href="{% url 'admin:data_analytics_workstatic_changelist' %}">作品静态信息</a>
+    &rsaquo; BV号导入
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="import-bv-container">
+    <h1 class="import-bv-title">📥 导入B站作品静态信息</h1>
+
+    <form method="post" class="import-bv-form">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <button type="submit" class="default">开始导入</button>
+    </form>
+
+    <p style="margin-top: 20px;">
+        <a href="{% url 'admin:data_analytics_workstatic_changelist' %}" class="button">← 返回作品列表</a>
+    </p>
+
+    <div class="help-section">
+        <h3>📋 使用说明：</h3>
+        <ul>
+            <li><strong>BV号获取</strong>：从B站视频URL中获取，例如：<code>BV1xx411c7mD</code></li>
+            <li><strong>自动获取信息</strong>：系统会自动获取以下信息
+                <ul>
+                    <li>视频标题</li>
+                    <li>UP主名称</li>
+                    <li>发布时间</li>
+                    <li>视频封面</li>
+                </ul>
+            </li>
+            <li><strong>封面处理</strong>：
+                <ul>
+                    <li>自动下载视频封面</li>
+                    <li>封面保存路径：<code>/media/data_analytics/covers/</code></li>
+                    <li>封面文件格式：<code>{BV号}.jpg</code></li>
+                </ul>
+            </li>
+        </ul>
+    </div>
+
+    <div class="alert-section">
+        <h3>⚠️ 注意事项：</h3>
+        <ul>
+            <li><strong>重复检查</strong>：如果该BV号已存在于数据库中，导入会失败并提示"作品已存在"</li>
+            <li><strong>平台标识</strong>：导入的作品会被标记为 <code>bilibili</code> 平台</li>
+            <li><strong>有效性标识</strong>：导入的作品默认标记为有效投稿（<code>is_valid=True</code>）</li>
+            <li><strong>封面下载</strong>：如果封面下载失败，会使用B站原始URL作为封面链接</li>
+        </ul>
+    </div>
+
+    <div class="help-section">
+        <h3>💡 使用示例：</h3>
+        <div class="example-section">
+            视频URL：https://www.bilibili.com/video/BV1234567890<br>
+            导入信息：<br>
+            &nbsp;&nbsp;BV号：BV1234567890<br>
+            &nbsp;&nbsp;标题：从视频自动获取<br>
+            &nbsp;&nbsp;作者：从视频自动获取<br>
+            &nbsp;&nbsp;封面：自动下载到 /media/data_analytics/covers/BV1234567890.jpg
+        </div>
+    </div>
+</div>
+{% endblock %}

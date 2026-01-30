@@ -5,6 +5,7 @@ from datetime import datetime
 from django.conf import settings
 from ..models import WorkStatic
 from tools.bilibili import BilibiliAPIClient, BilibiliCoverDownloader, BilibiliAPIError
+from core.thumbnail_generator import ThumbnailGenerator
 
 
 class BilibiliWorkStaticImporter:
@@ -36,9 +37,25 @@ class BilibiliWorkStaticImporter:
             if WorkStatic.objects.filter(platform="bilibili", work_id=bvid).exists():
                 return False, f"作品《{title}》已存在", None
 
-            # 下载并保存封面
-            final_cover_url = self.cover_downloader.download_by_bvid(cover_url, bvid)
-            if not final_cover_url:
+            # 下载并保存封面到 data_analytics/covers 目录
+            filename = f"{bvid}.jpg"
+            sub_path = "data_analytics/covers"
+            print(f"[BV:{bvid}] 开始下载封面...")
+            local_cover_path = self.cover_downloader.download(cover_url, sub_path, filename)
+
+            if local_cover_path:
+                final_cover_url = f"/media/{local_cover_path}"
+                print(f"[BV:{bvid}] ✅ 封面下载成功: {local_cover_path}")
+
+                # 自动生成缩略图
+                try:
+                    thumbnail_path = ThumbnailGenerator.generate_thumbnail(local_cover_path)
+                    if thumbnail_path != local_cover_path:
+                        print(f"[BV:{bvid}] ✅ 缩略图生成成功: {thumbnail_path}")
+                except Exception as e:
+                    print(f"[BV:{bvid}] ⚠️ 缩略图生成失败: {e}")
+            else:
+                print(f"[BV:{bvid}] ❌ 封面下载失败，使用原始URL: {cover_url}")
                 final_cover_url = cover_url
 
             # 创建WorkStatic记录
@@ -52,7 +69,7 @@ class BilibiliWorkStaticImporter:
                 is_valid=True
             )
 
-            print(f"✅ 成功导入作品静态信息: {title} - {author}")
+            print(f"[BV:{bvid}] ✅ 成功导入作品静态信息: {title} - {author}")
 
             return True, f"成功导入作品《{title}》", work_static
 

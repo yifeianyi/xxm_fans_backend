@@ -2,78 +2,107 @@
 Admin 配置
 """
 from django.contrib import admin, messages
-from django.urls import path
-from django.shortcuts import render, redirect
-from django.template.response import TemplateResponse
+from django.urls import path, reverse
+from django.http import JsonResponse, HttpResponseRedirect
+from django.shortcuts import render
+from django.utils.safestring import mark_safe
 
 from ..models import WorkStatic, WorkMetricsHour, CrawlSession
-from ..forms import BVImportForm
+from ..forms import WorkStaticForm, BVImportForm
 from ..services.bilibili_service import BilibiliWorkStaticImporter
 
 
 @admin.register(WorkStatic)
 class WorkStaticAdmin(admin.ModelAdmin):
     """作品静态信息 Admin"""
+    form = WorkStaticForm
+    change_form_template = 'admin/data_analytics/workstatic/change_form.html'
     list_display = ['id', 'platform', 'work_id', 'title', 'author', 'publish_time', 'is_valid', 'cover_preview']
     list_filter = ['platform', 'is_valid', 'publish_time']
     search_fields = ['work_id', 'title', 'author']
     list_per_page = 50
     ordering = ['-publish_time']
     readonly_fields = ['id', 'cover_preview']
-    change_list_template = 'admin/data_analytics/workstatic/change_list.html'
-    actions = ['delete_selected']
-    
-    def cover_preview(self, obj):
-        """封面预览"""
-        if obj.cover_url:
-            # 处理相对路径
-            if obj.cover_url.startswith('views/'):
-                url = f"/media/{obj.cover_url}"
-            elif obj.cover_url.startswith('/'):
-                url = obj.cover_url
-            else:
-                url = f'/{obj.cover_url}'
-            from django.utils.safestring import mark_safe
-            return mark_safe(f'<img src="{url}" style="height:60px;max-width:80px;object-fit:cover;" />')
-        return "-"
-    cover_preview.short_description = "封面预览"
-    cover_preview.allow_tags = True
-    
+
     def get_urls(self):
+        """添加自定义 URL"""
         urls = super().get_urls()
-        my_urls = [
-            path("import-bv-work-static/", self.admin_site.admin_view(self.import_bv_work_static_view), name="import-bv-work-static"),
+        custom_urls = [
+            path('bv-import/', self.admin_site.admin_view(self.import_bv_view), name='bv-import-workstatic'),
+            path('import-bv-api/', self.admin_site.admin_view(self.import_bv_api), name='data_analytics_workstatic_import_bv_api'),
         ]
-        return my_urls + urls
-    
-    def import_bv_work_static_view(self, request):
-        """导入B站作品静态信息视图"""
+        return custom_urls + urls
+
+    def import_bv_view(self, request):
+        """BV号导入视图（页面表单）"""
         if request.method == "POST":
             form = BVImportForm(request.POST)
             if form.is_valid():
                 bvid = form.cleaned_data["bvid"]
-                try:
-                    importer = BilibiliWorkStaticImporter()
-                    success, message, work_static = importer.import_bv_work_static(bvid)
-                    
-                    if success:
-                        messages.success(request, message)
-                    else:
-                        messages.warning(request, message)
-                    
-                    return redirect("admin:import-bv-work-static")
-                except Exception as e:
-                    messages.error(request, f"❌ 导入失败: {e}")
+
+                # 使用导入服务
+                importer = BilibiliWorkStaticImporter()
+                success, message, work_static = importer.import_bv_work_static(bvid)
+
+                if success:
+                    self.message_user(request, f"✅ {message}", level=messages.SUCCESS)
+                    return HttpResponseRedirect('/admin/data_analytics/workstatic/')
+                else:
+                    self.message_user(request, f"❌ {message}", level=messages.ERROR)
         else:
             form = BVImportForm()
 
-        return render(request, "admin/data_analytics/import_bv_work_static_form.html", {"form": form})
-    
-    def delete_queryset(self, request, queryset):
-        """自定义批量删除操作"""
-        count = queryset.count()
-        queryset.delete()
-        self.message_user(request, f"成功删除 {count} 条作品静态信息", messages.SUCCESS)
+        return render(request, 'admin/data_analytics/import_bv_form.html', {"form": form})
+
+    def import_bv_api(self, request):
+        """BV 号导入 API（返回 JSON）"""
+        if request.method != 'POST':
+            return JsonResponse({'success': False, 'message': '只支持 POST 请求'}, status=405)
+
+        bvid = request.POST.get('bvid', '').strip()
+        if not bvid:
+            return JsonResponse({'success': False, 'message': 'BV 号不能为空'})
+
+        try:
+            importer = BilibiliWorkStaticImporter()
+            success, message, work_static = importer.import_bv_work_static(bvid)
+
+            if success:
+                # 返回作品信息用于填充表单
+                return JsonResponse({
+                    'success': True,
+                    'message': message,
+                    'data': {
+                        'platform': work_static.platform,
+                        'work_id': work_static.work_id,
+                        'title': work_static.title,
+                        'author': work_static.author,
+                        'publish_time': work_static.publish_time.strftime('%Y-%m-%d %H:%M:%S') if work_static.publish_time else '',
+                        'cover_url': work_static.cover_url,
+                        'is_valid': work_static.is_valid,
+                    }
+                })
+            else:
+                return JsonResponse({'success': False, 'message': message})
+        except Exception as e:
+            return JsonResponse({'success': False, 'message': f"导入失败: {str(e)}"})
+
+    def cover_preview(self, obj):
+        """封面预览（使用缩略图）"""
+        if obj.cover_url:
+            # 使用缩略图生成器获取缩略图 URL
+            from core.thumbnail_generator import ThumbnailGenerator
+
+            # 如果是本地路径，尝试获取缩略图
+            if not obj.cover_url.startswith('http'):
+                thumbnail_url = ThumbnailGenerator.get_thumbnail_url(obj.cover_url)
+                return mark_safe(f'<img src="{thumbnail_url}" style="height:60px;max-width:80px;object-fit:cover;" />')
+            else:
+                # 外部 URL，直接显示
+                return mark_safe(f'<img src="{obj.cover_url}" style="height:60px;max-width:80px;object-fit:cover;" />')
+        return "-"
+    cover_preview.short_description = "封面预览"
+    cover_preview.allow_tags = True
 
 
 @admin.register(WorkMetricsHour)

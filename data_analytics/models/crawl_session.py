@@ -16,6 +16,7 @@ class CrawlSession(models.Model):
     note = models.TextField(blank=True, null=True, verbose_name="备注")
 
     class Meta:
+        db_table = 'data_analytics_crawlsession'
         verbose_name = "爬取会话"
         verbose_name_plural = "爬取会话"
         ordering = ['-start_time']
