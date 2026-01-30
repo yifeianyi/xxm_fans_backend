@@ -1,6 +1,7 @@
 """
 API 视图
 """
+from django.utils import timezone
 from rest_framework import generics
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
@@ -188,3 +189,178 @@ def TopWorksView(request, platform):
         return error_response(message=str(e), status_code=400)
     except Exception as e:
         return error_response(message=str(e))
+
+
+# ==================== 投稿时刻功能 API 视图 ====================
+
+@api_view(['GET'])
+def monthly_submission_stats(request):
+    """
+    获取月度投稿统计
+
+    GET /api/data-analytics/submissions/monthly/?year=2024&platform=bilibili
+
+    Args:
+        year: 年份（默认当前年份）
+        platform: 平台筛选（可选）
+
+    Returns:
+        JSON: 月度统计数据
+    """
+    from rest_framework import status
+    from ..services.submission_service import SubmissionService
+    from .serializers import MonthlySubmissionStatsResponseSerializer
+
+    try:
+        # 获取查询参数
+        year = request.query_params.get('year', timezone.now().year)
+        platform = request.query_params.get('platform')
+
+        # 参数验证
+        try:
+            year = int(year)
+        except (ValueError, TypeError):
+            return error_response(
+                message="参数错误：年份必须为整数",
+                status_code=400
+            )
+
+        # 调用业务逻辑
+        data = SubmissionService.get_monthly_submission_stats(year, platform)
+
+        # 序列化响应
+        serializer = MonthlySubmissionStatsResponseSerializer(data)
+        return success_response(data=serializer.data)
+
+    except Exception as e:
+        return error_response(
+            message=f"获取月度投稿统计失败：{str(e)}",
+            status_code=500
+        )
+
+
+@api_view(['GET'])
+def monthly_submission_records(request, year, month):
+    """
+    获取月度投稿记录
+
+    GET /api/data-analytics/submissions/monthly/2024/1/?platform=bilibili&page=1&page_size=20
+
+    Args:
+        year: 年份（路径参数）
+        month: 月份（路径参数）
+        platform: 平台筛选（可选）
+        is_valid: 是否有效投稿（可选）
+        page: 页码（默认 1）
+        page_size: 每页数量（默认 20）
+
+    Returns:
+        JSON: 月度投稿记录数据
+    """
+    from rest_framework import status
+    from ..services.submission_service import SubmissionService
+    from .serializers import MonthlySubmissionRecordsResponseSerializer
+
+    try:
+        # 获取查询参数
+        platform = request.query_params.get('platform')
+        is_valid = request.query_params.get('is_valid')
+        page = int(request.query_params.get('page', 1))
+        page_size = int(request.query_params.get('page_size', 20))
+
+        # 参数验证
+        if page < 1:
+            return error_response(
+                message="参数错误：页码必须大于 0",
+                status_code=400
+            )
+
+        if page_size < 1 or page_size > 100:
+            return error_response(
+                message="参数错误：每页数量必须在 1-100 之间",
+                status_code=400
+            )
+
+        # 处理 is_valid 参数
+        if is_valid is not None:
+            is_valid = is_valid.lower() in ['true', '1', 'yes']
+
+        # 调用业务逻辑
+        data = SubmissionService.get_monthly_submission_records(
+            year, month, platform, is_valid, page, page_size
+        )
+
+        # 序列化响应
+        serializer = MonthlySubmissionRecordsResponseSerializer(data)
+        return success_response(data=serializer.data)
+
+    except ValueError as e:
+        return error_response(
+            message=f"参数错误：{str(e)}",
+            status_code=400
+        )
+    except Exception as e:
+        return error_response(
+            message=f"获取月度投稿记录失败：{str(e)}",
+            status_code=500
+        )
+
+
+@api_view(['GET'])
+def years_submission_overview(request):
+    """
+    获取年度投稿概览
+
+    GET /api/data-analytics/submissions/years/?platform=bilibili&start_year=2021&end_year=2024
+
+    Args:
+        platform: 平台筛选（可选）
+        start_year: 起始年份（可选）
+        end_year: 结束年份（可选）
+
+    Returns:
+        JSON: 年度投稿概览数据
+    """
+    from rest_framework import status
+    from ..services.submission_service import SubmissionService
+    from .serializers import YearsSubmissionOverviewResponseSerializer
+
+    try:
+        # 获取查询参数
+        platform = request.query_params.get('platform')
+        start_year = request.query_params.get('start_year')
+        end_year = request.query_params.get('end_year')
+
+        # 参数验证
+        if start_year is not None:
+            try:
+                start_year = int(start_year)
+            except (ValueError, TypeError):
+                return error_response(
+                    message="参数错误：起始年份必须为整数",
+                    status_code=400
+                )
+
+        if end_year is not None:
+            try:
+                end_year = int(end_year)
+            except (ValueError, TypeError):
+                return error_response(
+                    message="参数错误：结束年份必须为整数",
+                    status_code=400
+                )
+
+        # 调用业务逻辑
+        data = SubmissionService.get_years_submission_overview(
+            platform, start_year, end_year
+        )
+
+        # 序列化响应
+        serializer = YearsSubmissionOverviewResponseSerializer(data)
+        return success_response(data=serializer.data)
+
+    except Exception as e:
+        return error_response(
+            message=f"获取年度投稿概览失败：{str(e)}",
+            status_code=500
+        )

@@ -10,6 +10,9 @@ from .api.views import (
     WorkMetricsSummaryView,
     PlatformStatisticsView,
     TopWorksView,
+    monthly_submission_stats,
+    monthly_submission_records,
+    years_submission_overview,
 )
 
 app_name = 'data_analytics'
@@ -29,4 +32,9 @@ urlpatterns = [
 
     # 爬取会话
     path('sessions/', CrawlSessionListView.as_view(), name='session-list'),
+
+    # 投稿时刻相关接口
+    path('submissions/monthly/', monthly_submission_stats, name='monthly-submission-stats'),
+    path('submissions/monthly/<int:year>/<int:month>/', monthly_submission_records, name='monthly-submission-records'),
+    path('submissions/years/', years_submission_overview, name='years-submission-overview'),
 ]
