@@ -18,7 +18,7 @@ from django.db import transaction
 
 import os
 
-from .models import Song, SongRecord, Style, SongStyle, Tag, SongTag
+from .models import Song, SongRecord, Style, SongStyle, Tag, SongTag, OriginalWork
 from .forms import BVImportForm, SongRecordForm, SongStyleForm, SongTagForm, BatchSongStyleForm, BatchSongTagForm
 
 
@@ -758,3 +758,56 @@ class SongRecordAdmin(admin.ModelAdmin):
         else:
             form = BVImportForm()
         return render(request, "admin/import_bv_form.html", {"form": form})
+
+
+@admin.register(OriginalWork)
+class OriginalWorkAdmin(admin.ModelAdmin):
+    """原创作品管理"""
+    list_display = ['title', 'release_date', 'featured', 'netease_id_display', 'bilibili_bvid_display', 'cover_thumb']
+    list_filter = ['featured', 'release_date']
+    search_fields = ['title', 'description']
+    list_editable = ['featured']
+    ordering = ['-featured', '-release_date']
+    readonly_fields = ['created_at', 'updated_at']
+    fieldsets = (
+        ('基本信息', {
+            'fields': ('title', 'release_date', 'description', 'featured')
+        }),
+        ('播放链接', {
+            'fields': ('netease_id', 'bilibili_bvid')
+        }),
+        ('封面', {
+            'fields': ('cover',)
+        }),
+        ('时间信息', {
+            'fields': ('created_at', 'updated_at'),
+            'classes': ('collapse',)
+        }),
+    )
+
+    @admin.display(description="网易云音乐")
+    def netease_id_display(self, obj):
+        if obj.netease_id:
+            return format_html(
+                '<a href="https://music.163.com/#/song?id={}" target="_blank" style="color:#79aec8;">{}</a>',
+                obj.netease_id,
+                obj.netease_id
+            )
+        return '-'
+
+    @admin.display(description="B站视频")
+    def bilibili_bvid_display(self, obj):
+        if obj.bilibili_bvid:
+            return format_html(
+                '<a href="https://www.bilibili.com/video/{}" target="_blank" style="color:#79aec8;">{}</a>',
+                obj.bilibili_bvid,
+                obj.bilibili_bvid
+            )
+        return '-'
+
+    @admin.display(description="封面")
+    def cover_thumb(self, obj):
+        if obj.cover:
+            return mark_safe(f'<img src="{obj.cover.url}" style="height:48px;max-width:80px;object-fit:cover;" />')
+        return '-'
+    cover_thumb.short_description = "封面"

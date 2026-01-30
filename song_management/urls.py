@@ -9,6 +9,7 @@ from .api.views import (
     tag_list_api,
     top_songs_api,
     random_song_api,
+    original_works_list_api,
 )
 
 app_name = 'song_management'
@@ -25,4 +26,7 @@ urlpatterns = [
     # 排行榜和随机
     path('top_songs/', top_songs_api, name='top-songs'),
     path('random-song/', random_song_api, name='random-song'),
+
+    # 原创作品
+    path('original-works/', original_works_list_api, name='original-works-list'),
 ]
