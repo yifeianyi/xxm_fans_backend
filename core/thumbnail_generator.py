@@ -44,6 +44,11 @@ class ThumbnailGenerator:
             'keep_aspect_ratio': True,
             'thumbnail_dir': 'data_analytics/thumbnails/',
         },
+        'cloud_picture': {
+            'thumbnail_size': (400, 400),  # 最大边 400px
+            'keep_aspect_ratio': True,
+            'thumbnail_dir': 'cloud_picture/thumbnails/',
+        },
     }
 
     QUALITY = 85  # 图片质量

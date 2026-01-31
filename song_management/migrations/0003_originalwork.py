@@ -25,8 +25,8 @@ class Migration(migrations.Migration):
                 ('updated_at', models.DateTimeField(auto_now=True, verbose_name='更新时间')),
             ],
             options={
-                'verbose_name': '原创作品',
-                'verbose_name_plural': '原创作品',
+                'verbose_name': '原唱作品',
+                'verbose_name_plural': '原唱作品',
                 'ordering': ['-featured', '-release_date'],
                 'indexes': [models.Index(fields=['featured'], name='song_manage_feature_99f7e2_idx'), models.Index(fields=['release_date'], name='song_manage_release_9f61d4_idx'), models.Index(fields=['netease_id'], name='song_manage_netease_9a865b_idx'), models.Index(fields=['bilibili_bvid'], name='song_manage_bilibil_6d1294_idx')],
             },

@@ -12,8 +12,8 @@ class Command(BaseCommand):
         parser.add_argument(
             '--module',
             type=str,
-            choices=['gallery', 'covers', 'footprint'],
-            help='指定模块（gallery/covers/footprint），不指定则生成所有模块的缩略图',
+            choices=['gallery', 'covers', 'footprint', 'data_analytics', 'cloud_picture'],
+            help='指定模块，不指定则生成所有模块的缩略图',
         )
         parser.add_argument(
             '--force',

@@ -1,11 +1,11 @@
 """
-原创作品模型
+原唱作品模型
 """
 from django.db import models
 
 
 class OriginalWork(models.Model):
-    """原创作品模型"""
+    """原唱作品模型"""
     title = models.CharField(max_length=200, verbose_name='作品标题')
     release_date = models.DateField(verbose_name='发布日期')
     description = models.TextField(blank=True, null=True, verbose_name='作品描述')
@@ -17,8 +17,8 @@ class OriginalWork(models.Model):
     updated_at = models.DateTimeField(auto_now=True, verbose_name='更新时间')
 
     class Meta:
-        verbose_name = "原创作品"
-        verbose_name_plural = "原创作品"
+        verbose_name = "原唱作品"
+        verbose_name_plural = "原唱作品"
         ordering = ['-featured', '-release_date']
         indexes = [
             models.Index(fields=['featured']),

@@ -27,6 +27,6 @@ urlpatterns = [
     path('top_songs/', top_songs_api, name='top-songs'),
     path('random-song/', random_song_api, name='random-song'),
 
-    # 原创作品
+    # 原唱作品
     path('original-works/', original_works_list_api, name='original-works-list'),
 ]

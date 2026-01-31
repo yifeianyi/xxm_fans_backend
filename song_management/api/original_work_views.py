@@ -1,5 +1,5 @@
 """
-原创作品 API 视图
+原唱作品 API 视图
 """
 from rest_framework.decorators import api_view
 from core.responses import success_response
@@ -13,17 +13,17 @@ logger = logging.getLogger(__name__)
 @api_view(['GET'])
 def original_works_list_api(request):
     """
-    获取所有原创作品列表
+    获取所有原唱作品列表
     """
     cache_key = "original_works_list"
     try:
         data = cache.get(cache_key)
         if data is not None:
-            return success_response(data=data, message="获取原创作品列表成功")
+            return success_response(data=data, message="获取原唱作品列表成功")
     except Exception as e:
         logger.warning(f"Cache get failed for original works: {e}")
 
-    # 获取所有原创作品
+    # 获取所有原唱作品
     works = OriginalWork.objects.all().order_by('-featured', '-release_date')
 
     # 构建返回数据
@@ -46,4 +46,4 @@ def original_works_list_api(request):
     except Exception as e:
         logger.warning(f"Cache set failed for original works: {e}")
 
-    return success_response(data=result, message="获取原创作品列表成功")
+    return success_response(data=result, message="获取原唱作品列表成功")

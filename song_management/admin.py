@@ -762,7 +762,7 @@ class SongRecordAdmin(admin.ModelAdmin):
 
 @admin.register(OriginalWork)
 class OriginalWorkAdmin(admin.ModelAdmin):
-    """原创作品管理"""
+    """原唱作品管理"""
     list_display = ['title', 'release_date', 'featured', 'netease_id_display', 'bilibili_bvid_display', 'cover_thumb']
     list_filter = ['featured', 'release_date']
     search_fields = ['title', 'description']

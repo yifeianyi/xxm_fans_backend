@@ -266,55 +266,57 @@ class SitemapView(APIView):
     def get(self, request):
         """生成 sitemap.xml"""
         try:
+            from django.utils import timezone
+            from datetime import datetime
+
+            # 使用当前日期作为 lastmod
+            current_date = timezone.now().strftime('%Y-%m-%d')
+
             # 基础 URL 列表
             base_urls = [
                 {
                     'loc': 'https://www.xxm8777.cn/',
-                    'lastmod': '2026-01-26',
+                    'lastmod': current_date,
                     'changefreq': 'daily',
                     'priority': '1.0'
                 },
                 {
-                    'loc': 'https://www.xxm8777.cn/about',
-                    'lastmod': '2026-01-26',
-                    'changefreq': 'weekly',
-                    'priority': '0.8'
-                },
-                {
                     'loc': 'https://www.xxm8777.cn/songs',
-                    'lastmod': '2026-01-26',
+                    'lastmod': current_date,
                     'changefreq': 'daily',
                     'priority': '0.9'
                 },
                 {
                     'loc': 'https://www.xxm8777.cn/gallery',
-                    'lastmod': '2026-01-26',
+                    'lastmod': current_date,
                     'changefreq': 'daily',
                     'priority': '0.8'
                 },
                 {
                     'loc': 'https://www.xxm8777.cn/fansDIY',
-                    'lastmod': '2026-01-26',
+                    'lastmod': current_date,
                     'changefreq': 'weekly',
-                    'priority': '0.7'
+                    'priority': '0.8'
+                },
+                {
+                    'loc': 'https://www.xxm8777.cn/about',
+                    'lastmod': current_date,
+                    'changefreq': 'monthly',
+                    'priority': '0.6'
                 },
                 {
                     'loc': 'https://www.xxm8777.cn/live',
-                    'lastmod': '2026-01-26',
+                    'lastmod': current_date,
                     'changefreq': 'weekly',
                     'priority': '0.7'
                 },
                 {
                     'loc': 'https://www.xxm8777.cn/data',
-                    'lastmod': '2026-01-26',
+                    'lastmod': current_date,
                     'changefreq': 'weekly',
-                    'priority': '0.6'
+                    'priority': '0.7'
                 },
             ]
-
-            # 注意: 不再为每首歌曲和图集生成单独的详情页 URL
-            # 因为前端只有列表页面,没有单独的详情页面
-            # 用户可以通过歌曲列表页面查看所有歌曲信息
 
             # 生成 XML
             xml_content = render_to_string('sitemap.xml', {'urls': base_urls})
@@ -323,8 +325,9 @@ class SitemapView(APIView):
             # 返回基本的 sitemap
             basic_urls = [
                 {'loc': 'https://www.xxm8777.cn/', 'priority': '1.0'},
-                {'loc': 'https://www.xxm8777.cn/about', 'priority': '0.8'},
                 {'loc': 'https://www.xxm8777.cn/songs', 'priority': '0.9'},
+                {'loc': 'https://www.xxm8777.cn/gallery', 'priority': '0.8'},
+                {'loc': 'https://www.xxm8777.cn/fansDIY', 'priority': '0.8'},
             ]
             xml_content = render_to_string('sitemap.xml', {'urls': basic_urls})
             return HttpResponse(xml_content, content_type='application/xml')
@@ -335,12 +338,34 @@ class RobotsTxtView(APIView):
 
     def get(self, request):
         """生成 robots.txt"""
-        content = """User-agent: *
+        content = """# Robots.txt for XXM Fans Home
+# 小满虫之家 - 爬虫访问规则
+
+User-agent: *
 Allow: /
 
+# 禁止访问后台管理界面
 Disallow: /admin/
+
+# 禁止访问 API 接口
 Disallow: /api/
 
+# 禁止访问静态文件目录
+Disallow: /static/
+Disallow: /media/
+
+# 禁止访问测试相关路径
+Disallow: /test/
+Disallow: /spider/
+
+# 禁止访问敏感文件
+Disallow: /.env
+Disallow: /manage.py
+
+# Crawl-delay: 1
+# 请求间隔 1 秒，避免过度抓取
+
+# Sitemap 位置
 Sitemap: https://www.xxm8777.cn/sitemap.xml
 """
         return HttpResponse(content, content_type='text/plain')
