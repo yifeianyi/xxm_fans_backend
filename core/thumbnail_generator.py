@@ -336,6 +336,10 @@ class ThumbnailGenerator:
                 module_full_path = os.path.join(default_storage.location, module_dir)
                 if os.path.exists(module_full_path):
                     for root, dirs, files in os.walk(module_full_path):
+                        # 跳过 thumbnails 目录，避免对缩略图再次生成缩略图
+                        if 'thumbnails' in dirs:
+                            dirs.remove('thumbnails')
+
                         for file in files:
                             # 检查文件扩展名
                             ext = Path(file).suffix.lower()
