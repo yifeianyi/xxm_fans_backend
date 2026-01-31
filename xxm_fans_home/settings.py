@@ -52,6 +52,7 @@ INSTALLED_APPS = [
     'data_analytics',  # 数据分析应用 - 从 main 拆分出来
     'site_settings',  # 网站设置应用 - 从 main 拆分出来
     'gallery',  # 图集管理应用
+    'livestream',  # 直播日历应用
     'rest_framework',
     # 'drf_yasg',
 ]
