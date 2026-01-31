@@ -134,6 +134,27 @@ class Livestream(models.Model):
             return f'https://www.bilibili.com/video/{self.bvid}'
         return ''
 
+    def _generate_recordings(self):
+        """生成分段视频列表（包含完整的视频链接）"""
+        if not self.bvid:
+            return []
+
+        recordings = []
+
+        if self.parts == 1:
+            recordings.append({
+                'title': self.title,
+                'url': f'https://www.bilibili.com/video/{self.bvid}'
+            })
+        else:
+            for i in range(1, self.parts + 1):
+                recordings.append({
+                    'title': f'{self.title} - P{i}',
+                    'url': f'https://www.bilibili.com/video/{self.bvid}?p={i}'
+                })
+
+        return recordings
+
     def get_song_cuts(self):
         """获取当日歌切列表"""
         from song_management.models import SongRecord
@@ -178,9 +199,57 @@ class Livestream(models.Model):
         except Exception:
             return []
 
+    def get_screenshots_with_thumbnails(self):
+        """获取直播截图列表，包含缩略图URL（从 live_moment 目录）"""
+        from django.core.files.storage import default_storage
+        import os
+
+        if not self.live_moment:
+            return []
+
+        folder_path = self.live_moment.lstrip('/')
+
+        try:
+            # 检查目录是否存在
+            full_path = os.path.join(default_storage.location, folder_path)
+            if not os.path.exists(full_path):
+                return []
+
+            # 获取目录下所有图片文件
+            if os.path.isdir(full_path):
+                files = os.listdir(full_path)
+                image_files = sorted([
+                    f for f in files
+                    if f.lower().endswith(('.jpg', '.jpeg', '.png', '.webp', '.gif'))
+                ])
+
+                # 缩略图存放在 /media/gallery/thumbnails/LiveMoment/ 目录下
+                # 目录结构：{year}/{month}/{day}/
+                # 命名格式：YYYY_MM_DD-N.webp
+                date_prefix = f"{self.date.year}_{self.date.month:02d}_{self.date.day:02d}"
+
+                # 返回包含原图URL和缩略图URL的数组
+                result = []
+                for idx, f in enumerate(image_files, 1):
+                    thumbnail_filename = f"{date_prefix}-{idx}.webp"
+                    # 路径格式：/media/gallery/thumbnails/LiveMoment/{year}/{month}/{day}/{filename}
+                    thumbnail_path = f"/media/gallery/thumbnails/LiveMoment/{self.date.year}/{self.date.month:02d}/{self.date.day:02d}/{thumbnail_filename}"
+
+                    result.append({
+                        'url': f"{self.live_moment}{f}",
+                        'thumbnailUrl': thumbnail_path
+                    })
+                return result
+            return []
+        except Exception:
+            return []
+
     def to_dict(self):
         """转换为字典格式（用于 API 返回）"""
-        screenshots = self.get_screenshots()
+        screenshots_with_thumbnails = self.get_screenshots_with_thumbnails()
+
+        # 生成完整的 recordings 数组（包含完整视频链接）
+        recordings = self._generate_recordings()
 
         return {
             'id': self.date.strftime('%Y-%m-%d'),
@@ -194,9 +263,9 @@ class Livestream(models.Model):
             'duration': self.duration_formatted or 'N/A',
             'bvid': self.bvid or '',
             'parts': self.parts,
-            'recordings': [],  # 前端根据 bvid 和 parts 生成
+            'recordings': recordings,  # 后端生成的完整视频链接列表
             'songCuts': self.get_song_cuts(),
-            'screenshots': screenshots,
+            'screenshots': screenshots_with_thumbnails,  # 现在返回包含缩略图的数组
             'danmakuCloudUrl': self.danmaku_cloud_url or '',
-            'coverUrl': screenshots[0] if screenshots else '',  # 使用第一张截图作为封面
+            'coverUrl': screenshots_with_thumbnails[0]['thumbnailUrl'] if screenshots_with_thumbnails else '',  # 使用第一张缩略图作为封面
         }

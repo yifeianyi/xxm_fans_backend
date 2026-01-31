@@ -142,8 +142,8 @@ class LivestreamService:
         # 获取当日歌切（演唱记录）
         song_cuts = cls._get_song_cuts_by_date(date)
 
-        # 获取当日截图（从 LiveMoment 目录）
-        screenshots = cls._get_screenshots_by_date(date)
+        # 获取当日截图（从 LiveMoment 目录，包含缩略图）
+        screenshots_with_thumbnails = cls._get_screenshots_by_date(date)
 
         # 使用 live_final.json 中的标题和描述
         title = live_item.get('title', f'{date_str} 直播记录')
@@ -152,8 +152,8 @@ class LivestreamService:
         bvid = live_item.get('bvid', '')
         parts = live_item.get('parts', 1)
 
-        # 生成 live_moment 目录路径
-        live_moment = f'/gallery/LiveMoment/{date.year}/{date.month:02d}/{date.day:02d}/'
+        # 生成完整的 recordings 数组
+        recordings = cls._generate_recordings(bvid, title, parts)
 
         return {
             'id': date_str,
@@ -167,11 +167,11 @@ class LivestreamService:
             'duration': duration,
             'bvid': bvid,
             'parts': parts,
-            'recordings': [],  # 前端根据 bvid 和 parts 生成
+            'recordings': recordings,  # 后端生成的完整视频链接列表
             'songCuts': song_cuts,
-            'screenshots': screenshots,
+            'screenshots': screenshots_with_thumbnails,  # 包含缩略图的数组
             'danmakuCloudUrl': '',
-            'coverUrl': screenshots[0] if screenshots else '',  # 使用第一张截图作为封面
+            'coverUrl': screenshots_with_thumbnails[0]['thumbnailUrl'] if screenshots_with_thumbnails else '',  # 使用第一张缩略图作为封面
         }
 
     @classmethod
@@ -200,9 +200,31 @@ class LivestreamService:
             'videoUrl': record.url or '',  # 演唱记录链接（B站视频链接）
         } for record in song_records]
 
+    @staticmethod
+    def _generate_recordings(bvid: str, title: str, parts: int):
+        """生成分段视频列表（包含完整的视频链接）"""
+        if not bvid:
+            return []
+
+        recordings = []
+
+        if parts == 1:
+            recordings.append({
+                'title': title,
+                'url': f'https://www.bilibili.com/video/{bvid}'
+            })
+        else:
+            for i in range(1, parts + 1):
+                recordings.append({
+                    'title': f'{title} - P{i}',
+                    'url': f'https://www.bilibili.com/video/{bvid}?p={i}'
+                })
+
+        return recordings
+
     @classmethod
     def _get_screenshots_by_date(cls, date: datetime.date):
-        """获取指定日期的截图列表（从 LiveMoment 目录）"""
+        """获取指定日期的截图列表，包含缩略图URL（从 LiveMoment 目录）"""
         from django.core.files.storage import default_storage
         import os
 
@@ -224,8 +246,21 @@ class LivestreamService:
                     if f.lower().endswith(('.jpg', '.jpeg', '.png', '.webp', '.gif'))
                 ])
 
-                # 返回完整的图片 URL 列表
-                return [f"{live_moment}{f}" for f in image_files]
+                # 缩略图存放在 /gallery/thumbnails/LiveMoment/ 目录下
+                # 命名格式：YYYY_MM_DD-N.webp
+                date_prefix = f"{date.year}_{date.month:02d}_{date.day:02d}"
+
+                # 返回包含原图URL和缩略图URL的数组
+                result = []
+                for idx, f in enumerate(image_files, 1):
+                    thumbnail_filename = f"{date_prefix}-{idx}.webp"
+                    thumbnail_path = f"/gallery/thumbnails/LiveMoment/{date.year}/{date.month:02d}/{thumbnail_filename}"
+
+                    result.append({
+                        'url': f"{live_moment}{f}",
+                        'thumbnailUrl': thumbnail_path
+                    })
+                return result
             return []
         except Exception:
             return []
