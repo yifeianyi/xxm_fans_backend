@@ -166,7 +166,7 @@ class LivestreamService:
         try:
             # 优先从 Livestream 模型获取数据
             livestream = Livestream.objects.get(date=date_obj, is_active=True)
-            return livestream.to_dict()
+            return livestream.to_dict(include_details=True)
         except Livestream.DoesNotExist:
             # Fallback: 从 JSON 文件获取数据
             return cls._get_livestream_from_json(date_str)
@@ -468,7 +468,7 @@ class LivestreamService:
                 result = []
                 for idx, f in enumerate(image_files, 1):
                     thumbnail_filename = f"{date_prefix}-{idx}.webp"
-                    thumbnail_path = f"/gallery/thumbnails/LiveMoment/{date.year}/{date.month:02d}/{thumbnail_filename}"
+                    thumbnail_path = f"/gallery/thumbnails/LiveMoment/{date.year}/{date.month:02d}/{date.day:02d}/{thumbnail_filename}"
 
                     # 原图路径：确保使用 /media/ 前缀
                     original_url = live_moment
