@@ -244,8 +244,10 @@ class Livestream(models.Model):
             # 生成完整的 recordings 数组（包含完整视频链接）
             recordings = self._generate_recordings()
 
-            # 优先使用演唱记录的封面缩略图
-            cover_url = LivestreamService._get_first_song_cover_thumbnail(self.date)
+            # 优先使用数据库中的封面URL，再fallback到演唱记录封面或截图缩略图
+            cover_url = self.cover_url if self.cover_url else ''
+            if not cover_url:
+                cover_url = LivestreamService._get_first_song_cover_thumbnail(self.date)
             if not cover_url and screenshots_with_thumbnails:
                 cover_url = screenshots_with_thumbnails[0]['thumbnailUrl']
 
@@ -254,11 +256,13 @@ class Livestream(models.Model):
                 'songCuts': self.get_song_cuts(),
                 'screenshots': screenshots_with_thumbnails,  # 现在返回包含缩略图的数组
                 'danmakuCloudUrl': self.danmaku_cloud_url or '',
-                'coverUrl': cover_url,  # 优先使用演唱记录封面缩略图
+                'coverUrl': cover_url,  # 优先使用数据库中的封面URL
             })
         else:
-            # 优先使用演唱记录的封面缩略图
-            cover_url = LivestreamService._get_first_song_cover_thumbnail(self.date)
+            # 优先使用数据库中的封面URL，再fallback到演唱记录封面或截图缩略图
+            cover_url = self.cover_url if self.cover_url else ''
+            if not cover_url:
+                cover_url = LivestreamService._get_first_song_cover_thumbnail(self.date)
             if not cover_url:
                 screenshots_with_thumbnails = LivestreamService._get_screenshots_by_date(
                     self.date,

@@ -470,6 +470,10 @@ class LivestreamService:
                     thumbnail_filename = f"{date_prefix}-{idx}.webp"
                     thumbnail_path = f"/gallery/thumbnails/LiveMoment/{date.year}/{date.month:02d}/{date.day:02d}/{thumbnail_filename}"
 
+                    # 确保缩略图路径使用 /media/ 前缀
+                    if not thumbnail_path.startswith('/media/'):
+                        thumbnail_path = f"/media{thumbnail_path}"
+
                     # 原图路径：确保使用 /media/ 前缀
                     original_url = live_moment
                     if not original_url.startswith('/media/'):
