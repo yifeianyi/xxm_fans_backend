@@ -11,7 +11,6 @@ from .api.views import (
     random_song_api,
     original_works_list_api,
 )
-from .api.record_views import SongRecordsByDateView
 
 app_name = 'song_management'
 
@@ -19,9 +18,6 @@ urlpatterns = [
     # 歌曲相关
     path('songs/', SongListView.as_view(), name='song-list'),
     path('songs/<int:song_id>/records/', SongRecordListView.as_view(), name='song-record-list'),
-
-    # 演唱记录相关
-    path('records/by-date/', SongRecordsByDateView.as_view(), name='records-by-date'),
 
     # 曲风和标签
     path('styles/', style_list_api, name='style-list'),

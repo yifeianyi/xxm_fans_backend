@@ -5,6 +5,22 @@ from ..services.livestream_service import LivestreamService
 from ..exceptions import FileReadError
 
 
+class LivestreamConfigView(APIView):
+    """获取直播配置信息（最小年份等）"""
+
+    def get(self, request, *args, **kwargs):
+        try:
+            config = {
+                'minYear': LivestreamService._get_min_year(),
+            }
+            return success_response(
+                data=config,
+                message='获取配置成功'
+            )
+        except Exception as e:
+            return error_response(message=f'获取配置失败: {str(e)}')
+
+
 class LivestreamListView(APIView):
     """获取指定月份的直播记录列表（默认只返回基本信息）"""
 
