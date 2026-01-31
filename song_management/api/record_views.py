@@ -118,27 +118,15 @@ class SongRecordsByDateView(APIView):
         # 查询该日期的所有演唱记录
         queryset = SongRecord.objects.filter(performed_at=date_obj).select_related('song').order_by('id')
         logger.info(f"查询日期 {date_obj} 的演唱记录，共 {queryset.count()} 条")
-        serializer = SongRecordSerializer(queryset, many=True)
-
-        # 处理数据，添加歌曲名称等信息
+        
+        # 只返回需要的字段
         results = []
-        for record in serializer.data:
-            logger.debug(f"处理演唱记录: {record}")
-            performed_at = record.get('performed_at')
-            if performed_at:
-                date = datetime.strptime(performed_at, "%Y-%m-%d").date()
-                date_str = date.strftime("%Y-%m-%d")
-                year = date.strftime("%Y")
-                month = date.strftime("%m")
-                record["cover_url"] = record.get("cover_url") or f"/covers/{year}/{month}/{date_str}.jpg"
-            else:
-                record["cover_url"] = "/covers/default.jpg"
-            
-            # 添加歌曲名称
-            song_name = record.get('song', {}).get('song_name', '未知歌曲')
-            record['song_name'] = song_name
-            
-            results.append(record)
+        for record in queryset:
+            results.append({
+                'performed_at': record.performed_at.strftime('%Y-%m-%d') if record.performed_at else '',
+                'song_name': record.song.song_name if record.song else '未知歌曲',
+                'url': record.url or '',
+            })
         
         logger.info(f"返回 {len(results)} 条演唱记录")
 

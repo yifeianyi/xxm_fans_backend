@@ -164,9 +164,9 @@ class Livestream(models.Model):
         ).select_related('song').order_by('song__song_name')
 
         return [{
-            'id': record.id,  # 演唱记录ID，可用于跳转到详情页
-            'name': record.song.song_name,
-            'videoUrl': record.url or '',  # 演唱记录链接（B站视频链接）
+            'performed_at': record.performed_at.strftime('%Y-%m-%d'),
+            'song_name': record.song.song_name,
+            'url': record.url or '',
         } for record in song_records]
 
     def get_screenshots(self):
@@ -199,59 +199,17 @@ class Livestream(models.Model):
         except Exception:
             return []
 
-    def get_screenshots_with_thumbnails(self):
-        """获取直播截图列表，包含缩略图URL（从 live_moment 目录）"""
-        from django.core.files.storage import default_storage
-        import os
+    def to_dict(self, include_details: bool = False):
+        """
+        转换为字典格式（用于 API 返回）
 
-        if not self.live_moment:
-            return []
+        Args:
+            include_details: 是否包含详细信息（截图、歌切等）
+        """
+        from .services.livestream_service import LivestreamService
 
-        folder_path = self.live_moment.lstrip('/')
-
-        try:
-            # 检查目录是否存在
-            full_path = os.path.join(default_storage.location, folder_path)
-            if not os.path.exists(full_path):
-                return []
-
-            # 获取目录下所有图片文件
-            if os.path.isdir(full_path):
-                files = os.listdir(full_path)
-                image_files = sorted([
-                    f for f in files
-                    if f.lower().endswith(('.jpg', '.jpeg', '.png', '.webp', '.gif'))
-                ])
-
-                # 缩略图存放在 /media/gallery/thumbnails/LiveMoment/ 目录下
-                # 目录结构：{year}/{month}/{day}/
-                # 命名格式：YYYY_MM_DD-N.webp
-                date_prefix = f"{self.date.year}_{self.date.month:02d}_{self.date.day:02d}"
-
-                # 返回包含原图URL和缩略图URL的数组
-                result = []
-                for idx, f in enumerate(image_files, 1):
-                    thumbnail_filename = f"{date_prefix}-{idx}.webp"
-                    # 路径格式：/media/gallery/thumbnails/LiveMoment/{year}/{month}/{day}/{filename}
-                    thumbnail_path = f"/media/gallery/thumbnails/LiveMoment/{self.date.year}/{self.date.month:02d}/{self.date.day:02d}/{thumbnail_filename}"
-
-                    result.append({
-                        'url': f"{self.live_moment}{f}",
-                        'thumbnailUrl': thumbnail_path
-                    })
-                return result
-            return []
-        except Exception:
-            return []
-
-    def to_dict(self):
-        """转换为字典格式（用于 API 返回）"""
-        screenshots_with_thumbnails = self.get_screenshots_with_thumbnails()
-
-        # 生成完整的 recordings 数组（包含完整视频链接）
-        recordings = self._generate_recordings()
-
-        return {
+        # 基础信息
+        result = {
             'id': self.date.strftime('%Y-%m-%d'),
             'date': self.date.strftime('%Y-%m-%d'),
             'title': self.title,
@@ -263,9 +221,32 @@ class Livestream(models.Model):
             'duration': self.duration_formatted or 'N/A',
             'bvid': self.bvid or '',
             'parts': self.parts,
-            'recordings': recordings,  # 后端生成的完整视频链接列表
-            'songCuts': self.get_song_cuts(),
-            'screenshots': screenshots_with_thumbnails,  # 现在返回包含缩略图的数组
-            'danmakuCloudUrl': self.danmaku_cloud_url or '',
-            'coverUrl': screenshots_with_thumbnails[0]['thumbnailUrl'] if screenshots_with_thumbnails else '',  # 使用第一张缩略图作为封面
         }
+
+        # 只有在需要时才加载详细信息
+        if include_details:
+            # 调用服务层的方法获取截图列表（包含缩略图）
+            screenshots_with_thumbnails = LivestreamService._get_screenshots_by_date(
+                self.date,
+                self.live_moment
+            )
+
+            # 生成完整的 recordings 数组（包含完整视频链接）
+            recordings = self._generate_recordings()
+
+            result.update({
+                'recordings': recordings,  # 后端生成的完整视频链接列表
+                'songCuts': self.get_song_cuts(),
+                'screenshots': screenshots_with_thumbnails,  # 现在返回包含缩略图的数组
+                'danmakuCloudUrl': self.danmaku_cloud_url or '',
+                'coverUrl': screenshots_with_thumbnails[0]['thumbnailUrl'] if screenshots_with_thumbnails else '',  # 使用第一张缩略图作为封面
+            })
+        else:
+            # 只返回第一张缩略图作为封面
+            screenshots_with_thumbnails = LivestreamService._get_screenshots_by_date(
+                self.date,
+                self.live_moment
+            )
+            result['coverUrl'] = screenshots_with_thumbnails[0]['thumbnailUrl'] if screenshots_with_thumbnails else ''
+
+        return result

@@ -5,12 +5,14 @@ from ..services.livestream_service import LivestreamService
 
 
 class LivestreamListView(APIView):
-    """获取指定月份的直播记录列表"""
+    """获取指定月份的直播记录列表（默认只返回基本信息）"""
 
     def get(self, request, *args, **kwargs):
         try:
             year = int(request.query_params.get('year', 2025))
             month = int(request.query_params.get('month', 1))
+            # 查询参数：是否包含详细信息（截图、歌切等），默认 false
+            include_details = request.query_params.get('include_details', 'false').lower() == 'true'
 
             # 参数校验
             if month < 1 or month > 12:
@@ -18,7 +20,9 @@ class LivestreamListView(APIView):
                     message='月份参数无效，必须在 1-12 之间'
                 )
 
-            livestreams = LivestreamService.get_livestreams_by_month(year, month)
+            livestreams = LivestreamService.get_livestreams_by_month(
+                year, month, include_details=include_details
+            )
 
             return success_response(
                 data=livestreams,
@@ -31,7 +35,7 @@ class LivestreamListView(APIView):
 
 
 class LivestreamDetailView(APIView):
-    """获取指定日期的直播记录详情"""
+    """获取指定日期的直播记录详情（包含所有详细信息）"""
 
     def get(self, request, date_str, *args, **kwargs):
         try:

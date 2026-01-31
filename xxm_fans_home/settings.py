@@ -208,6 +208,10 @@ REST_FRAMEWORK = {
 }
 
 # Logging settings
+# 根据环境设置不同的日志级别
+LOG_LEVEL = 'DEBUG' if DEBUG else 'INFO'
+CONSOLE_LOG_LEVEL = 'INFO' if DEBUG else 'WARNING'
+
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
@@ -225,6 +229,7 @@ LOGGING = {
         'console': {
             'class': 'logging.StreamHandler',
             'formatter': 'simple',
+            'level': CONSOLE_LOG_LEVEL,  # 生产环境只输出 WARNING 及以上
         },
         'file': {
             'class': 'logging.handlers.RotatingFileHandler',
@@ -241,9 +246,28 @@ LOGGING = {
             'propagate': False,
         },
         'song_management': {
-            'handlers': ['console', 'file'],
-            'level': 'DEBUG',
+            'handlers': ['file'],  # 生产环境只写入文件，不输出到控制台
+            'level': LOG_LEVEL,
+            'propagate': False,
+        },
+        'livestream': {
+            'handlers': ['file'],  # 生产环境只写入文件，不输出到控制台
+            'level': LOG_LEVEL,
             'propagate': False,
         },
     },
+}
+
+
+# 直播日历配置
+LIVESTREAM_CONFIG = {
+    # Fallback 数据源文件路径
+    'LIVE_DATA_FILE': str(PROJECT_ROOT / 'live_final.json'),
+    # LiveMoment 目录前缀
+    'LIVE_MOMENT_PREFIX': '/gallery/LiveMoment',
+    # 缩略图目录前缀
+    'THUMBNAIL_PREFIX': '/gallery/thumbnails/LiveMoment',
+    # 年份范围限制
+    'MIN_YEAR': 2019,
+    'MAX_YEAR': 2030,
 }
