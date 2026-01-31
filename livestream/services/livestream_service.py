@@ -296,19 +296,53 @@ class LivestreamService:
             # 生成完整的 recordings 数组
             recordings = cls._generate_recordings(bvid, title, parts)
 
+            # 优先使用演唱记录的封面缩略图，其次使用截图缩略图
+            cover_url = cls._get_first_song_cover_thumbnail(date)
+            if not cover_url and screenshots_with_thumbnails:
+                cover_url = screenshots_with_thumbnails[0]['thumbnailUrl']
+
             result.update({
                 'recordings': recordings,  # 后端生成的完整视频链接列表
                 'songCuts': song_cuts,
                 'screenshots': screenshots_with_thumbnails,  # 包含缩略图的数组
                 'danmakuCloudUrl': '',
-                'coverUrl': screenshots_with_thumbnails[0]['thumbnailUrl'] if screenshots_with_thumbnails else '',  # 使用第一张缩略图作为封面
+                'coverUrl': cover_url,  # 优先使用演唱记录封面缩略图
             })
         else:
-            # 只返回第一张缩略图作为封面
-            screenshots_with_thumbnails = cls._get_screenshots_by_date(date)
-            result['coverUrl'] = screenshots_with_thumbnails[0]['thumbnailUrl'] if screenshots_with_thumbnails else ''
+            # 优先使用演唱记录的封面缩略图，其次使用截图缩略图
+            cover_url = cls._get_first_song_cover_thumbnail(date)
+            if not cover_url:
+                screenshots_with_thumbnails = cls._get_screenshots_by_date(date)
+                if screenshots_with_thumbnails:
+                    cover_url = screenshots_with_thumbnails[0]['thumbnailUrl']
+            result['coverUrl'] = cover_url
 
         return result
+
+    @classmethod
+    def _get_first_song_cover_thumbnail(cls, date: datetime.date):
+        """
+        获取指定日期第一首演唱记录的封面缩略图
+
+        Args:
+            date: 日期对象
+
+        Returns:
+            str: 封面缩略图URL，如果没有则返回空字符串
+        """
+        from song_management.models import SongRecord
+
+        try:
+            song_record = SongRecord.objects.filter(
+                performed_at=date
+            ).select_related('song').order_by('song__song_name').first()
+
+            if song_record and song_record.cover_url:
+                return song_record.get_cover_thumbnail_url() or ''
+        except Exception as e:
+            logger.error(f'获取演唱记录封面缩略图失败: {e}', exc_info=True)
+
+        return ''
 
     @classmethod
     def _get_song_cuts_by_date(cls, date: datetime.date):
@@ -323,6 +357,7 @@ class LivestreamService:
                 - performed_at: 演唱日期
                 - song_name: 歌曲名称
                 - url: 演唱记录链接（B站视频链接）
+                - coverThumbnailUrl: 封面缩略图URL
         """
         from song_management.models import SongRecord
 
@@ -334,6 +369,7 @@ class LivestreamService:
             'performed_at': record.performed_at.strftime('%Y-%m-%d'),
             'song_name': record.song.song_name,
             'url': record.url or '',
+            'coverThumbnailUrl': record.get_cover_thumbnail_url() or '',
         } for record in song_records]
 
     @staticmethod

@@ -2,6 +2,7 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from core.responses import success_response, error_response
 from ..services.livestream_service import LivestreamService
+from ..exceptions import FileReadError
 
 
 class LivestreamListView(APIView):
@@ -30,6 +31,12 @@ class LivestreamListView(APIView):
             )
         except ValueError:
             return error_response(message='参数格式错误')
+        except FileReadError:
+            # JSON 文件不存在时返回空数组（数据库中也没有数据）
+            return success_response(
+                data=[],
+                message='该月份暂无直播记录'
+            )
         except Exception as e:
             return error_response(message=f'获取直播记录失败: {str(e)}')
 
@@ -50,6 +57,12 @@ class LivestreamDetailView(APIView):
             return success_response(
                 data=livestream,
                 message='获取成功'
+            )
+        except FileReadError:
+            # JSON 文件不存在时返回 None
+            return success_response(
+                data=None,
+                message='该日期无直播记录'
             )
         except Exception as e:
             return error_response(message=f'获取直播详情失败: {str(e)}')

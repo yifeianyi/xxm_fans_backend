@@ -55,6 +55,15 @@ class Livestream(models.Model):
         help_text='LiveMoment 图册目录路径，如：/gallery/LiveMoment/2025/11/30/'
     )
 
+    # 回放封面
+    cover_url = models.CharField(
+        max_length=300,
+        blank=True,
+        null=True,
+        verbose_name='回放封面URL',
+        help_text='直播回放的封面图片URL'
+    )
+
     # 统计数据（预留字段）
     view_count = models.CharField(
         max_length=50,
@@ -167,6 +176,7 @@ class Livestream(models.Model):
             'performed_at': record.performed_at.strftime('%Y-%m-%d'),
             'song_name': record.song.song_name,
             'url': record.url or '',
+            'coverThumbnailUrl': record.get_cover_thumbnail_url() or '',
         } for record in song_records]
 
     def get_screenshots(self):
@@ -234,19 +244,28 @@ class Livestream(models.Model):
             # 生成完整的 recordings 数组（包含完整视频链接）
             recordings = self._generate_recordings()
 
+            # 优先使用演唱记录的封面缩略图
+            cover_url = LivestreamService._get_first_song_cover_thumbnail(self.date)
+            if not cover_url and screenshots_with_thumbnails:
+                cover_url = screenshots_with_thumbnails[0]['thumbnailUrl']
+
             result.update({
                 'recordings': recordings,  # 后端生成的完整视频链接列表
                 'songCuts': self.get_song_cuts(),
                 'screenshots': screenshots_with_thumbnails,  # 现在返回包含缩略图的数组
                 'danmakuCloudUrl': self.danmaku_cloud_url or '',
-                'coverUrl': screenshots_with_thumbnails[0]['thumbnailUrl'] if screenshots_with_thumbnails else '',  # 使用第一张缩略图作为封面
+                'coverUrl': cover_url,  # 优先使用演唱记录封面缩略图
             })
         else:
-            # 只返回第一张缩略图作为封面
-            screenshots_with_thumbnails = LivestreamService._get_screenshots_by_date(
-                self.date,
-                self.live_moment
-            )
-            result['coverUrl'] = screenshots_with_thumbnails[0]['thumbnailUrl'] if screenshots_with_thumbnails else ''
+            # 优先使用演唱记录的封面缩略图
+            cover_url = LivestreamService._get_first_song_cover_thumbnail(self.date)
+            if not cover_url:
+                screenshots_with_thumbnails = LivestreamService._get_screenshots_by_date(
+                    self.date,
+                    self.live_moment
+                )
+                if screenshots_with_thumbnails:
+                    cover_url = screenshots_with_thumbnails[0]['thumbnailUrl']
+            result['coverUrl'] = cover_url
 
         return result
