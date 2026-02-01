@@ -2,7 +2,7 @@
 API 序列化器
 """
 from rest_framework import serializers
-from ..models import WorkStatic, WorkMetricsHour, CrawlSession
+from ..models import WorkStatic, WorkMetricsHour, CrawlSession, Account, FollowerMetrics
 
 
 class WorkStaticSerializer(serializers.ModelSerializer):
@@ -59,6 +59,27 @@ class CrawlSessionSerializer(serializers.ModelSerializer):
             'fail_count',
             'note',
         ]
+
+
+class AccountSerializer(serializers.ModelSerializer):
+    """账号序列化器"""
+    id = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Account
+        fields = ['id', 'name', 'uid', 'platform', 'is_active']
+
+    def get_id(self, obj):
+        return str(obj.id)
+
+
+class FollowerMetricsSerializer(serializers.ModelSerializer):
+    """粉丝指标序列化器"""
+    account_name = serializers.CharField(source='account.name', read_only=True)
+
+    class Meta:
+        model = FollowerMetrics
+        fields = ['account', 'account_name', 'follower_count', 'crawl_time', 'ingest_time']
 
 
 # ==================== 投稿时刻功能序列化器 ====================

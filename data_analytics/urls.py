@@ -13,6 +13,9 @@ from .api.views import (
     monthly_submission_stats,
     monthly_submission_records,
     years_submission_overview,
+    accounts_list,
+    accounts_data,
+    account_detail,
 )
 
 app_name = 'data_analytics'
@@ -37,4 +40,9 @@ urlpatterns = [
     path('submissions/monthly/', monthly_submission_stats, name='monthly-submission-stats'),
     path('submissions/monthly/<int:year>/<int:month>/', monthly_submission_records, name='monthly-submission-records'),
     path('submissions/years/', years_submission_overview, name='years-submission-overview'),
+
+    # 粉丝数数据分析 API
+    path('followers/accounts/', accounts_list, name='accounts-list'),
+    path('followers/accounts/data/', accounts_data, name='accounts-data'),
+    path('followers/accounts/<int:account_id>/', account_detail, name='account-detail'),
 ]

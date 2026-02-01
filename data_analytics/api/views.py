@@ -364,3 +364,146 @@ def years_submission_overview(request):
             message=f"获取年度投稿概览失败：{str(e)}",
             status_code=500
         )
+
+
+# ==================== 粉丝数数据分析 API 视图 ====================
+
+@api_view(['GET'])
+def accounts_list(request):
+    """
+    获取所有账号列表
+
+    GET /api/data-analytics/followers/accounts/
+
+    Returns:
+        JSON: 账号列表
+    """
+    from ..services.follower_service import FollowerService
+
+    try:
+        accounts = FollowerService.get_all_accounts()
+        return success_response(data=accounts)
+    except Exception as e:
+        return error_response(
+            message=f"获取账号列表失败：{str(e)}",
+            status_code=500
+        )
+
+
+@api_view(['GET'])
+def accounts_data(request):
+    """
+    获取所有账号的粉丝数据
+
+    GET /api/data-analytics/followers/accounts/data/?granularity=WEEK&days=7
+
+    Query Parameters:
+        granularity: 时间粒度 ('DAY', 'WEEK', 'MONTH'), 默认 'WEEK'
+        days: 查询天数，默认 30
+
+    Returns:
+        JSON: 账号粉丝数据
+    """
+    from ..services.follower_service import FollowerService
+
+    try:
+        granularity = request.query_params.get('granularity', 'WEEK')
+        days = int(request.query_params.get('days', 30))
+
+        # 参数验证
+        if granularity not in ['DAY', 'WEEK', 'MONTH']:
+            return error_response(
+                message=f"参数错误：granularity 必须为 'DAY', 'WEEK' 或 'MONTH'",
+                status_code=400
+            )
+
+        if days < 1 or days > 365:
+            return error_response(
+                message="参数错误：days 必须在 1-365 之间",
+                status_code=400
+            )
+
+        data = FollowerService.get_all_accounts_data(granularity, days)
+        return success_response(data=data)
+
+    except ValueError as e:
+        return error_response(
+            message=f"参数错误：{str(e)}",
+            status_code=400
+        )
+    except Exception as e:
+        return error_response(
+            message=f"获取账号数据失败：{str(e)}",
+            status_code=500
+        )
+
+
+@api_view(['GET'])
+def account_detail(request, account_id):
+    """
+    获取单个账号的详细数据
+
+    GET /api/data-analytics/followers/accounts/{account_id}/?granularity=WEEK&days=7
+
+    Path Parameters:
+        account_id: 账号 ID
+
+    Query Parameters:
+        granularity: 时间粒度 ('DAY', 'WEEK', 'MONTH'), 默认 'WEEK'
+        days: 查询天数，默认 30
+
+    Returns:
+        JSON: 账号详细数据
+    """
+    from ..services.follower_service import FollowerService
+
+    try:
+        granularity = request.query_params.get('granularity', 'WEEK')
+        days = int(request.query_params.get('days', 30))
+
+        # 参数验证
+        if granularity not in ['DAY', 'WEEK', 'MONTH']:
+            return error_response(
+                message=f"参数错误：granularity 必须为 'DAY', 'WEEK' 或 'MONTH'",
+                status_code=400
+            )
+
+        # 获取账号信息
+        account = FollowerService.get_account_by_id(int(account_id))
+        if not account:
+            return error_response(
+                message=f"账号不存在：{account_id}",
+                status_code=404
+            )
+
+        # 获取数据
+        current_count = FollowerService.get_current_follower_count(int(account_id))
+        history = FollowerService.get_follower_history(
+            int(account_id),
+            granularity,
+            days
+        )
+
+        data = {
+            'id': str(account.id),
+            'name': account.name,
+            'uid': account.uid,
+            'platform': account.platform,
+            'totalFollowers': current_count or 0,
+            'history': {
+                granularity: history
+            }
+        }
+
+        return success_response(data=data)
+
+    except ValueError as e:
+        return error_response(
+            message=f"参数错误：{str(e)}",
+            status_code=400
+        )
+    except Exception as e:
+        return error_response(
+            message=f"获取账号详情失败：{str(e)}",
+            status_code=500
+        )

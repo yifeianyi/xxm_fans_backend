@@ -7,7 +7,7 @@ from django.http import JsonResponse, HttpResponseRedirect
 from django.shortcuts import render
 from django.utils.safestring import mark_safe
 
-from ..models import WorkStatic, WorkMetricsHour, CrawlSession
+from ..models import WorkStatic, WorkMetricsHour, CrawlSession, Account, FollowerMetrics
 from ..forms import WorkStaticForm, BVImportForm
 from ..services.bilibili_service import BilibiliWorkStaticImporter
 
@@ -125,3 +125,51 @@ class CrawlSessionAdmin(admin.ModelAdmin):
     list_per_page = 50
     ordering = ['-start_time']
     readonly_fields = ['id']
+
+
+@admin.register(Account)
+class AccountAdmin(admin.ModelAdmin):
+    """账号管理 Admin"""
+    list_display = ['id', 'name', 'uid', 'platform', 'is_active', 'follower_count', 'latest_crawl_time', 'created_at']
+    list_filter = ['platform', 'is_active', 'created_at']
+    search_fields = ['name', 'uid']
+    list_per_page = 20
+    ordering = ['-created_at']
+    readonly_fields = ['id', 'created_at', 'updated_at', 'follower_count', 'latest_crawl_time']
+
+    def follower_count(self, obj):
+        """最新粉丝数"""
+        latest = obj.followermetrics_set.order_by('-crawl_time').first()
+        return latest.follower_count if latest else '-'
+    follower_count.short_description = '最新粉丝数'
+
+    def latest_crawl_time(self, obj):
+        """最新爬取时间"""
+        latest = obj.followermetrics_set.order_by('-crawl_time').first()
+        return latest.crawl_time.strftime('%Y-%m-%d %H:%M') if latest else '-'
+    latest_crawl_time.short_description = '最新更新'
+
+
+@admin.register(FollowerMetrics)
+class FollowerMetricsAdmin(admin.ModelAdmin):
+    """粉丝数据 Admin"""
+    list_display = ['id', 'account', 'follower_count', 'crawl_time', 'ingest_time', 'delta']
+    list_filter = ['account', 'crawl_time']
+    search_fields = ['account__name', 'account__uid']
+    list_per_page = 50
+    ordering = ['-crawl_time']
+    readonly_fields = ['id', 'ingest_time', 'delta']
+
+    def delta(self, obj):
+        """粉丝变化量"""
+        # 获取同账号上一条记录
+        prev = FollowerMetrics.objects.filter(
+            account=obj.account,
+            crawl_time__lt=obj.crawl_time
+        ).order_by('-crawl_time').first()
+
+        if prev:
+            diff = obj.follower_count - prev.follower_count
+            return f"+{diff}" if diff > 0 else str(diff)
+        return "0"
+    delta.short_description = '变化量'
