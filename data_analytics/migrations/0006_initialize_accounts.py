@@ -10,13 +10,13 @@ def create_initial_accounts(apps, schema_editor):
 
     accounts = [
         {
-            'uid': '37754047',
+            'uid': '388828249',
             'name': '咻咻满',
             'platform': 'bilibili',
             'is_active': True
         },
         {
-            'uid': '480116537',
+            'uid': '435525530',
             'name': '咻小满',
             'platform': 'bilibili',
             'is_active': True

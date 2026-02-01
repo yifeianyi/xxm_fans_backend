@@ -4,6 +4,7 @@
 """
 from django.db.models import F
 from django.db.models.functions import TruncHour, TruncDay, TruncMonth
+from django.utils import timezone
 from datetime import datetime, timedelta
 from typing import List, Dict, Optional
 import json
@@ -94,7 +95,7 @@ class FollowerService:
             return []
 
         # 计算时间范围
-        end_time = datetime.now()
+        end_time = timezone.now()
         if granularity == 'DAY':
             start_time = end_time - timedelta(hours=days)
             trunc_func = TruncHour('crawl_time')
@@ -183,10 +184,13 @@ class FollowerService:
     @staticmethod
     def generate_cache(granularity: str = 'WEEK'):
         """生成指定粒度的缓存"""
-        data = FollowerService.get_all_accounts_data(granularity, use_cache=False)
+        # 根据粒度设置默认天数
+        days_map = {'DAY': 24, 'WEEK': 7, 'MONTH': 30}
+        days = days_map.get(granularity, 30)
+        data = FollowerService.get_all_accounts_data(granularity, days=days, use_cache=False)
         cache_file = FollowerService._get_cache_file_path(granularity)
         FollowerService._save_to_cache(cache_file, data)
-        print(f"✓ 缓存已生成: {granularity} ({len(data)} 个账号)")
+        print(f"✓ 缓存已生成: {granularity} ({len(data)} 个账号), 天数: {days}")
 
     @staticmethod
     def generate_all_caches():
