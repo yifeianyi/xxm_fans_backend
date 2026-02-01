@@ -269,9 +269,11 @@ class FollowerService:
         update_time = data.get('update_time')
 
         try:
-            crawl_time = datetime.strptime(update_time, '%Y-%m-%d %H:%M:%S')
+            # 解析时间并转换为 timezone-aware datetime
+            naive_time = datetime.strptime(update_time, '%Y-%m-%d %H:%M:%S')
+            crawl_time = timezone.make_aware(naive_time)
         except (ValueError, TypeError):
-            crawl_time = datetime.now()
+            crawl_time = timezone.now()
 
         for acc_data in accounts_data:
             try:
