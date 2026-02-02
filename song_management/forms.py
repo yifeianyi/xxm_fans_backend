@@ -19,8 +19,11 @@ class SongRecordForm(forms.ModelForm):
     
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields['url'].initial = "https://player.bilibili.com/player.html?bvid='换成对应BV号'"
-        self.fields['cover_url'].initial = "/covers/2025/01/01.jpg"
+        # 安全地设置初始值，避免字段不存在时抛出KeyError
+        if 'url' in self.fields:
+            self.fields['url'].initial = "https://player.bilibili.com/player.html?bvid='换成对应BV号'"
+        if 'cover_url' in self.fields:
+            self.fields['cover_url'].initial = "/covers/2025/01/01.jpg"
 
     def save(self, commit=True):
         instance = super().save(commit=False)
