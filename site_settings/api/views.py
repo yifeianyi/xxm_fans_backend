@@ -267,10 +267,14 @@ class SitemapView(APIView):
         """生成 sitemap.xml"""
         try:
             from django.utils import timezone
-            from datetime import datetime
+            from datetime import datetime, timedelta
+            from song_management.models import Song
+            from gallery.models import Gallery
+            from fansDIY.models import Collection
 
             # 使用当前日期作为 lastmod
             current_date = timezone.now().strftime('%Y-%m-%d')
+            yesterday = (timezone.now() - timedelta(days=1)).strftime('%Y-%m-%d')
 
             # 基础 URL 列表
             base_urls = [
@@ -285,6 +289,31 @@ class SitemapView(APIView):
                     'lastmod': current_date,
                     'changefreq': 'daily',
                     'priority': '0.9'
+                },
+                # 新增：歌曲标签页路由
+                {
+                    'loc': 'https://www.xxm8777.cn/songs/hot',
+                    'lastmod': current_date,
+                    'changefreq': 'daily',
+                    'priority': '0.85'
+                },
+                {
+                    'loc': 'https://www.xxm8777.cn/songs/originals',
+                    'lastmod': current_date,
+                    'changefreq': 'weekly',
+                    'priority': '0.85'
+                },
+                {
+                    'loc': 'https://www.xxm8777.cn/songs/submit',
+                    'lastmod': current_date,
+                    'changefreq': 'weekly',
+                    'priority': '0.8'
+                },
+                {
+                    'loc': 'https://www.xxm8777.cn/originals',
+                    'lastmod': current_date,
+                    'changefreq': 'weekly',
+                    'priority': '0.8'
                 },
                 {
                     'loc': 'https://www.xxm8777.cn/gallery',
@@ -307,25 +336,72 @@ class SitemapView(APIView):
                 {
                     'loc': 'https://www.xxm8777.cn/live',
                     'lastmod': current_date,
-                    'changefreq': 'weekly',
+                    'changefreq': 'daily',
                     'priority': '0.7'
                 },
                 {
                     'loc': 'https://www.xxm8777.cn/data',
                     'lastmod': current_date,
-                    'changefreq': 'weekly',
+                    'changefreq': 'daily',
                     'priority': '0.7'
                 },
             ]
 
+            # 添加歌曲详情页URL（暂时注释，等待前端实现详情页）
+            # try:
+            #     songs = Song.objects.all().order_by('-id')[:500]  # 最多500首歌曲
+            #     for song in songs:
+            #         song_date = song.created_at.strftime('%Y-%m-%d') if song.created_at else current_date
+            #         base_urls.append({
+            #             'loc': f'https://www.xxm8777.cn/songs/{song.id}',
+            #             'lastmod': song_date,
+            #             'changefreq': 'monthly',
+            #             'priority': '0.7'
+            #         })
+            # except Exception as e:
+            #     print(f"获取歌曲列表失败: {e}")
+
+            # 添加图集详情页URL（暂时注释，等待前端实现详情页）
+            # try:
+            #     galleries = Gallery.objects.all().order_by('-id')[:100]  # 最多100个图集
+            #     for gallery in galleries:
+            #         gallery_date = gallery.created_at.strftime('%Y-%m-%d') if gallery.created_at else current_date
+            #         base_urls.append({
+            #             'loc': f'https://www.xxm8777.cn/gallery/{gallery.id}',
+            #             'lastmod': gallery_date,
+            #             'changefreq': 'weekly',
+            #             'priority': '0.6'
+            #         })
+            # except Exception as e:
+            #     print(f"获取图集列表失败: {e}")
+
+            # 添加二创合集分类URL
+            try:
+                collections = Collection.objects.all()[:50]  # 最多50个合集
+                for collection in collections:
+                    base_urls.append({
+                        'loc': f'https://www.xxm8777.cn/fansDIY/{collection.id}',
+                        'lastmod': current_date,
+                        'changefreq': 'weekly',
+                        'priority': '0.7'
+                    })
+            except Exception as e:
+                print(f"获取合集列表失败: {e}")
+
             # 生成 XML
+            # 注意：当前sitemap包含主要页面URL和二创合集分类URL
+            # 详情页URL（/songs/:id、/gallery/:id）暂未包含，等待前端实现
             xml_content = render_to_string('sitemap.xml', {'urls': base_urls})
             return HttpResponse(xml_content, content_type='application/xml')
         except Exception as e:
+            print(f"Sitemap生成失败: {e}")
             # 返回基本的 sitemap
             basic_urls = [
                 {'loc': 'https://www.xxm8777.cn/', 'priority': '1.0'},
                 {'loc': 'https://www.xxm8777.cn/songs', 'priority': '0.9'},
+                {'loc': 'https://www.xxm8777.cn/songs/hot', 'priority': '0.85'},
+                {'loc': 'https://www.xxm8777.cn/songs/originals', 'priority': '0.85'},
+                {'loc': 'https://www.xxm8777.cn/songs/submit', 'priority': '0.8'},
                 {'loc': 'https://www.xxm8777.cn/gallery', 'priority': '0.8'},
                 {'loc': 'https://www.xxm8777.cn/fansDIY', 'priority': '0.8'},
             ]
@@ -340,9 +416,22 @@ class RobotsTxtView(APIView):
         """生成 robots.txt"""
         content = """# Robots.txt for XXM Fans Home
 # 小满虫之家 - 爬虫访问规则
+# 最后更新: 2026-02-03
 
 User-agent: *
 Allow: /
+
+# 允许访问的主要内容（所有路径默认允许）
+Allow: /songs
+Allow: /songs/hot
+Allow: /songs/originals
+Allow: /songs/submit
+Allow: /fansDIY
+Allow: /fansDIY/*
+Allow: /gallery
+Allow: /live
+Allow: /data
+Allow: /about
 
 # 禁止访问后台管理界面
 Disallow: /admin/
@@ -350,20 +439,49 @@ Disallow: /admin/
 # 禁止访问 API 接口
 Disallow: /api/
 
-# 禁止访问静态文件目录
-Disallow: /static/
+# 禁止访问静态文件目录（不必要的资源）
+Disallow: /static/*/*.woff
+Disallow: /static/*/*.woff2
+Disallow: /static/*/*.ttf
+Disallow: /static/*/*.otf
+Disallow: /static/*/*.eot
+
+# 禁止访问媒体文件根目录（但允许通过具体路径访问）
 Disallow: /media/
 
 # 禁止访问测试相关路径
 Disallow: /test/
 Disallow: /spider/
+Disallow: /tools/
+Disallow: /scripts/
 
 # 禁止访问敏感文件
 Disallow: /.env
 Disallow: /manage.py
+Disallow: /package.json
+Disallow: /package-lock.json
 
-# Crawl-delay: 1
-# 请求间隔 1 秒，避免过度抓取
+# 百度爬虫特殊规则
+User-agent: Baiduspider
+Allow: /
+Crawl-delay: 2
+
+# Google爬虫特殊规则
+User-agent: Googlebot
+Allow: /
+Crawl-delay: 1
+
+# Bing爬虫特殊规则
+User-agent: Bingbot
+Allow: /
+Crawl-delay: 2
+
+# 禁止不必要的爬虫
+User-agent: SemrushBot
+Disallow: /
+
+User-agent: AhrefsBot
+Disallow: /
 
 # Sitemap 位置
 Sitemap: https://www.xxm8777.cn/sitemap.xml
