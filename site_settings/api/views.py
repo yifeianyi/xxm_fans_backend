@@ -345,6 +345,12 @@ class SitemapView(APIView):
                     'changefreq': 'daily',
                     'priority': '0.7'
                 },
+                {
+                    'loc': 'https://www.xxm8777.cn/contact',
+                    'lastmod': current_date,
+                    'changefreq': 'monthly',
+                    'priority': '0.5'
+                },
             ]
 
             # 添加歌曲详情页URL（暂时注释，等待前端实现详情页）
@@ -361,19 +367,19 @@ class SitemapView(APIView):
             # except Exception as e:
             #     print(f"获取歌曲列表失败: {e}")
 
-            # 添加图集详情页URL（暂时注释，等待前端实现详情页）
-            # try:
-            #     galleries = Gallery.objects.all().order_by('-id')[:100]  # 最多100个图集
-            #     for gallery in galleries:
-            #         gallery_date = gallery.created_at.strftime('%Y-%m-%d') if gallery.created_at else current_date
-            #         base_urls.append({
-            #             'loc': f'https://www.xxm8777.cn/gallery/{gallery.id}',
-            #             'lastmod': gallery_date,
-            #             'changefreq': 'weekly',
-            #             'priority': '0.6'
-            #         })
-            # except Exception as e:
-            #     print(f"获取图集列表失败: {e}")
+            # 添加图集详情页URL
+            try:
+                galleries = Gallery.objects.filter(is_active=True).order_by('-updated_at')[:100]  # 最多100个图集
+                for gallery in galleries:
+                    gallery_date = gallery.updated_at.strftime('%Y-%m-%d') if gallery.updated_at else current_date
+                    base_urls.append({
+                        'loc': f'https://www.xxm8777.cn/gallery/{gallery.id}',
+                        'lastmod': gallery_date,
+                        'changefreq': 'weekly',
+                        'priority': '0.6'
+                    })
+            except Exception as e:
+                print(f"获取图集列表失败: {e}")
 
             # 添加二创合集分类URL
             try:
@@ -389,8 +395,8 @@ class SitemapView(APIView):
                 print(f"获取合集列表失败: {e}")
 
             # 生成 XML
-            # 注意：当前sitemap包含主要页面URL和二创合集分类URL
-            # 详情页URL（/songs/:id、/gallery/:id）暂未包含，等待前端实现
+            # 注意：当前sitemap包含主要页面URL、二创合集分类URL和图集详情页URL
+            # 歌曲详情页URL（/songs/:id）暂未包含，等待前端实现
             xml_content = render_to_string('sitemap.xml', {'urls': base_urls})
             return HttpResponse(xml_content, content_type='application/xml')
         except Exception as e:
@@ -404,7 +410,20 @@ class SitemapView(APIView):
                 {'loc': 'https://www.xxm8777.cn/songs/submit', 'priority': '0.8'},
                 {'loc': 'https://www.xxm8777.cn/gallery', 'priority': '0.8'},
                 {'loc': 'https://www.xxm8777.cn/fansDIY', 'priority': '0.8'},
+                {'loc': 'https://www.xxm8777.cn/contact', 'priority': '0.5'},
             ]
+            
+            # 尝试添加图集URL（降级处理）
+            try:
+                from gallery.models import Gallery
+                galleries = Gallery.objects.filter(is_active=True).order_by('-updated_at')[:50]
+                for gallery in galleries:
+                    basic_urls.append({
+                        'loc': f'https://www.xxm8777.cn/gallery/{gallery.id}',
+                        'priority': '0.6'
+                    })
+            except Exception:
+                pass
             xml_content = render_to_string('sitemap.xml', {'urls': basic_urls})
             return HttpResponse(xml_content, content_type='application/xml')
 
@@ -416,22 +435,24 @@ class RobotsTxtView(APIView):
         """生成 robots.txt"""
         content = """# Robots.txt for XXM Fans Home
 # 小满虫之家 - 爬虫访问规则
-# 最后更新: 2026-02-03
+# 最后更新: 2026-02-05
 
 User-agent: *
 Allow: /
 
 # 允许访问的主要内容（所有路径默认允许）
 Allow: /songs
-Allow: /songs/hot
-Allow: /songs/originals
-Allow: /songs/submit
+Allow: /songs/*
+Allow: /originals
 Allow: /fansDIY
 Allow: /fansDIY/*
 Allow: /gallery
+Allow: /gallery/*
 Allow: /live
+Allow: /live/*
 Allow: /data
 Allow: /about
+Allow: /contact
 
 # 禁止访问后台管理界面
 Disallow: /admin/
