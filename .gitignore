@@ -66,8 +66,10 @@ coverage.xml
 staticfiles/
 static/covers_backup/
 # 文件上传目录（如果有的话）
-media/
+media/*
+media
 uploads/
+data/*
 
 # 本地运行生成的临时文件（如 manage.py runserver 创建的 pid 文件等）
 *.pid
