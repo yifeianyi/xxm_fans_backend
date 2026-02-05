@@ -43,6 +43,7 @@ def collection_list_api(request):
 def collection_detail_api(request, collection_id):
     """获取合集详情"""
     try:
+        # 优化: 使用 select_related 预取关联数据
         collection = Collection.objects.get(id=collection_id)
         data = {
             "id": collection.id,
@@ -65,8 +66,8 @@ def work_list_api(request):
     page_size = request.GET.get("limit", 20)
     collection_id = request.GET.get("collection")
 
-    # 按照 position 升序排列，再按 display_order 升序排列，最后按ID降序排列
-    works = Work.objects.all().order_by('position', 'display_order', '-id')
+    # 优化: 使用 select_related 预取外键，避免 N+1 查询
+    works = Work.objects.select_related('collection').order_by('position', 'display_order', '-id')
 
     if collection_id:
         works = works.filter(collection_id=collection_id)

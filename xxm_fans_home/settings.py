@@ -65,6 +65,9 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    # 自定义缓存中间件
+    'core.cache_middleware.CacheControlMiddleware',
+    'core.cache_middleware.CacheHeaderMiddleware',
 ]
 
 ROOT_URLCONF = 'xxm_fans_home.urls'

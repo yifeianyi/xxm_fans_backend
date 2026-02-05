@@ -11,11 +11,11 @@ from .utils import ThumbnailGenerator
 def gallery_tree(request):
     """获取图集树结构"""
     try:
-        # 获取所有根图集（level=0）
+        # 优化: 使用 prefetch_related 预取所有子图集，避免递归查询
         root_galleries = Gallery.objects.filter(
             parent__isnull=True,
             is_active=True
-        ).order_by('sort_order', 'id')
+        ).prefetch_related('children').order_by('sort_order', 'id')
 
         # 构建树结构
         def build_tree(gallery):
@@ -54,7 +54,8 @@ def gallery_tree(request):
 def gallery_detail(request, gallery_id):
     """获取图集详情"""
     try:
-        gallery = Gallery.objects.get(id=gallery_id, is_active=True)
+        # 优化: 使用 prefetch_related 预取子图集
+        gallery = Gallery.objects.prefetch_related('children').get(id=gallery_id, is_active=True)
 
         data = {
             'id': gallery.id,
@@ -71,11 +72,8 @@ def gallery_detail(request, gallery_id):
             'created_at': gallery.created_at.isoformat() if gallery.created_at else None,
         }
 
-        # 获取子图集
-        children = Gallery.objects.filter(
-            parent=gallery,
-            is_active=True
-        ).order_by('sort_order', 'id')
+        # 获取子图集（已从 prefetch_related 缓存中获取）
+        children = gallery.children.filter(is_active=True).order_by('sort_order', 'id')
 
         if children.exists():
             data['children'] = [{

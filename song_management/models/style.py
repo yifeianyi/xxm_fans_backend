@@ -37,6 +37,11 @@ class SongStyle(models.Model):
         unique_together = ("song", "style")
         verbose_name = "歌曲曲风"
         verbose_name_plural = "歌曲曲风"
+        indexes = [
+            models.Index(fields=['song']),
+            models.Index(fields=['style']),
+            models.Index(fields=['song', 'style']),
+        ]
 
     def __str__(self):
         return f"{self.song.song_name} - {self.style.name}"

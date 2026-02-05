@@ -4,6 +4,7 @@
 from django.core.paginator import Paginator
 from rest_framework import generics, filters
 from core.responses import paginated_response
+from core.cache_utils import cached, CacheTimeout, CacheKeys
 from ..models import Song
 from .serializers import SongSerializer
 from django.db.models import Q
@@ -24,7 +25,11 @@ class SongListView(generics.ListAPIView):
     ordering = ['-last_performed']
 
     def get_queryset(self):
-        queryset = Song.objects.all()
+        # 优化: 使用 prefetch_related 预取多对多关系，避免 N+1 查询
+        queryset = Song.objects.prefetch_related(
+            'song_styles__style',
+            'song_tags__tag'
+        )
 
         # 添加调试信息
         logger.info(f"请求参数: {self.request.query_params}")
@@ -83,7 +88,8 @@ class SongListView(generics.ListAPIView):
         if filters:
             queryset = queryset.filter(filters).distinct()
 
-        logger.info(f"最终查询集大小: {queryset.count()}")
+        # 优化: 使用 count() 缓存或直接返回，避免重复计算
+        # 注意: 这里不再调用 count()，让 paginator 去处理
         return queryset
 
     def list(self, request, *args, **kwargs):

@@ -54,6 +54,10 @@ class SongRecord(models.Model):
         verbose_name = "演唱记录"
         verbose_name_plural = "演唱记录"
         ordering = ['-performed_at']
+        indexes = [
+            models.Index(fields=['song', '-performed_at']),
+            models.Index(fields=['performed_at']),
+        ]
 
     def __str__(self):
         return f"{self.song.song_name} @ {self.performed_at}"

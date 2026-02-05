@@ -23,7 +23,10 @@ class SongRecordListView(generics.ListAPIView):
 
     def get_queryset(self):
         song_id = self.kwargs['song_id']
-        return SongRecord.objects.filter(song_id=song_id).order_by('-performed_at')
+        # 优化: 使用 select_related 预取外键，避免 N+1 查询
+        return SongRecord.objects.filter(
+            song_id=song_id
+        ).select_related('song').order_by('-performed_at')
 
     def list(self, request, *args, **kwargs):
         song_id = self.kwargs['song_id']
