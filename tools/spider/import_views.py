@@ -350,8 +350,8 @@ class ViewsImporter:
                     INSERT OR REPLACE INTO data_analytics_workmetricsspider
                     (platform, work_id, title, crawl_date, crawl_hour, crawl_time,
                      view_count, danmaku_count, comment_count, like_count,
-                     coin_count, favorite_count, share_count)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                     coin_count, favorite_count, share_count, created_at)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
                 """, (
                     item.get('platform', 'bilibili'),
                     item.get('work_id'),
