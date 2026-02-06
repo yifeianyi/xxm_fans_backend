@@ -330,8 +330,8 @@ class ViewsImporter:
             self.cursor.execute("""
                 INSERT OR REPLACE INTO data_analytics_crawlsessionspider
                 (session_id, crawl_date, crawl_hour, start_time, end_time,
-                 total_count, success_count, fail_count)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                 total_count, success_count, fail_count, created_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
             """, (
                 session_id, crawl_date, crawl_hour, crawl_time_str,
                 datetime.now().strftime('%H:%M:%S'),
