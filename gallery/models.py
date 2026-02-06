@@ -122,9 +122,12 @@ class Gallery(models.Model):
 
             from .utils import ThumbnailGenerator
 
+            # 将 /gallery/ 前缀转换为 /media/gallery/ 以匹配 Nginx 配置
+            media_folder_path = self.folder_path.replace('/gallery/', '/media/gallery/', 1)
+
             return [{
                 'filename': f,
-                'url': f"{self.folder_path}{f}",
+                'url': f"{media_folder_path}{f}",
                 'thumbnail_url': f"/api/gallery/thumbnail/?path={self.folder_path}{f}",
                 'title': f"{self.title} - {idx + 1}"
             } for idx, f in enumerate(image_files)]

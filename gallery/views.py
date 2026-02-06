@@ -7,6 +7,13 @@ from .models import Gallery
 from .utils import ThumbnailGenerator
 
 
+def to_media_url(path):
+    """将 /gallery/ 路径转换为 /media/gallery/ 路径"""
+    if path and path.startswith('/gallery/'):
+        return path.replace('/gallery/', '/media/gallery/', 1)
+    return path
+
+
 @api_view(['GET'])
 def gallery_tree(request):
     """获取图集树结构"""

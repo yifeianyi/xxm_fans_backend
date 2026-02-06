@@ -6,8 +6,9 @@ from django.urls import path, reverse
 from django.http import JsonResponse, HttpResponseRedirect
 from django.shortcuts import render
 from django.utils.safestring import mark_safe
+from django.utils.html import format_html
 
-from ..models import WorkStatic, WorkMetricsHour, CrawlSession, Account, FollowerMetrics
+from ..models import WorkStatic, WorkMetricsHour, CrawlSession, Account, FollowerMetrics, WorkMetricsSpider, CrawlSessionSpider
 from ..forms import WorkStaticForm, BVImportForm
 from ..services.bilibili_service import BilibiliWorkStaticImporter
 
@@ -105,26 +106,108 @@ class WorkStaticAdmin(admin.ModelAdmin):
     cover_preview.allow_tags = True
 
 
+@admin.register(WorkMetricsSpider)
+class WorkMetricsSpiderAdmin(admin.ModelAdmin):
+    """
+    作品指标爬虫数据 Admin
+    显示从B站爬取的小时级作品数据
+    """
+    list_display = ['id', 'platform', 'work_id', 'title', 'crawl_date', 'crawl_hour', 'view_count', 'like_count', 'coin_count', 'favorite_count', 'share_count']
+    list_filter = ['platform', 'crawl_date', 'crawl_hour']
+    search_fields = ['work_id', 'title']
+    list_per_page = 50
+    ordering = ['-crawl_date', '-crawl_hour']
+    readonly_fields = ['id', 'created_at']
+    date_hierarchy = 'crawl_date'
+    
+    fieldsets = (
+        ('作品信息', {
+            'fields': ('platform', 'work_id', 'title')
+        }),
+        ('爬取时间', {
+            'fields': ('crawl_date', 'crawl_hour', 'crawl_time')
+        }),
+        ('统计数据', {
+            'fields': ('view_count', 'danmaku_count', 'comment_count', 'like_count', 'coin_count', 'favorite_count', 'share_count')
+        }),
+        ('元数据', {
+            'fields': ('id', 'created_at'),
+            'classes': ('collapse',)
+        }),
+    )
+
+
+@admin.register(CrawlSessionSpider)
+class CrawlSessionSpiderAdmin(admin.ModelAdmin):
+    """
+    爬虫会话 Admin
+    显示每次爬取任务的会话信息
+    """
+    list_display = ['id', 'session_id', 'crawl_date', 'crawl_hour', 'start_time', 'end_time', 'total_count', 'success_count', 'fail_count', 'success_rate_display']
+    list_filter = ['crawl_date', 'crawl_hour']
+    search_fields = ['session_id']
+    list_per_page = 50
+    ordering = ['-crawl_date', '-crawl_hour']
+    readonly_fields = ['id', 'created_at', 'success_rate_display']
+    date_hierarchy = 'crawl_date'
+    
+    fieldsets = (
+        ('会话信息', {
+            'fields': ('session_id',)
+        }),
+        ('爬取时间', {
+            'fields': ('crawl_date', 'crawl_hour', 'start_time', 'end_time')
+        }),
+        ('统计信息', {
+            'fields': ('total_count', 'success_count', 'fail_count', 'success_rate_display')
+        }),
+        ('元数据', {
+            'fields': ('id', 'created_at'),
+            'classes': ('collapse',)
+        }),
+    )
+    
+    @admin.display(description="成功率")
+    def success_rate_display(self, obj):
+        """显示成功率"""
+        rate = obj.success_rate
+        if rate >= 90:
+            return format_html('<span style="color:green">{:.1f}%</span>', rate)
+        elif rate >= 70:
+            return format_html('<span style="color:orange">{:.1f}%</span>', rate)
+        else:
+            return format_html('<span style="color:red">{:.1f}%</span>', rate)
+
+
+# 保留旧模型的 admin 注册（用于兼容历史数据），但隐藏菜单
 @admin.register(WorkMetricsHour)
 class WorkMetricsHourAdmin(admin.ModelAdmin):
-    """作品小时指标 Admin"""
+    """作品小时指标 Admin（历史数据，已弃用）"""
     list_display = ['id', 'platform', 'work_id', 'crawl_time', 'view_count', 'like_count', 'coin_count', 'favorite_count']
     list_filter = ['platform', 'crawl_time', 'session_id']
     search_fields = ['work_id']
     list_per_page = 50
     ordering = ['-crawl_time']
     readonly_fields = ['id', 'ingest_time']
+    
+    def has_module_permission(self, request):
+        """隐藏菜单，保留数据访问权限"""
+        return False
 
 
 @admin.register(CrawlSession)
 class CrawlSessionAdmin(admin.ModelAdmin):
-    """爬取会话 Admin"""
+    """爬取会话 Admin（历史数据，已弃用）"""
     list_display = ['id', 'source', 'node_id', 'start_time', 'end_time', 'total_work_count', 'success_count', 'fail_count']
     list_filter = ['source', 'start_time']
     search_fields = ['node_id']
     list_per_page = 50
     ordering = ['-start_time']
     readonly_fields = ['id']
+    
+    def has_module_permission(self, request):
+        """隐藏菜单，保留数据访问权限"""
+        return False
 
 
 @admin.register(Account)
