@@ -6,7 +6,6 @@ from django.urls import path, reverse
 from django.http import JsonResponse, HttpResponseRedirect
 from django.shortcuts import render
 from django.utils.safestring import mark_safe
-from django.utils.html import format_html
 
 from ..models import WorkStatic, WorkMetricsHour, CrawlSession, Account, FollowerMetrics, WorkMetricsSpider, CrawlSessionSpider
 from ..forms import WorkStaticForm, BVImportForm
@@ -172,11 +171,13 @@ class CrawlSessionSpiderAdmin(admin.ModelAdmin):
         """显示成功率"""
         rate = obj.success_rate
         if rate >= 90:
-            return format_html('<span style="color:green">{:.1f}%</span>', rate)
+            color = "green"
         elif rate >= 70:
-            return format_html('<span style="color:orange">{:.1f}%</span>', rate)
+            color = "orange"
         else:
-            return format_html('<span style="color:red">{:.1f}%</span>', rate)
+            color = "red"
+        from django.utils.safestring import mark_safe
+        return mark_safe(f'<span style="color:{color}">{rate:.1f}%</span>')
 
 
 # 保留旧模型的 admin 注册（用于兼容历史数据），但隐藏菜单
