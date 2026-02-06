@@ -4,6 +4,7 @@ from django.shortcuts import render, get_object_or_404
 from django.http import JsonResponse
 from django.contrib.admin.views.decorators import staff_member_required
 from django import forms
+from django.utils.html import format_html
 from .models import Gallery
 
 
@@ -54,7 +55,7 @@ class GalleryAdmin(admin.ModelAdmin):
     list_filter = ['level', 'is_active', 'created_at']
     search_fields = ['id', 'title', 'description']
     readonly_fields = [
-        'created_at', 'updated_at', 'image_count',
+        'created_at', 'updated_at', 'image_count', 'level',
         'images_preview'
     ]
 
@@ -63,7 +64,8 @@ class GalleryAdmin(admin.ModelAdmin):
             'fields': ('id', 'title', 'description', 'cover_url')
         }),
         ('层级关系', {
-            'fields': ('parent', 'level', 'sort_order', 'is_active')
+            'fields': ('parent', 'level', 'sort_order', 'is_active'),
+            'description': '层级会根据父图集自动计算'
         }),
         ('文件夹信息', {
             'fields': ('folder_path', 'image_count')
@@ -115,26 +117,30 @@ class GalleryAdmin(admin.ModelAdmin):
         images = obj.get_images()
 
         if not images:
-            return '<p style="color: #999;">暂无图片</p>'
+            return format_html('<p style="color: #999;">暂无图片</p>')
 
-        html = '<div style="display: flex; flex-wrap: wrap; gap: 10px; max-height: 400px; overflow-y: auto;">'
+        html_parts = [
+            '<div style="display: flex; flex-wrap: wrap; gap: 10px; max-height: 400px; overflow-y: auto;">'
+        ]
 
         # 最多显示 12 张
         for img in images[:12]:
-            html += f'''
-                <div style="position: relative; width: 100px; height: 100px;">
-                    <img src="{img['url']}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 8px;">
-                    <span style="position: absolute; bottom: 2px; right: 2px; background: rgba(0,0,0,0.7); color: white; font-size: 10px; padding: 2px 4px; border-radius: 4px;">{img['filename']}</span>
-                </div>
-            '''
+            html_parts.append(format_html(
+                '''<div style="position: relative; width: 100px; height: 100px;">
+                    <img src="{}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 8px;">
+                    <span style="position: absolute; bottom: 2px; right: 2px; background: rgba(0,0,0,0.7); color: white; font-size: 10px; padding: 2px 4px; border-radius: 4px;">{}</span>
+                </div>''',
+                img['url'], img['filename']
+            ))
 
         if len(images) > 12:
-            html += f'<p style="color: #999; font-size: 12px;">还有 {len(images) - 12} 张图片...</p>'
+            html_parts.append(
+                format_html('<p style="color: #999; font-size: 12px;">还有 {} 张图片...</p>', len(images) - 12)
+            )
 
-        html += '</div>'
-        return html
+        html_parts.append('</div>')
+        return format_html(''.join(html_parts))
     images_preview.short_description = '图片预览'
-    images_preview.allow_tags = True
 
     def parent_id(self, obj):
         """显示父图集ID"""
@@ -146,9 +152,8 @@ class GalleryAdmin(admin.ModelAdmin):
     def manage_images_link(self, obj):
         """图片管理链接"""
         url = reverse('admin:gallery_gallery_change', args=[obj.id])
-        return f'<a href="{url}#images-section">管理图片</a>'
+        return format_html('<a href="{}#images-section">管理图片</a>', url)
     manage_images_link.short_description = '图片管理'
-    manage_images_link.allow_tags = True
 
     def save_model(self, request, obj, form, change):
         """保存模型时自动刷新图片数量"""
@@ -157,10 +162,10 @@ class GalleryAdmin(admin.ModelAdmin):
         obj.tags = tags_input
         
         super().save_model(request, obj, form, change)
-        # 如果文件夹路径发生变化，自动刷新图片数量
+        # 如果文件夹路径存在，自动刷新图片数量
+        # 注意：refresh_image_count 内部会调用 save()，不需要再次调用 super().save_model()
         if obj.folder_path:
             obj.refresh_image_count()
-            super().save_model(request, obj, form, change)
 
     def upload_image_view(self, request, object_id):
         """上传图片视图"""
@@ -194,8 +199,8 @@ class GalleryAdmin(admin.ModelAdmin):
         gallery = get_object_or_404(Gallery, id=object_id)
 
         if request.method == 'POST':
-            # 安全检查：防止删除 cover.jpg
-            if filename == 'cover.jpg':
+            # 安全检查：防止删除封面
+            if filename == Gallery.COVER_FILENAME:
                 return JsonResponse({'success': False, 'message': '不能删除封面图片'})
 
             success = gallery.delete_image(filename)
@@ -262,7 +267,7 @@ def get_gallery_images(request, gallery_id):
         others = []
 
         for img in images:
-            if img['filename'] == 'cover.jpg':
+            if img['filename'] == Gallery.COVER_FILENAME:
                 cover = img
             else:
                 others.append(img)

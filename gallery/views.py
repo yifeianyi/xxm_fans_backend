@@ -14,17 +14,26 @@ def to_media_url(path):
     return path
 
 
+import logging
+
+logger = logging.getLogger(__name__)
+
+
 @api_view(['GET'])
 def gallery_tree(request):
     """获取图集树结构"""
     try:
-        # 优化: 使用 prefetch_related 预取所有子图集，避免递归查询
-        root_galleries = Gallery.objects.filter(
-            parent__isnull=True,
-            is_active=True
-        ).prefetch_related('children').order_by('sort_order', 'id')
+        # 优化: 一次性获取所有活跃图集，避免递归查询数据库
+        all_galleries = list(
+            Gallery.objects.filter(is_active=True).order_by('sort_order', 'id')
+        )
+        
+        # 构建父子关系映射
+        children_map = {}
+        for gallery in all_galleries:
+            if gallery.parent_id:
+                children_map.setdefault(gallery.parent_id, []).append(gallery)
 
-        # 构建树结构
         def build_tree(gallery):
             data = {
                 'id': gallery.id,
@@ -39,22 +48,21 @@ def gallery_tree(request):
                 'created_at': gallery.created_at.isoformat() if gallery.created_at else None,
             }
 
-            # 递归获取子图集
-            children = Gallery.objects.filter(
-                parent=gallery,
-                is_active=True
-            ).order_by('sort_order', 'id')
-
-            if children.exists():
+            # 从内存映射中获取子图集，避免数据库查询
+            children = children_map.get(gallery.id, [])
+            if children:
                 data['children'] = [build_tree(child) for child in children]
 
             return data
 
+        # 仅获取根图集进行遍历
+        root_galleries = [g for g in all_galleries if g.parent_id is None]
         tree = [build_tree(gallery) for gallery in root_galleries]
 
         return success_response(tree, '获取图集树成功')
     except Exception as e:
-        return error_response(str(e))
+        logger.error(f"获取图集树失败: {e}", exc_info=True)
+        return error_response(f"获取图集树失败: {str(e)}")
 
 
 @api_view(['GET'])
@@ -100,7 +108,8 @@ def gallery_detail(request, gallery_id):
     except Gallery.DoesNotExist:
         return error_response('图集不存在', status_code=404)
     except Exception as e:
-        return error_response(str(e))
+        logger.error(f"获取图集详情失败: {e}", exc_info=True)
+        return error_response(f"获取图集详情失败: {str(e)}")
 
 
 @api_view(['GET'])
@@ -129,7 +138,8 @@ def gallery_images(request, gallery_id):
     except Gallery.DoesNotExist:
         return error_response('图集不存在', status_code=404)
     except Exception as e:
-        return error_response(str(e))
+        logger.error(f"获取图片列表失败: {e}", exc_info=True)
+        return error_response(f"获取图片列表失败: {str(e)}")
 
 
 @api_view(['GET'])
@@ -178,7 +188,8 @@ def gallery_children_images(request, gallery_id):
     except Gallery.DoesNotExist:
         return error_response('图集不存在', status_code=404)
     except Exception as e:
-        return error_response(str(e))
+        logger.error(f"获取子图集图片失败: {e}", exc_info=True)
+        return error_response(f"获取子图集图片失败: {str(e)}")
 
 
 @api_view(['GET'])
@@ -210,4 +221,5 @@ def get_thumbnail(request):
             else:
                 return HttpResponse('Image not found', status=404)
     except Exception as e:
+        logger.error(f"生成缩略图失败: {e}", exc_info=True)
         return HttpResponse(f'Error: {str(e)}', status=500)
