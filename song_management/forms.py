@@ -33,7 +33,8 @@ class SongRecordForm(forms.ModelForm):
             rel_path = instance.cover_url.lstrip('/')
             if rel_path.startswith('covers/'):
                 rel_path = rel_path[len('covers/'):]
-            cover_path = os.path.join(settings.BASE_DIR, 'xxm_fans_frontend', 'public', 'covers', rel_path)
+            # 使用 PROJECT_ROOT 指向正确的 media/covers 目录
+            cover_path = os.path.join(settings.PROJECT_ROOT, 'media', 'covers', rel_path)
             
             # 确保目录存在
             cover_dir = os.path.dirname(cover_path)
