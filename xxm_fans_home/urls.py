@@ -55,6 +55,10 @@ urlpatterns = [
     re_path(r'^gallery/(?P<path>.*)$', serve, {
         'document_root': settings.MEDIA_ROOT / 'gallery',
     }),
+    # 为covers目录提供静态文件服务（开发和生产环境都需要）
+    re_path(r'^covers/(?P<path>.*)$', serve, {
+        'document_root': settings.MEDIA_ROOT / 'covers',
+    }),
 ]
 
 # 在开发环境中提供媒体文件服务

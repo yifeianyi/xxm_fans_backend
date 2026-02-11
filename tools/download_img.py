@@ -9,10 +9,11 @@ from tqdm import tqdm
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "xxm_fans_home.settings")
 django.setup()
 
-from main.models import SongRecord  # ✅ 用 SongRecord 而不是 Songs
+from song_management.models import SongRecord
+from django.conf import settings
 
-# 本地封面目录根
-BASE_DIR = os.path.join("static", "covers")
+# 本地封面目录根 - 使用 MEDIA_ROOT 下的 covers
+BASE_DIR = os.path.join(settings.MEDIA_ROOT, "covers")
 os.makedirs(BASE_DIR, exist_ok=True)
 
 # 哈希表：图片内容哈希 -> 封面路径
@@ -49,7 +50,7 @@ for url in tqdm(cover_urls):
 
         filename = f"{date_str}.jpg"
         file_path = os.path.join(save_dir, filename)
-        local_path = f"/static/covers/{year}/{month}/{filename}"
+        local_path = f"/covers/{year}/{month}/{filename}"
 
         # 下载图片内容
         headers = {

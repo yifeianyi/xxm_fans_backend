@@ -721,6 +721,11 @@ class SongRecordAdmin(admin.ModelAdmin):
                             msg += "，🖼️ 封面已下载"
                         self.message_user(request, msg, level=messages.SUCCESS)
 
+                    # 如果有错误信息（API错误等）
+                    if conflict_info and conflict_info.get("error"):
+                        self.message_user(request, f"❌ 导入失败: {conflict_info['error']}", level=messages.ERROR)
+                        return redirect("admin:song_management_songrecord_changelist")
+
                     # 如果有冲突
                     if conflict_info:
                         # 判断是不是第一次进入冲突处理
@@ -749,7 +754,10 @@ class SongRecordAdmin(admin.ModelAdmin):
 
                     # 没有剩余 -> 完成
                     if not remaining_parts:
-                        self.message_user(request, f"🎉 BV导入完成！共处理 {all_results_count} 条记录", level=messages.SUCCESS)
+                        if all_results_count == 0:
+                            self.message_user(request, f"⚠️ BV导入完成，但未找到有效的演唱记录。请检查视频分P标题是否包含日期格式（如：2024年1月1日）", level=messages.WARNING)
+                        else:
+                            self.message_user(request, f"🎉 BV导入完成！共处理 {all_results_count} 条记录", level=messages.SUCCESS)
                         return redirect("admin:song_management_songrecord_changelist")
 
                     # 没有冲突但还有剩余，继续循环

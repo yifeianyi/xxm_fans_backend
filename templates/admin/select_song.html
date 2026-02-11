@@ -52,12 +52,20 @@
                                 required>
                             <label for="song_{{ song.id }}">
                                 <strong>{{ song.song_name }}</strong>
-                                {% if song.singer %}({{ song.singer }}){% endif %}
-                                {% if song.language %}[{{ song.language }}]{% endif %}
-                                - 演唱次数: {{ song.perform_count }}
+                                {% if song.singer %}<span class="singer">原唱: {{ song.singer }}</span>{% endif %}
+                                {% if song.language %}<span class="language">[{{ song.language }}]</span>{% endif %}
+                                <span class="stats">- 演唱次数: {{ song.perform_count }}</span>
                             </label>
                         </div>
                         {% endfor %}
+                        
+                        <div class="radio-item new-song-option">
+                            <input type="radio" name="selected_song_id" value="__new__" id="song_new" required>
+                            <label for="song_new">
+                                <strong>🆕 创建为新歌曲</strong>
+                                <span class="hint">（如果以上都不是您要导入的歌曲，选择此项创建新条目）</span>
+                            </label>
+                        </div>
                     </div>
                 </div>
             </fieldset>
@@ -102,6 +110,37 @@
         border-radius: 5px;
         padding: 15px;
         margin: 15px 0;
+    }
+
+    .singer {
+        color: #e74c3c;
+        font-weight: bold;
+        margin-left: 8px;
+    }
+
+    .language {
+        color: #3498db;
+        margin-left: 5px;
+    }
+
+    .stats {
+        color: #7f8c8d;
+        margin-left: 10px;
+    }
+
+    .new-song-option {
+        background: #e8f6f3;
+        border: 2px solid #1abc9c;
+    }
+
+    .new-song-option:hover {
+        background: #d1f2eb;
+    }
+
+    .hint {
+        color: #7f8c8d;
+        font-size: 0.9em;
+        margin-left: 10px;
     }
 </style>
 {% endblock %}
