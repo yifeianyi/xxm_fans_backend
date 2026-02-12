@@ -1,0 +1,78 @@
+{% extends "admin/base_site.html" %}
+{% block content %}
+<h1>封面选择</h1>
+
+<div style="margin-bottom: 20px; padding: 15px; background-color: #f8f9fa; border-radius: 5px;">
+    <p><strong>直播日期：</strong>{{ date }}</p>
+    <p><strong>直播标题：</strong>{{ title }}</p>
+    <p style="color: #666;">检测到该日期已存在封面，请选择是否替换：</p>
+</div>
+
+<form method="post" action="{% url 'admin:select-cover-livestream' %}" style="max-width: 900px;">
+    {% csrf_token %}
+    <input type="hidden" name="bvid" value="{{ bvid }}">
+    <input type="hidden" name="date" value="{{ date }}">
+    <input type="hidden" name="title" value="{{ title }}">
+    <input type="hidden" name="summary" value="{{ summary }}">
+    <input type="hidden" name="total_parts" value="{{ total_parts }}">
+    <input type="hidden" name="total_duration_seconds" value="{{ total_duration_seconds }}">
+    <input type="hidden" name="duration_formatted" value="{{ duration_formatted }}">
+    <input type="hidden" name="new_cover_url" value="{{ new_cover_url }}">
+    <input type="hidden" name="existing_cover_url" value="{{ existing_cover_url }}">
+
+    <div style="display: flex; gap: 30px; margin-bottom: 30px;">
+        <!-- 现有封面 -->
+        <div style="flex: 1; text-align: center; padding: 20px; border: 2px solid #ddd; border-radius: 8px; {% if not existing_cover_url %}opacity: 0.5;{% endif %}">
+            <h3 style="margin-top: 0; color: #333;">现有封面</h3>
+            {% if existing_cover_url %}
+            <div style="margin: 15px 0;">
+                <img src="{{ existing_cover_url }}" style="max-width: 300px; max-height: 200px; border-radius: 4px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+            </div>
+            <p style="color: #666; font-size: 12px; word-break: break-all;">{{ existing_cover_url }}</p>
+            {% else %}
+            <div style="margin: 15px 0; padding: 60px 20px; background: #f5f5f5; border-radius: 4px;">
+                <p style="color: #999;">无封面</p>
+            </div>
+            {% endif %}
+            <label style="display: block; margin-top: 15px; padding: 10px; background: #f0f0f0; border-radius: 4px; cursor: pointer;">
+                <input type="radio" name="cover_choice" value="keep" {% if not existing_cover_url %}disabled{% else %}checked{% endif %}>
+                <span style="margin-left: 8px;">保留现有封面</span>
+            </label>
+        </div>
+
+        <!-- 新封面 -->
+        <div style="flex: 1; text-align: center; padding: 20px; border: 2px solid #79aec8; border-radius: 8px;">
+            <h3 style="margin-top: 0; color: #79aec8;">待下载新封面</h3>
+            {% if new_cover_url %}
+            <div style="margin: 15px 0;">
+                <img src="{{ new_cover_url }}" style="max-width: 300px; max-height: 200px; border-radius: 4px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+            </div>
+            <p style="color: #666; font-size: 12px; word-break: break-all;">{{ new_cover_url }}</p>
+            {% else %}
+            <div style="margin: 15px 0; padding: 60px 20px; background: #f5f5f5; border-radius: 4px;">
+                <p style="color: #999;">无法获取封面</p>
+            </div>
+            {% endif %}
+            <label style="display: block; margin-top: 15px; padding: 10px; background: #e8f4fc; border-radius: 4px; cursor: pointer;">
+                <input type="radio" name="cover_choice" value="replace" {% if not existing_cover_url %}checked{% endif %}>
+                <span style="margin-left: 8px;">使用新封面</span>
+            </label>
+        </div>
+    </div>
+
+    <div style="text-align: center; margin-top: 20px;">
+        <button type="submit" class="default" style="padding: 10px 30px; font-size: 14px;">确认选择</button>
+        <a href="{% url 'admin:livestream_livestream_changelist' %}" style="margin-left: 15px; padding: 10px 20px; display: inline-block; text-decoration: none; color: #666;">取消</a>
+    </div>
+</form>
+
+<div style="margin-top: 30px; padding: 15px; background-color: #fff3cd; border-radius: 5px; border-left: 4px solid #ffc107;">
+    <h4 style="margin-top: 0; color: #856404;">💡 提示</h4>
+    <ul style="margin-bottom: 0; color: #856404;">
+        <li>选择"保留现有封面"：将继续使用当前封面，不会下载新封面</li>
+        <li>选择"使用新封面"：将下载并替换为B站视频的封面</li>
+        <li>无论选择哪种封面，其他信息（标题、BV号、时长等）都会正常更新</li>
+    </ul>
+</div>
+</div>
+{% endblock %}
