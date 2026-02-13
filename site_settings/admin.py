@@ -1,5 +1,6 @@
 from django.contrib import admin
 from django import forms
+from django.utils.safestring import mark_safe
 from site_settings.models import SiteSettings, Recommendation, Milestone
 
 
@@ -52,17 +53,17 @@ class SiteSettingsForm(forms.ModelForm):
 class SiteSettingsAdmin(admin.ModelAdmin):
     """网站设置Admin"""
     form = SiteSettingsForm
-    list_display = ['id', 'artist_name', 'artist_birthday', 'artist_constellation', 'artist_location', 'created_at', 'updated_at']
+    list_display = ['id', 'artist_name', 'favicon_preview', 'artist_avatar_preview', 'artist_birthday', 'artist_constellation', 'artist_location', 'created_at', 'updated_at']
     list_filter = ['created_at', 'updated_at']
     search_fields = ['artist_name', 'artist_location']
-    readonly_fields = ['created_at', 'updated_at']
+    readonly_fields = ['favicon_preview', 'artist_avatar_preview', 'created_at', 'updated_at']
 
     fieldsets = (
         ('基础设置', {
-            'fields': ('favicon',)
+            'fields': ('favicon', 'favicon_preview')
         }),
         ('艺人信息', {
-            'fields': ('artist_name', 'artist_avatar', 'artist_birthday', 'artist_constellation', 'artist_location')
+            'fields': ('artist_name', 'artist_avatar', 'artist_avatar_preview', 'artist_birthday', 'artist_constellation', 'artist_location')
         }),
         ('艺人特色', {
             'fields': ('artist_profession', 'artist_voice_features')
@@ -75,6 +76,20 @@ class SiteSettingsAdmin(admin.ModelAdmin):
             'classes': ('collapse',)
         }),
     )
+
+    def favicon_preview(self, obj):
+        """favicon预览"""
+        if obj.favicon:
+            return mark_safe(f'<img src="{obj.favicon.url}" style="height:32px;width:32px;object-fit:cover;border-radius:4px;" />')
+        return '-'
+    favicon_preview.short_description = '当前图标预览'
+
+    def artist_avatar_preview(self, obj):
+        """艺人头像预览"""
+        if obj.artist_avatar:
+            return mark_safe(f'<img src="{obj.artist_avatar.url}" style="height:80px;width:80px;object-fit:cover;border-radius:8px;" />')
+        return '-'
+    artist_avatar_preview.short_description = '当前头像预览'
 
 
 @admin.register(Recommendation)

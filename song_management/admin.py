@@ -640,10 +640,18 @@ class SongRecordAdmin(admin.ModelAdmin):
     autocomplete_fields = ("song",)
 
     def get_fields(self, request, obj=None):
-        fields = ["song", "performed_at", "url", "cover_url", "notes"]
+        fields = ["song", "performed_at", "url", "notes"]
         if obj:
-            return fields + ["replace_cover"]
-        return fields
+            # 编辑模式：显示所有字段
+            return fields + ["cover_image", "cover_url", "cover_thumb_large"]
+        else:
+            # 新增模式
+            return fields + ["cover_image", "cover_url"]
+
+    def get_readonly_fields(self, request, obj=None):
+        if obj:
+            return ["cover_thumb", "cover_thumb_large"]
+        return ["cover_thumb"]
 
     def get_urls(self):
         urls = super().get_urls()
@@ -652,16 +660,23 @@ class SongRecordAdmin(admin.ModelAdmin):
         ]
         return my_urls + urls
 
-    # 缩略图显示
+    # 缩略图显示（列表页）
     def cover_thumb(self, obj):
         if obj.cover_url:
-            url = obj.cover_url.lstrip('/')
-            if url.startswith('covers/'):
-                url = url[len('covers/'):]
-            full_url = f'/covers/{url}'
-            return mark_safe(f'<img src="{full_url}" style="height:48px;max-width:80px;object-fit:cover;" />')
+            from core.thumbnail_generator import ThumbnailGenerator
+            thumb_url = ThumbnailGenerator.get_thumbnail_url(obj.cover_url)
+            return mark_safe(f'<img src="{thumb_url}" style="height:48px;max-width:80px;object-fit:cover;" />')
         return "-"
     cover_thumb.short_description = "封面缩略图"
+
+    # 大缩略图显示（编辑页）
+    def cover_thumb_large(self, obj):
+        if obj.cover_url:
+            from core.thumbnail_generator import ThumbnailGenerator
+            thumb_url = ThumbnailGenerator.get_thumbnail_url(obj.cover_url)
+            return mark_safe(f'<img src="{thumb_url}" style="height:150px;max-width:250px;object-fit:cover;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,0.1);" />')
+        return '<span style="color:#999;">暂无封面</span>'
+    cover_thumb_large.short_description = '当前封面预览'
 
     # 导入BV演唱记录的视图
     def import_bv_view(self, request):
@@ -776,7 +791,7 @@ class OriginalWorkAdmin(admin.ModelAdmin):
     search_fields = ['title', 'description']
     list_editable = ['featured']
     ordering = ['-featured', '-release_date']
-    readonly_fields = ['created_at', 'updated_at']
+    readonly_fields = ['cover_thumb', 'created_at', 'updated_at']
     fieldsets = (
         ('基本信息', {
             'fields': ('title', 'release_date', 'description', 'featured')
@@ -785,7 +800,7 @@ class OriginalWorkAdmin(admin.ModelAdmin):
             'fields': ('netease_id', 'bilibili_bvid')
         }),
         ('封面', {
-            'fields': ('cover',)
+            'fields': ('cover', 'cover_thumb')
         }),
         ('时间信息', {
             'fields': ('created_at', 'updated_at'),
@@ -816,6 +831,10 @@ class OriginalWorkAdmin(admin.ModelAdmin):
     @admin.display(description="封面")
     def cover_thumb(self, obj):
         if obj.cover:
-            return mark_safe(f'<img src="{obj.cover.url}" style="height:48px;max-width:80px;object-fit:cover;" />')
+            # 使用缩略图而不是原图
+            from core.thumbnail_generator import ThumbnailGenerator
+            # covers/original/ 路径下的图片
+            thumb_url = ThumbnailGenerator.get_thumbnail_url(obj.cover.url)
+            return mark_safe(f'<img src="{thumb_url}" style="height:48px;max-width:80px;object-fit:cover;" />')
         return '-'
     cover_thumb.short_description = "封面"

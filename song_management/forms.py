@@ -11,12 +11,16 @@ class BVImportForm(forms.Form):
 
 # 替换Record封面图的
 class SongRecordForm(forms.ModelForm):
-    replace_cover = forms.ImageField(label="更换封面图（仅内容覆盖，路径和文件名不变）", required=False)
-    
+    cover_image = forms.ImageField(
+        label="上传/替换封面",
+        required=False,
+        help_text='上传本地图片作为封面。如果是已有记录且已有封面路径，将只替换原文件内容而不改变路径；如果是新记录，将按日期自动创建路径。上传后会自动触发缩略图生成。'
+    )
+
     class Meta:
         model = SongRecord
         fields = '__all__'
-    
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         # 安全地设置初始值，避免字段不存在时抛出KeyError
@@ -25,28 +29,122 @@ class SongRecordForm(forms.ModelForm):
         if 'cover_url' in self.fields:
             self.fields['cover_url'].initial = "/covers/2025/01/01.jpg"
 
+        # 调整字段顺序
+        self.fields = self._reorder_fields()
+
+    def _reorder_fields(self):
+        """重新排序字段，让上传字段在前面"""
+        fields = {}
+        field_order = [
+            'song', 'performed_at', 'url', 'notes',
+            'cover_image', 'cover_url'
+        ]
+        for field_name in field_order:
+            if field_name in self.fields:
+                fields[field_name] = self.fields[field_name]
+        # 添加剩余字段
+        for field_name, field in self.fields.items():
+            if field_name not in fields:
+                fields[field_name] = field
+        return fields
+
     def save(self, commit=True):
         instance = super().save(commit=False)
-        new_cover = self.cleaned_data.get('replace_cover')
-        if new_cover and instance.cover_url:
-            # 兼容 /covers/ 前缀和无 /covers/ 前缀
-            rel_path = instance.cover_url.lstrip('/')
-            if rel_path.startswith('covers/'):
-                rel_path = rel_path[len('covers/'):]
-            # 使用 PROJECT_ROOT 指向正确的 media/covers 目录
-            cover_path = os.path.join(settings.PROJECT_ROOT, 'media', 'covers', rel_path)
-            
-            # 确保目录存在
-            cover_dir = os.path.dirname(cover_path)
-            os.makedirs(cover_dir, exist_ok=True)
-            
-            # 保存文件
-            with open(cover_path, 'wb+') as f:
-                for chunk in new_cover.chunks():
-                    f.write(chunk)
+        cover_image = self.cleaned_data.get('cover_image')
+
+        if cover_image:
+            if instance.cover_url and instance.pk:
+                # 已有封面路径：只替换内容，保持原路径
+                self._replace_cover_content(instance.cover_url, cover_image)
+            else:
+                # 没有封面路径：创建新路径
+                saved_path = self._save_new_cover_image(cover_image)
+                if saved_path:
+                    instance.cover_url = saved_path
+
         if commit:
             instance.save()
+            # 保存后触发生成缩略图
+            self._generate_thumbnail(instance.cover_url)
+
         return instance
+
+    def _replace_cover_content(self, cover_url, new_image):
+        """替换已有封面的内容，保持原路径和文件名"""
+        from django.core.files.storage import default_storage
+        from django.conf import settings
+
+        try:
+            # 标准化路径
+            rel_path = cover_url.lstrip('/')
+            if rel_path.startswith('media/'):
+                rel_path = rel_path[len('media/'):]
+            if rel_path.startswith('covers/'):
+                rel_path = rel_path[len('covers/'):]
+
+            # 完整的存储路径
+            storage_path = f'covers/{rel_path}'
+            
+            # 获取完整的文件系统路径
+            full_path = os.path.join(settings.MEDIA_ROOT, storage_path)
+
+            # 确保目录存在
+            os.makedirs(os.path.dirname(full_path), exist_ok=True)
+
+            # 直接写入文件（覆盖原文件）
+            with open(full_path, 'wb+') as f:
+                for chunk in new_image.chunks():
+                    f.write(chunk)
+
+            # 删除旧缩略图（如果存在）
+            from core.thumbnail_generator import ThumbnailGenerator
+            ThumbnailGenerator.delete_thumbnail(storage_path)
+
+        except Exception as e:
+            raise forms.ValidationError(f'封面替换失败: {str(e)}')
+
+    def _save_new_cover_image(self, image):
+        """保存新封面图片到 media/covers/ 目录，按日期组织"""
+        import datetime
+        from django.core.files.storage import default_storage
+
+        try:
+            # 使用当前日期组织文件夹
+            now = datetime.datetime.now()
+            year = now.strftime('%Y')
+            month = now.strftime('%m')
+
+            # 生成文件名
+            ext = os.path.splitext(image.name)[1].lower()
+            filename = f"{now.strftime('%Y%m%d_%H%M%S')}{ext}"
+
+            # 保存路径: media/covers/YYYY/MM/
+            upload_path = f'covers/{year}/{month}/{filename}'
+
+            # 保存文件
+            saved_path = default_storage.save(upload_path, image)
+            return f'/media/{saved_path}'
+        except Exception as e:
+            raise forms.ValidationError(f'图片保存失败: {str(e)}')
+
+    def _generate_thumbnail(self, cover_url):
+        """触发缩略图生成"""
+        if not cover_url:
+            return
+
+        try:
+            from core.thumbnail_generator import ThumbnailGenerator
+
+            # 标准化路径
+            rel_path = cover_url.lstrip('/')
+            if rel_path.startswith('media/'):
+                rel_path = rel_path[len('media/'):]
+
+            # 强制重新生成缩略图（因为原图已更新）
+            ThumbnailGenerator.generate_thumbnail(rel_path, force=True)
+        except Exception as e:
+            # 缩略图生成失败不应影响主流程
+            print(f"缩略图生成失败: {cover_url}, 错误: {e}")
 
 
 class SongStyleForm(forms.ModelForm):

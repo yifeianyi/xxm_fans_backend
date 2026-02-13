@@ -1,3 +1,4 @@
+import os
 import re
 from datetime import datetime
 
@@ -5,6 +6,9 @@ from django.contrib import admin, messages
 from django.urls import path
 from django.shortcuts import render, redirect
 from django.conf import settings
+from django.utils.safestring import mark_safe
+from django import forms
+from django.core.files.storage import default_storage
 
 from .models import Livestream
 from .forms import BVImportForm
@@ -13,9 +17,164 @@ from .forms import BVImportForm
 from tools.bilibili import BilibiliAPIClient, BilibiliCoverDownloader, BilibiliAPIError
 
 
+class LivestreamAdminForm(forms.ModelForm):
+    """直播记录表单 - 支持本地上传封面和弹幕云图"""
+    cover_image = forms.ImageField(
+        label='上传/替换封面',
+        required=False,
+        help_text='上传本地图片作为封面。如果是已有封面路径，将只替换原文件内容而不改变路径。上传后会自动触发缩略图生成。'
+    )
+    danmaku_cloud_image = forms.ImageField(
+        label='上传/替换弹幕云图',
+        required=False,
+        help_text='上传本地图片作为弹幕云图。如果是已有路径，将只替换原文件内容而不改变路径。'
+    )
+
+    class Meta:
+        model = Livestream
+        fields = '__all__'
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # 调整字段顺序
+        self.fields = self._reorder_fields()
+
+    def _reorder_fields(self):
+        """重新排序字段，让上传字段在前面"""
+        fields = {}
+        field_order = [
+            'date', 'title', 'summary', 'live_moment', 'is_active', 'sort_order',
+            'bvid', 'duration_seconds', 'duration_formatted', 'parts',
+            'view_count', 'danmaku_count', 'start_time', 'end_time',
+            'cover_image', 'cover_url',
+            'danmaku_cloud_image', 'danmaku_cloud_url'
+        ]
+        for field_name in field_order:
+            if field_name in self.fields:
+                fields[field_name] = self.fields[field_name]
+        # 添加剩余字段
+        for field_name, field in self.fields.items():
+            if field_name not in fields:
+                fields[field_name] = field
+        return fields
+
+    def save(self, commit=True):
+        instance = super().save(commit=False)
+
+        # 处理封面上传
+        cover_image = self.cleaned_data.get('cover_image')
+        if cover_image:
+            if instance.cover_url and instance.pk:
+                # 已有封面路径：只替换内容，保持原路径
+                self._replace_image_content(instance.cover_url, cover_image)
+            else:
+                # 没有封面路径：根据日期创建新路径
+                saved_path = self._save_new_image(cover_image, instance.date, 'covers')
+                if saved_path:
+                    instance.cover_url = saved_path
+
+        # 处理弹幕云图上传
+        danmaku_image = self.cleaned_data.get('danmaku_cloud_image')
+        if danmaku_image:
+            if instance.danmaku_cloud_url and instance.pk:
+                # 已有路径：只替换内容
+                self._replace_image_content(instance.danmaku_cloud_url, danmaku_image)
+            else:
+                # 没有路径：根据日期创建新路径
+                saved_path = self._save_new_image(danmaku_image, instance.date, 'cloud_picture')
+                if saved_path:
+                    instance.danmaku_cloud_url = saved_path
+
+        if commit:
+            instance.save()
+            # 保存后触发缩略图生成
+            if cover_image:
+                self._generate_thumbnail(instance.cover_url)
+            if danmaku_image:
+                self._generate_thumbnail(instance.danmaku_cloud_url)
+
+        return instance
+
+    def _replace_image_content(self, image_url, new_image):
+        """替换已有图片的内容，保持原路径和文件名"""
+        try:
+            # 标准化路径
+            rel_path = image_url.lstrip('/')
+            if rel_path.startswith('media/'):
+                rel_path = rel_path[len('media/'):]
+
+            # 确定存储路径
+            storage_path = rel_path
+            
+            # 获取完整的文件系统路径
+            full_path = os.path.join(settings.MEDIA_ROOT, storage_path)
+
+            # 确保目录存在
+            os.makedirs(os.path.dirname(full_path), exist_ok=True)
+
+            # 直接写入文件（覆盖原文件）
+            with open(full_path, 'wb+') as f:
+                for chunk in new_image.chunks():
+                    f.write(chunk)
+
+            # 删除旧缩略图（如果存在）
+            from core.thumbnail_generator import ThumbnailGenerator
+            ThumbnailGenerator.delete_thumbnail(storage_path)
+
+        except Exception as e:
+            raise forms.ValidationError(f'图片替换失败: {str(e)}')
+
+    def _save_new_image(self, image, date, folder):
+        """保存新图片到指定目录，按日期组织"""
+        try:
+            # 使用直播日期组织文件夹
+            year = date.strftime('%Y')
+            month = date.strftime('%m')
+            date_str = date.strftime('%Y-%m-%d')
+
+            # 生成文件名
+            ext = os.path.splitext(image.name)[1].lower()
+            if ext not in ['.jpg', '.jpeg', '.png', '.webp', '.gif']:
+                ext = '.jpg'
+            filename = f"{date_str}{ext}"
+
+            # 保存路径: media/{folder}/YYYY/MM/
+            upload_path = f'{folder}/{year}/{month}/{filename}'
+
+            # 如果文件已存在，先删除
+            if default_storage.exists(upload_path):
+                default_storage.delete(upload_path)
+
+            # 保存文件
+            saved_path = default_storage.save(upload_path, image)
+            return f'/media/{saved_path}'
+        except Exception as e:
+            raise forms.ValidationError(f'图片保存失败: {str(e)}')
+
+    def _generate_thumbnail(self, image_url):
+        """触发缩略图生成"""
+        if not image_url:
+            return
+
+        try:
+            from core.thumbnail_generator import ThumbnailGenerator
+
+            # 标准化路径
+            rel_path = image_url.lstrip('/')
+            if rel_path.startswith('media/'):
+                rel_path = rel_path[len('media/'):]
+
+            # 强制重新生成缩略图
+            ThumbnailGenerator.generate_thumbnail(rel_path, force=True)
+        except Exception as e:
+            # 缩略图生成失败不应影响主流程
+            print(f"缩略图生成失败: {image_url}, 错误: {e}")
+
+
 @admin.register(Livestream)
 class LivestreamAdmin(admin.ModelAdmin):
     """直播记录管理后台"""
+    form = LivestreamAdminForm
 
     list_display = [
         'date',
@@ -32,6 +191,8 @@ class LivestreamAdmin(admin.ModelAdmin):
     ordering = ['-date']
     change_list_template = 'admin/livestream_change_list.html'
 
+    readonly_fields = ['cover_preview', 'danmaku_cloud_preview']
+
     fieldsets = (
         ('基础信息', {
             'fields': ('date', 'title', 'summary', 'live_moment', 'is_active', 'sort_order')
@@ -45,10 +206,33 @@ class LivestreamAdmin(admin.ModelAdmin):
         ('时间信息', {
             'fields': ('start_time', 'end_time')
         }),
+        ('回放封面', {
+            'fields': ('cover_image', 'cover_url', 'cover_preview'),
+            'description': '支持两种方式：1.上传本地图片（推荐）2.输入图片URL'
+        }),
         ('弹幕云图', {
-            'fields': ('danmaku_cloud_url',)
+            'fields': ('danmaku_cloud_image', 'danmaku_cloud_url', 'danmaku_cloud_preview'),
+            'description': '支持两种方式：1.上传本地图片（推荐）2.输入图片URL'
         }),
     )
+
+    def cover_preview(self, obj):
+        """封面预览 - 使用缩略图"""
+        if obj.cover_url:
+            from core.thumbnail_generator import ThumbnailGenerator
+            thumb_url = ThumbnailGenerator.get_thumbnail_url(obj.cover_url)
+            return mark_safe(f'<img src="{thumb_url}" style="height:120px;max-width:200px;object-fit:cover;border-radius:8px;" />')
+        return '-'
+    cover_preview.short_description = '当前封面预览'
+
+    def danmaku_cloud_preview(self, obj):
+        """弹幕云图预览 - 使用缩略图"""
+        if obj.danmaku_cloud_url:
+            from core.thumbnail_generator import ThumbnailGenerator
+            thumb_url = ThumbnailGenerator.get_thumbnail_url(obj.danmaku_cloud_url)
+            return mark_safe(f'<img src="{thumb_url}" style="height:120px;max-width:200px;object-fit:cover;border-radius:8px;" />')
+        return '-'
+    danmaku_cloud_preview.short_description = '当前云图预览'
 
     def get_urls(self):
         urls = super().get_urls()
