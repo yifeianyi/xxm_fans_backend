@@ -149,10 +149,20 @@ class RobustBilibiliAPIClient(BilibiliAPIClient):
 class ViewsCrawler:
     """B站投稿数据爬虫"""
 
-    def __init__(self, request_delay_min: float = 1.0, request_delay_max: float = 3.0, max_retries: int = 2):
+    def __init__(self, request_delay_min: float = 1.0, request_delay_max: float = 3.0, max_retries: int = 2, tier: str = None):
+        """
+        初始化爬虫
+        
+        Args:
+            request_delay_min: 最小请求延迟（秒）
+            request_delay_max: 最大请求延迟（秒）
+            max_retries: 最大重试次数
+            tier: 数据分层类型 ('hot', 'cold', None)，用于区分输出文件名
+        """
         self.request_delay_min = request_delay_min
         self.request_delay_max = request_delay_max
         self.max_retries = max_retries
+        self.tier = tier  # 数据分层类型
         # 使用强化版客户端
         self.api_client = RobustBilibiliAPIClient(
             timeout=8,  # 减少超时时间，快速失败
@@ -363,7 +373,7 @@ class ViewsCrawler:
         return output_path
 
     def _save_output(self, data: Dict[str, Any], dt: datetime) -> str:
-        """保存输出到文件（含小时）"""
+        """保存输出到文件（含小时和分层标识）"""
         year = dt.strftime('%Y')
         month = dt.strftime('%m')
         day = dt.strftime('%d')
@@ -373,8 +383,11 @@ class ViewsCrawler:
         output_dir = os.path.join(OUTPUT_DIR, year, month, day)
         os.makedirs(output_dir, exist_ok=True)
 
-        # 文件名包含小时
-        output_file = os.path.join(output_dir, f"{date_str}-{hour}_views_data.json")
+        # 根据分层类型生成文件名
+        if self.tier:
+            output_file = os.path.join(output_dir, f"{date_str}-{hour}_views_data_{self.tier}.json")
+        else:
+            output_file = os.path.join(output_dir, f"{date_str}-{hour}_views_data.json")
 
         with open(output_file, 'w', encoding='utf-8') as f:
             json.dump(data, f, ensure_ascii=False, indent=2)
