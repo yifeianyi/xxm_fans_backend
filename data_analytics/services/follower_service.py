@@ -85,7 +85,10 @@ class FollowerService:
         Args:
             account_id: 账号 ID
             granularity: 时间粒度 ('DAY', 'WEEK', 'MONTH')
-            days: 查询天数（对于 WEEK/MONTH，days 用于计算时间范围）
+            days: 查询天数
+                - DAY: 返回最近 days 小时的每小时数据
+                - WEEK: 返回最近 7 天的每天数据
+                - MONTH: 返回最近 30 天的每天数据
 
         Returns:
             List[Dict]: 历史数据列表
@@ -101,13 +104,13 @@ class FollowerService:
             start_time = end_time - timedelta(hours=days)
             return FollowerService._get_hourly_data(account, start_time, end_time)
         elif granularity == 'WEEK':
-            # 返回最近 days/7 周的每周数据（每周末取一个点）
-            start_time = end_time - timedelta(days=days)
-            return FollowerService._get_weekly_data(account, start_time, end_time)
+            # 返回最近 7 天的每天数据
+            start_time = end_time - timedelta(days=7)
+            return FollowerService._get_daily_data(account, start_time, end_time)
         elif granularity == 'MONTH':
-            # 返回最近 days/30 月的每月数据（每月末取一个点）
-            start_time = end_time - timedelta(days=days)
-            return FollowerService._get_monthly_data(account, start_time, end_time)
+            # 返回最近 30 天的每天数据
+            start_time = end_time - timedelta(days=30)
+            return FollowerService._get_daily_data(account, start_time, end_time)
         else:
             raise ValueError(f"Invalid granularity: {granularity}")
 
@@ -142,101 +145,38 @@ class FollowerService:
         return result
 
     @staticmethod
-    def _get_weekly_data(account, start_time, end_time) -> List[Dict]:
-        """获取每周数据（每周末取一个点）"""
-        # 获取时间范围内的所有数据，按天分组
+    def _get_daily_data(account, start_time, end_time) -> List[Dict]:
+        """获取每天数据（用于 WEEK 和 MONTH 粒度），每天只保留最后一条记录"""
+        # 获取原始数据
         queryset = FollowerMetrics.objects.filter(
             account=account,
             crawl_time__gte=start_time,
             crawl_time__lte=end_time
-        ).annotate(
-            date=TruncDay('crawl_time')
-        ).values('date').annotate(
-            follower_count=F('follower_count')
-        ).order_by('date')
+        ).order_by('crawl_time')
 
-        # 按周分组，每周取最后一天的数据
-        from collections import defaultdict
-        weekly_data = defaultdict(list)
+        # 按天分组，每天只保留最后一条
+        from collections import OrderedDict
+        daily_last = OrderedDict()
 
         for item in queryset:
-            date = item['date']
-            # 计算该日期属于哪一周（以周日为周结束）
-            week_end = date + timedelta(days=(6 - date.weekday()))
-            weekly_data[week_end].append({
-                'date': date,
-                'value': item['follower_count']
-            })
+            date_key = item.crawl_time.date()
+            daily_last[date_key] = item.follower_count
 
-        # 每周取最后一天的数据
+        # 转换为结果列表
         result = []
         prev_value = None
 
-        for week_end in sorted(weekly_data.keys()):
-            week_records = weekly_data[week_end]
-            if week_records:
-                # 取本周最后一天的数据
-                last_record = week_records[-1]
-                current_value = last_record['value']
-                delta = current_value - prev_value if prev_value is not None else 0
-                time_str = week_end.strftime('%Y/%m/%d')
+        for date, follower_count in daily_last.items():
+            current_value = follower_count
+            delta = current_value - prev_value if prev_value is not None else 0
+            time_str = date.strftime('%Y/%m/%d')
 
-                result.append({
-                    'time': time_str,
-                    'value': current_value,
-                    'delta': delta
-                })
-                prev_value = current_value
-
-        return result
-
-    @staticmethod
-    def _get_monthly_data(account, start_time, end_time) -> List[Dict]:
-        """获取每月数据（每月末取一个点）"""
-        # 获取时间范围内的所有数据，按天分组
-        queryset = FollowerMetrics.objects.filter(
-            account=account,
-            crawl_time__gte=start_time,
-            crawl_time__lte=end_time
-        ).annotate(
-            date=TruncDay('crawl_time')
-        ).values('date').annotate(
-            follower_count=F('follower_count')
-        ).order_by('date')
-
-        # 按月分组，每月取最后一天的数据
-        from collections import defaultdict
-        monthly_data = defaultdict(list)
-
-        for item in queryset:
-            date = item['date']
-            # 以年月作为键
-            month_key = date.replace(day=1)
-            monthly_data[month_key].append({
-                'date': date,
-                'value': item['follower_count']
+            result.append({
+                'time': time_str,
+                'value': current_value,
+                'delta': delta
             })
-
-        # 每月取最后一天的数据
-        result = []
-        prev_value = None
-
-        for month_start in sorted(monthly_data.keys()):
-            month_records = monthly_data[month_start]
-            if month_records:
-                # 取本月最后一天的数据
-                last_record = month_records[-1]
-                current_value = last_record['value']
-                delta = current_value - prev_value if prev_value is not None else 0
-                # 格式：2025/12
-                time_str = month_start.strftime('%Y/%m')
-
-                result.append({
-                    'time': time_str,
-                    'value': current_value,
-                    'delta': delta
-                })
-                prev_value = current_value
+            prev_value = current_value
 
         return result
 
