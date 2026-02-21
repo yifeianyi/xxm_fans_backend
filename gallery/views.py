@@ -129,6 +129,8 @@ def gallery_images(request, gallery_id):
                 'thumbnail_url': thumbnail_url,
                 'title': img['title'],
                 'filename': img['filename'],
+                'is_gif': img.get('is_gif', False),
+                'is_video': img.get('is_video', False),
             })
 
         return success_response({

@@ -183,7 +183,9 @@ class Gallery(models.Model):
                 'filename': f,
                 'url': f"{media_folder_path}{f}",
                 'thumbnail_url': f"/api/gallery/thumbnail/?path={self.folder_path}{f}",
-                'title': f"{self.title} - {idx + 1}"
+                'title': f"{self.title} - {idx + 1}",
+                'is_gif': f.lower().endswith('.gif'),
+                'is_video': f.lower().endswith('.mp4'),
             } for idx, f in enumerate(image_files)]
         except Exception as e:
             logger.error(f"获取图集 {self.id} 图片失败: {e}")
