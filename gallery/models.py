@@ -180,6 +180,7 @@ class Gallery(models.Model):
             media_folder_path = self._get_media_folder_path()
 
             return [{
+                'id': f"{self.id}-{idx}",
                 'filename': f,
                 'url': f"{media_folder_path}{f}",
                 'thumbnail_url': f"/api/gallery/thumbnail/?path={self.folder_path}{f}",

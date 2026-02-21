@@ -125,6 +125,7 @@ def gallery_images(request, gallery_id):
             # 使用核心缩略图生成器获取缩略图 URL
             thumbnail_url = ThumbnailGenerator.get_thumbnail_url(img['url'])
             image_list.append({
+                'id': img['id'],
                 'url': img['url'],
                 'thumbnail_url': thumbnail_url,
                 'title': img['title'],
