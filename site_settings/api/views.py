@@ -290,21 +290,21 @@ class SitemapView(APIView):
                     'changefreq': 'daily',
                     'priority': '0.9'
                 },
-                # 新增：歌曲标签页路由
+                # 新增：歌曲标签页路由（使用查询参数）
                 {
-                    'loc': 'https://www.xxm8777.cn/songs/hot',
+                    'loc': 'https://www.xxm8777.cn/songs?tab=hot',
                     'lastmod': current_date,
                     'changefreq': 'daily',
                     'priority': '0.85'
                 },
                 {
-                    'loc': 'https://www.xxm8777.cn/songs/originals',
+                    'loc': 'https://www.xxm8777.cn/songs?tab=originals',
                     'lastmod': current_date,
                     'changefreq': 'weekly',
                     'priority': '0.85'
                 },
                 {
-                    'loc': 'https://www.xxm8777.cn/songs/submit',
+                    'loc': 'https://www.xxm8777.cn/songs?tab=submit',
                     'lastmod': current_date,
                     'changefreq': 'weekly',
                     'priority': '0.8'
@@ -389,18 +389,8 @@ class SitemapView(APIView):
             except Exception as e:
                 print(f"获取图集列表失败: {e}")
 
-            # 添加二创合集分类URL
-            try:
-                collections = Collection.objects.all()[:50]  # 最多50个合集
-                for collection in collections:
-                    base_urls.append({
-                        'loc': f'https://www.xxm8777.cn/fansDIY/{collection.id}',
-                        'lastmod': current_date,
-                        'changefreq': 'weekly',
-                        'priority': '0.7'
-                    })
-            except Exception as e:
-                print(f"获取合集列表失败: {e}")
+            # 注意：fansDIY 详情页暂未实现，暂不加到 sitemap
+            # 如需添加，请确认前端已实现 /fansDIY/{id} 路由
 
             # 生成 XML
             # 注意：当前sitemap包含主要页面URL、二创合集分类URL和图集详情页URL
@@ -413,9 +403,9 @@ class SitemapView(APIView):
             basic_urls = [
                 {'loc': 'https://www.xxm8777.cn/', 'priority': '1.0'},
                 {'loc': 'https://www.xxm8777.cn/songs', 'priority': '0.9'},
-                {'loc': 'https://www.xxm8777.cn/songs/hot', 'priority': '0.85'},
-                {'loc': 'https://www.xxm8777.cn/songs/originals', 'priority': '0.85'},
-                {'loc': 'https://www.xxm8777.cn/songs/submit', 'priority': '0.8'},
+                {'loc': 'https://www.xxm8777.cn/songs?tab=hot', 'priority': '0.85'},
+                {'loc': 'https://www.xxm8777.cn/songs?tab=originals', 'priority': '0.85'},
+                {'loc': 'https://www.xxm8777.cn/songs?tab=submit', 'priority': '0.8'},
                 {'loc': 'https://www.xxm8777.cn/albums', 'priority': '0.8'},
                 {'loc': 'https://www.xxm8777.cn/gallery', 'priority': '0.7'},
                 {'loc': 'https://www.xxm8777.cn/fansDIY', 'priority': '0.8'},
