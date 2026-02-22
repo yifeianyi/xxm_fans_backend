@@ -316,10 +316,17 @@ class SitemapView(APIView):
                     'priority': '0.8'
                 },
                 {
-                    'loc': 'https://www.xxm8777.cn/gallery',
+                    'loc': 'https://www.xxm8777.cn/albums',
                     'lastmod': current_date,
                     'changefreq': 'daily',
                     'priority': '0.8'
+                },
+                # 图集页面保留旧 URL（301 重定向到新地址）
+                {
+                    'loc': 'https://www.xxm8777.cn/gallery',
+                    'lastmod': current_date,
+                    'changefreq': 'daily',
+                    'priority': '0.7'
                 },
                 {
                     'loc': 'https://www.xxm8777.cn/fansDIY',
@@ -367,13 +374,14 @@ class SitemapView(APIView):
             # except Exception as e:
             #     print(f"获取歌曲列表失败: {e}")
 
-            # 添加图集详情页URL
+            # 添加图集详情页URL（使用新的 /albums/ 路径）
             try:
                 galleries = Gallery.objects.filter(is_active=True).order_by('-updated_at')[:100]  # 最多100个图集
                 for gallery in galleries:
                     gallery_date = gallery.updated_at.strftime('%Y-%m-%d') if gallery.updated_at else current_date
+                    # 新路径 /albums/{id}
                     base_urls.append({
-                        'loc': f'https://www.xxm8777.cn/gallery/{gallery.id}',
+                        'loc': f'https://www.xxm8777.cn/albums/{gallery.id}',
                         'lastmod': gallery_date,
                         'changefreq': 'weekly',
                         'priority': '0.6'
@@ -408,7 +416,8 @@ class SitemapView(APIView):
                 {'loc': 'https://www.xxm8777.cn/songs/hot', 'priority': '0.85'},
                 {'loc': 'https://www.xxm8777.cn/songs/originals', 'priority': '0.85'},
                 {'loc': 'https://www.xxm8777.cn/songs/submit', 'priority': '0.8'},
-                {'loc': 'https://www.xxm8777.cn/gallery', 'priority': '0.8'},
+                {'loc': 'https://www.xxm8777.cn/albums', 'priority': '0.8'},
+                {'loc': 'https://www.xxm8777.cn/gallery', 'priority': '0.7'},
                 {'loc': 'https://www.xxm8777.cn/fansDIY', 'priority': '0.8'},
                 {'loc': 'https://www.xxm8777.cn/contact', 'priority': '0.5'},
             ]
@@ -419,7 +428,7 @@ class SitemapView(APIView):
                 galleries = Gallery.objects.filter(is_active=True).order_by('-updated_at')[:50]
                 for gallery in galleries:
                     basic_urls.append({
-                        'loc': f'https://www.xxm8777.cn/gallery/{gallery.id}',
+                        'loc': f'https://www.xxm8777.cn/albums/{gallery.id}',
                         'priority': '0.6'
                     })
             except Exception:
@@ -435,7 +444,7 @@ class RobotsTxtView(APIView):
         """生成 robots.txt"""
         content = """# Robots.txt for XXM Fans Home
 # 小满虫之家 - 爬虫访问规则
-# 最后更新: 2026-02-05
+# 最后更新: 2026-02-22
 
 User-agent: *
 Allow: /
@@ -446,6 +455,8 @@ Allow: /songs/*
 Allow: /originals
 Allow: /fansDIY
 Allow: /fansDIY/*
+Allow: /albums
+Allow: /albums/*
 Allow: /gallery
 Allow: /gallery/*
 Allow: /live
@@ -459,6 +470,9 @@ Disallow: /admin/
 
 # 禁止访问 API 接口
 Disallow: /api/
+
+# 禁止访问 Next.js 内部路径
+Disallow: /_next/
 
 # 禁止访问静态文件目录（不必要的资源）
 Disallow: /static/*/*.woff
