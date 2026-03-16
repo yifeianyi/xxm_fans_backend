@@ -14,9 +14,6 @@ Pillow==10.2.0
 # HTTP Requests
 requests==2.31.0
 
-# Database
-mysqlclient==2.1.1
-
 # Progress Bar (for crawlers)
 tqdm==4.66.2
 
