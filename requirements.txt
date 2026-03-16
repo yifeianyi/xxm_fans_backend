@@ -1,7 +1,24 @@
+# Web Framework
 Django==5.2.3
 djangorestframework==3.15.2
-python-dotenv==1.0.1
-requests==2.31.0
-Pillow==10.2.0
+
+# CORS Support
 django-cors-headers==4.9.0
+
+# Environment Variables
+python-dotenv==1.0.1
+
+# Image Processing
+Pillow==10.2.0
+
+# HTTP Requests
+requests==2.31.0
+
+# Database
 mysqlclient==2.1.1
+
+# Progress Bar (for crawlers)
+tqdm==4.66.2
+
+# Web Automation (for Weibo monitoring)
+selenium==4.18.1
