@@ -13,6 +13,11 @@ ARTIST_CONFIG = {
         'setting_model': YouyouSiteSetting,
         'name': '乐游',
     },
+    'leyou': {
+        'song_model': YouyouSong,
+        'setting_model': YouyouSiteSetting,
+        'name': '乐优',
+    },
     'bingjie': {
         'song_model': BingjieSong,
         'setting_model': BingjieSiteSetting,
@@ -265,6 +270,9 @@ def site_settings(request):
             # 简化photo_url，只返回文件名
             updated_settings = []
             for setting in settings:
+                # 替换 photo 路径中的 youyou 为当前 artist
+                if 'photo' in setting and setting['photo']:
+                    setting['photo'] = setting['photo'].replace('youyou', artist)
                 if '/' in setting['photo_url']:
                     filename = setting['photo_url'].split('/')[-1]
                     setting['photo_url'] = filename

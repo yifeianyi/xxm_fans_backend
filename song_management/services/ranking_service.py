@@ -58,12 +58,17 @@ class RankingService:
         # 构建结果
         result = []
         for song in queryset:
+            # 获取最新演唱记录的封面缩略图
+            latest_record = song.records.order_by('-performed_at').first()
+            cover_url = latest_record.get_cover_thumbnail_url() if latest_record else None
+            
             result.append({
                 'id': song.id,
                 'song_name': song.song_name,
                 'singer': song.singer,
                 'perform_count': song.recent_count,
                 'last_performed': song.last_performed,
+                'cover_url': cover_url,
             })
 
         return result
@@ -83,12 +88,17 @@ class RankingService:
 
         result = []
         for song in queryset:
+            # 获取最新演唱记录的封面缩略图
+            latest_record = song.records.order_by('-performed_at').first()
+            cover_url = latest_record.get_cover_thumbnail_url() if latest_record else None
+            
             result.append({
                 'id': song.id,
                 'song_name': song.song_name,
                 'singer': song.singer,
                 'perform_count': song.perform_count,
                 'last_performed': song.last_performed,
+                'cover_url': cover_url,
             })
 
         return result
@@ -108,12 +118,17 @@ class RankingService:
 
         result = []
         for song in queryset:
+            # 获取最新演唱记录的封面缩略图
+            latest_record = song.records.order_by('-performed_at').first()
+            cover_url = latest_record.get_cover_thumbnail_url() if latest_record else None
+            
             result.append({
                 'id': song.id,
                 'song_name': song.song_name,
                 'singer': song.singer,
                 'perform_count': song.perform_count,
                 'last_performed': song.last_performed,
+                'cover_url': cover_url,
             })
 
         return result
