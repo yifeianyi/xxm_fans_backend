@@ -103,17 +103,22 @@ def top_songs_api(request):
         qs = qs.filter(records__performed_at__gte=since)
     # annotate 统计演唱次数
     qs = qs.annotate(recent_count=Count('records')).order_by('-recent_count', '-last_performed')[:limit]
-    result = [
-        {
+    result = []
+    for s in qs:
+        # 获取最新演唱记录的封面缩略图
+        latest_record = s.records.order_by('-performed_at').first()
+        cover_url = latest_record.get_cover_thumbnail_url() if latest_record else None
+        
+        result.append({
             'id': s.id,
             'song_name': s.song_name,
             'singer': s.singer,
             'perform_count': s.recent_count,
             'first_perform': s.first_perform,
             'last_perform': s.last_performed,
-        }
-        for s in qs
-    ]
+            'cover_url': cover_url,
+        })
+    
     return success_response(data=result, message="获取排行榜成功")
 
 
