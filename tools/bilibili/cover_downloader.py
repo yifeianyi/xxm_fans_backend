@@ -61,7 +61,8 @@ class BilibiliCoverDownloader:
             # 检查文件是否已存在
             if check_exists and os.path.exists(file_path):
                 print(f"封面已存在: {local_path}")
-                return local_path
+                # 返回带 / 前缀的路径，确保与数据库中存储的格式一致
+                return f"/{local_path}"
 
             # 确保目录存在
             os.makedirs(save_dir, exist_ok=True)
