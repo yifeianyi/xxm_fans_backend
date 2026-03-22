@@ -92,8 +92,12 @@ class Command(BaseCommand):
         except OSError:
             image_files = []
 
-        # 生成图集ID：使用相对路径的规范化形式
-        gallery_id = rel_path.replace('\\', '-').replace('/', '-')
+        # 生成图集ID：根图集使用文件夹名，子图集使用父图集ID-子文件夹名
+        # 与 auto_sync_gallery.py 保持一致
+        if parent is None:
+            gallery_id = item_name
+        else:
+            gallery_id = f"{parent.id}-{item_name}"
 
         # 创建或更新图集
         gallery, created = Gallery.objects.update_or_create(
