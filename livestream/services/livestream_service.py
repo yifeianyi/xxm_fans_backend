@@ -1,5 +1,6 @@
 from django.db.models import Q
 from datetime import datetime
+from pathlib import Path
 from ..models import Livestream
 from ..exceptions import (
     ParameterValidationError,
@@ -460,14 +461,11 @@ class LivestreamService:
                     if f.lower().endswith(('.jpg', '.jpeg', '.png', '.webp', '.gif'))
                 ])
 
-                # 缩略图存放在 /gallery/thumbnails/LiveMoment/ 目录下
-                # 命名格式：YYYY_MM_DD-N.webp
-                date_prefix = f"{date.year}_{date.month:02d}_{date.day:02d}"
-
                 # 返回包含原图URL和缩略图URL的数组
                 result = []
-                for idx, f in enumerate(image_files, 1):
-                    thumbnail_filename = f"{date_prefix}-{idx}.webp"
+                for f in image_files:
+                    # 缩略图文件名：保持原图文件名，只改扩展名为 .webp
+                    thumbnail_filename = Path(f).with_suffix('.webp').name
                     thumbnail_path = f"/gallery/thumbnails/LiveMoment/{date.year}/{date.month:02d}/{date.day:02d}/{thumbnail_filename}"
 
                     # 确保缩略图路径使用 /media/ 前缀
