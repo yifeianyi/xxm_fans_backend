@@ -171,7 +171,8 @@ STATICFILES_DIRS = [
 
 # Media files
 MEDIA_URL = '/media/'
-MEDIA_ROOT = BASE_DIR / 'media'
+# 指向项目根目录的 media 文件夹，而不是后端代码目录下的 media
+MEDIA_ROOT = BASE_DIR.parent.parent / 'media'
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
