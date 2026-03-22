@@ -44,7 +44,9 @@ class BilibiliWorkStaticImporter:
             local_cover_path = self.cover_downloader.download(cover_url, sub_path, filename)
 
             if local_cover_path:
-                final_cover_url = f"/media/{local_cover_path}"
+                # cover_downloader 现在返回带 / 前缀的路径
+                # 需要加上 /media 前缀以匹配实际存储路径
+                final_cover_url = f"/media{local_cover_path}"
                 print(f"[BV:{bvid}] ✅ 封面下载成功: {local_cover_path}")
 
                 # 自动生成缩略图

@@ -82,7 +82,8 @@ class BilibiliCoverDownloader:
                 f.write(response.content)
 
             print(f"封面已下载: {local_path} ({content_length} bytes)")
-            return local_path
+            # 返回带 / 前缀的路径，确保与数据库中存储的格式一致
+            return f"/{local_path}"
 
         except requests.exceptions.Timeout:
             print(f"封面下载超时: {cover_url}")
@@ -115,7 +116,9 @@ class BilibiliCoverDownloader:
             filename = f"{date_str}.jpg"
 
         sub_path = f"covers/{year}/{month}"
-        return self.download(cover_url, sub_path, filename)
+        result = self.download(cover_url, sub_path, filename)
+        # download 方法已经添加了 / 前缀，直接返回
+        return result
 
     def download_by_bvid(
         self,
@@ -130,7 +133,9 @@ class BilibiliCoverDownloader:
         """
         filename = f"{bvid}.jpg"
         sub_path = "views"
-        return self.download(cover_url, sub_path, filename)
+        result = self.download(cover_url, sub_path, filename)
+        # download 方法已经添加了 / 前缀，直接返回
+        return result
 
     def download_by_collection(
         self,
@@ -148,4 +153,6 @@ class BilibiliCoverDownloader:
         date_str = pubdate.strftime("%Y-%m-%d")
         filename = f"{date_str}.jpg"
         sub_path = f"footprint/Collection/{collection_name}"
-        return self.download(cover_url, sub_path, filename)
+        result = self.download(cover_url, sub_path, filename)
+        # download 方法已经添加了 / 前缀，直接返回
+        return result
