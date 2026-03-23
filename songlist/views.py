@@ -1,51 +1,49 @@
 from django.shortcuts import render
 from django.http import JsonResponse
 from django.db.models import Q
-from .models import YouyouSong, BingjieSong, YouyouSiteSetting, BingjieSiteSetting
+from .models import ARTIST_CONFIG
 import json
 import random
 
 
-# 歌手配置字典（包含模型和中文名称）
-ARTIST_CONFIG = {
-    'youyou': {
-        'song_model': YouyouSong,
-        'setting_model': YouyouSiteSetting,
-        'name': '乐游',
-    },
-    'leyou': {
-        'song_model': YouyouSong,
-        'setting_model': YouyouSiteSetting,
-        'name': '乐优',
-    },
-    'bingjie': {
-        'song_model': BingjieSong,
-        'setting_model': BingjieSiteSetting,
-        'name': '冰洁',
-    },
-}
+def get_artist_models(artist_key):
+    """根据歌手标识获取对应的模型"""
+    from . import models
+    class_name = artist_key.capitalize()
+    song_model_name = f'{class_name}Song'
+    setting_model_name = f'{class_name}SiteSetting'
+    
+    song_model = getattr(models, song_model_name, None)
+    setting_model = getattr(models, setting_model_name, None)
+    
+    return song_model, setting_model
 
 
 def get_artist_model(artist, model_type='song'):
     """根据歌手标识获取对应的模型"""
     if artist in ARTIST_CONFIG:
-        return ARTIST_CONFIG[artist][f'{model_type}_model']
+        song_model, setting_model = get_artist_models(artist)
+        return song_model if model_type == 'song' else setting_model
     return None
 
 
 def get_all_songs():
     """获取所有歌手的歌曲"""
     all_songs = []
-    for artist_config in ARTIST_CONFIG.values():
-        all_songs.extend(list(artist_config['song_model'].objects.all()))
+    for artist_key in ARTIST_CONFIG.keys():
+        song_model, _ = get_artist_models(artist_key)
+        if song_model:
+            all_songs.extend(list(song_model.objects.all()))
     return all_songs
 
 
 def get_all_settings():
     """获取所有歌手的设置"""
     all_settings = []
-    for artist_config in ARTIST_CONFIG.values():
-        all_settings.extend(list(artist_config['setting_model'].objects.all().values()))
+    for artist_key in ARTIST_CONFIG.keys():
+        _, setting_model = get_artist_models(artist_key)
+        if setting_model:
+            all_settings.extend(list(setting_model.objects.all().values()))
     return all_settings
 
 
@@ -110,9 +108,11 @@ def language_list(request):
         else:
             # 合并所有表的语言
             all_languages = set()
-            for artist_config in ARTIST_CONFIG.values():
-                languages = set(artist_config['song_model'].objects.exclude(language='').values_list('language', flat=True))
-                all_languages.update(languages)
+            for artist_key in ARTIST_CONFIG.keys():
+                song_model, _ = get_artist_models(artist_key)
+                if song_model:
+                    languages = set(song_model.objects.exclude(language='').values_list('language', flat=True))
+                    all_languages.update(languages)
             return JsonResponse(list(all_languages), safe=False)
 
 
@@ -130,9 +130,11 @@ def style_list(request):
         else:
             # 合并所有表的曲风
             all_styles = set()
-            for artist_config in ARTIST_CONFIG.values():
-                styles = set(artist_config['song_model'].objects.exclude(style='').values_list('style', flat=True))
-                all_styles.update(styles)
+            for artist_key in ARTIST_CONFIG.keys():
+                song_model, _ = get_artist_models(artist_key)
+                if song_model:
+                    styles = set(song_model.objects.exclude(style='').values_list('style', flat=True))
+                    all_styles.update(styles)
             return JsonResponse(list(all_styles), safe=False)
 
 
@@ -202,46 +204,6 @@ def random_song(request):
             }
             return JsonResponse(song_data)
 
-            random_song = random.choice(all_songs)
-            song_data = {
-                'id': random_song.id,
-                'song_name': random_song.song_name,
-                'language': random_song.language,
-                'singer': random_song.singer,
-                'style': random_song.style,
-                'note': random_song.note,
-            }
-            return JsonResponse(song_data)
-
-        # 应用筛选条件
-        if language:
-            songs = songs.filter(language=language)
-        if style:
-            songs = songs.filter(style=style)
-        if search:
-            songs = songs.filter(
-                Q(song_name__icontains=search) | Q(singer__icontains=search)
-            )
-
-        # 如果没有符合条件的歌曲，返回404
-        if not songs.exists():
-            return JsonResponse({'error': 'No songs available.'}, status=404)
-
-        # 随机选择一首歌曲
-        random_song = random.choice(songs)
-
-        # 返回歌曲信息
-        song_data = {
-            'id': random_song.id,
-            'song_name': random_song.song_name,
-            'language': random_song.language,
-            'singer': random_song.singer,
-            'style': random_song.style,
-            'note': random_song.note,
-        }
-
-        return JsonResponse(song_data)
-
 
 def get_artist_info(request):
     """获取歌手信息（包括中文名称）"""
@@ -251,7 +213,7 @@ def get_artist_info(request):
         if artist in ARTIST_CONFIG:
             artist_info = {
                 'key': artist,
-                'name': ARTIST_CONFIG[artist]['name'],
+                'name': ARTIST_CONFIG[artist],
             }
             return JsonResponse(artist_info)
         else:
@@ -260,6 +222,8 @@ def get_artist_info(request):
 
 def site_settings(request):
     """网站设置API - 支持按歌手筛选"""
+    from urllib.parse import unquote
+    
     if request.method == 'GET':
         artist = request.GET.get('artist', '')
 
@@ -273,9 +237,13 @@ def site_settings(request):
                 # 替换 photo 路径中的 youyou 为当前 artist
                 if 'photo' in setting and setting['photo']:
                     setting['photo'] = setting['photo'].replace('youyou', artist)
-                if '/' in setting['photo_url']:
-                    filename = setting['photo_url'].split('/')[-1]
-                    setting['photo_url'] = filename
+                if 'photo_url' in setting and setting['photo_url']:
+                    # URL 解码，处理历史数据中可能存在的 URL 编码问题
+                    photo_url = unquote(setting['photo_url'])
+                    # 只保留文件名
+                    if '/' in photo_url:
+                        photo_url = photo_url.split('/')[-1]
+                    setting['photo_url'] = photo_url
                 updated_settings.append(setting)
             return JsonResponse(updated_settings, safe=False)
         else:
@@ -284,15 +252,20 @@ def site_settings(request):
             # 简化photo_url，只返回文件名
             updated_settings = []
             for setting in all_settings:
-                if '/' in setting['photo_url']:
-                    filename = setting['photo_url'].split('/')[-1]
-                    setting['photo_url'] = filename
+                if 'photo_url' in setting and setting['photo_url']:
+                    # URL 解码，处理历史数据中可能存在的 URL 编码问题
+                    photo_url = unquote(setting['photo_url'])
+                    if '/' in photo_url:
+                        photo_url = photo_url.split('/')[-1]
+                    setting['photo_url'] = photo_url
                 updated_settings.append(setting)
             return JsonResponse(updated_settings, safe=False)
 
 
 def favicon(request):
     """获取favicon - 支持按歌手筛选"""
+    from urllib.parse import unquote
+    
     artist = request.GET.get('artist', '')
 
     setting_model = get_artist_model(artist, 'setting')
@@ -303,12 +276,14 @@ def favicon(request):
             setting = setting_model.objects.get(position=1)
         else:
             # 默认使用第一个歌手的设置
-            setting_model = get_artist_model(list(ARTIST_CONFIG.keys())[0], 'setting')
+            first_artist = list(ARTIST_CONFIG.keys())[0]
+            _, setting_model = get_artist_models(first_artist)
             setting = setting_model.objects.get(position=1)
 
         # 重定向到对应的图片文件，前端统一使用/photos/前缀
         from django.shortcuts import redirect
-        filename = setting.photo_url
+        # URL 解码，处理历史数据中可能存在的 URL 编码问题
+        filename = unquote(setting.photo_url) if setting.photo_url else ''
         if '/' in filename:
             filename = filename.split('/')[-1]
         photo_url = 'songlist_frontend/photos/' + filename

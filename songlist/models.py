@@ -5,6 +5,8 @@ from django.db import models
 ARTIST_CONFIG = {
     'youyou': '乐游',
     'bingjie': '冰洁',
+    'eva':'阿肆',
+    'baojingbi':'爆金币',
 }
 
 
@@ -69,19 +71,16 @@ def create_artist_models(artist_key, artist_name):
 
 
 # 动态创建所有歌手的模型
+__all__ = []
+
 for artist_key, artist_name in ARTIST_CONFIG.items():
     song_model, setting_model = create_artist_models(artist_key, artist_name)
     class_name = artist_key.capitalize()
-    globals()[f'{class_name}Song'] = song_model
-    globals()[f'{class_name}SiteSetting'] = setting_model
-
-
-# 导出模型供其他模块使用
-YouyouSong = globals()['YouyouSong']
-BingjieSong = globals()['BingjieSong']
-YouyouSiteSetting = globals()['YouyouSiteSetting']
-BingjieSiteSetting = globals()['BingjieSiteSetting']
-
-
-# 将模型添加到模块的 __all__ 中，确保Django能正确识别
-__all__ = ['YouyouSong', 'BingjieSong', 'YouyouSiteSetting', 'BingjieSiteSetting']
+    
+    song_model_name = f'{class_name}Song'
+    setting_model_name = f'{class_name}SiteSetting'
+    
+    globals()[song_model_name] = song_model
+    globals()[setting_model_name] = setting_model
+    
+    __all__.extend([song_model_name, setting_model_name])
