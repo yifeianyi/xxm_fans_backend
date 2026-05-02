@@ -21,6 +21,8 @@ class Song(models.Model):
             models.Index(fields=['song_name']),
             models.Index(fields=['singer']),
             models.Index(fields=['language']),
+            models.Index(fields=['-last_performed']),
+            models.Index(fields=['-perform_count']),
         ]
 
     def __str__(self):
@@ -54,6 +56,9 @@ class SongRecord(models.Model):
         verbose_name = "演唱记录"
         verbose_name_plural = "演唱记录"
         ordering = ['-performed_at']
+        # 注意: Django Index 不支持 DESC，fields=['-last_performed'] 实际创建的是升序索引。
+        # SQLite/MySQL 支持反向扫描，可高效处理降序排序。
+        # PostgreSQL 如需真正的 DESC 索引，需手写 SQL migration（使用 RunSQL）。
         indexes = [
             models.Index(fields=['song', '-performed_at']),
             models.Index(fields=['performed_at']),
