@@ -259,17 +259,7 @@ class Livestream(models.Model):
                 'coverUrl': cover_url,  # 优先使用数据库中的封面URL
             })
         else:
-            # 优先使用数据库中的封面URL，再fallback到演唱记录封面或截图缩略图
-            cover_url = self.cover_url if self.cover_url else ''
-            if not cover_url:
-                cover_url = LivestreamService._get_first_song_cover_thumbnail(self.date)
-            if not cover_url:
-                screenshots_with_thumbnails = LivestreamService._get_screenshots_by_date(
-                    self.date,
-                    self.live_moment
-                )
-                if screenshots_with_thumbnails:
-                    cover_url = screenshots_with_thumbnails[0]['thumbnailUrl']
-            result['coverUrl'] = cover_url
+            # 列表模式：避免查询 SongRecord，仅使用数据库中的 cover_url 或空字符串
+            result['coverUrl'] = self.cover_url or ''
 
         return result

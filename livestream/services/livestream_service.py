@@ -310,13 +310,8 @@ class LivestreamService:
                 'coverUrl': cover_url,  # 优先使用演唱记录封面缩略图
             })
         else:
-            # 优先使用演唱记录的封面缩略图，其次使用截图缩略图
-            cover_url = cls._get_first_song_cover_thumbnail(date)
-            if not cover_url:
-                screenshots_with_thumbnails = cls._get_screenshots_by_date(date)
-                if screenshots_with_thumbnails:
-                    cover_url = screenshots_with_thumbnails[0]['thumbnailUrl']
-            result['coverUrl'] = cover_url
+            # 列表模式：避免查询 SongRecord，仅使用数据库中的 cover_url 或空字符串
+            result['coverUrl'] = live_item.get('coverUrl', '')
 
         return result
 

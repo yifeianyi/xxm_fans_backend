@@ -1,3 +1,5 @@
+from django.views.decorators.cache import cache_page
+from django.utils.decorators import method_decorator
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticatedOrReadOnly
@@ -260,6 +262,7 @@ from song_management.models import Song
 from gallery.models import Gallery
 
 
+@method_decorator(cache_page(3600), name='get')
 class SitemapView(APIView):
     """动态 Sitemap 视图"""
 
