@@ -95,7 +95,7 @@ class DIYService:
             dict: 包含分页信息和作品列表的字典
         """
         try:
-            works = Work.objects.all().order_by('position', 'display_order', '-id')
+            works = Work.objects.select_related('collection').all().order_by('position', 'display_order', '-id')
             
             if collection_id:
                 works = works.filter(collection_id=collection_id)

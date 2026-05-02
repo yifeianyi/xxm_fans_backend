@@ -1,14 +1,8 @@
 """
 FansDIY 应用测试
 """
-from .test_diy_service import DIYServiceTest
-from .test_views import FansDIYViewTest
-from .test_admin import CollectionAdminTest, WorkAdminTest, AdminIntegrationTest
+from .test_diy_service import DIYWorkQueryTest
 
 __all__ = [
-    'DIYServiceTest',
-    'FansDIYViewTest',
-    'CollectionAdminTest',
-    'WorkAdminTest',
-    'AdminIntegrationTest',
+    'DIYWorkQueryTest',
 ]
