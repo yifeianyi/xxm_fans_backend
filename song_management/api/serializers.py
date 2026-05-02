@@ -17,6 +17,13 @@ class TagSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 
+class SimpleSongSerializer(serializers.ModelSerializer):
+    """轻量级歌曲序列化器，仅包含基本信息"""
+    class Meta:
+        model = Song
+        fields = ['id', 'song_name', 'singer']
+
+
 class SongSerializer(serializers.ModelSerializer):
     styles = serializers.SerializerMethodField()
     tags = serializers.SerializerMethodField()
@@ -36,7 +43,7 @@ class SongSerializer(serializers.ModelSerializer):
 
 class SongRecordSerializer(serializers.ModelSerializer):
     cover_thumbnail_url = serializers.SerializerMethodField()
-    song = SongSerializer(read_only=True)
+    song = SimpleSongSerializer(read_only=True)
 
     class Meta:
         model = SongRecord

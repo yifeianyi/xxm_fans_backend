@@ -119,6 +119,23 @@ class SongListView(generics.ListAPIView):
         if language_param:
             languages = [lang.strip() for lang in language_param.split(',') if lang.strip()]
 
+        # 构造缓存key
+        cache_key = f"song_list_api:{query}:{page_num}:{page_size}:{ordering}:{'-'.join(styles)}:{'-'.join(tags)}:{'-'.join(languages)}"
+
+        # 尝试从缓存读取，处理Redis连接异常
+        try:
+            cached_data = cache.get(cache_key)
+            if cached_data is not None:
+                return paginated_response(
+                    data=cached_data["results"],
+                    total=cached_data["total"],
+                    page=cached_data["page"],
+                    page_size=cached_data["page_size"],
+                    message="获取歌曲列表成功"
+                )
+        except Exception as e:
+            logger.warning(f"Cache get failed: {e}")
+
         # 使用Django的Paginator来处理分页
         queryset = self.get_queryset()
 
@@ -137,12 +154,15 @@ class SongListView(generics.ListAPIView):
         # 序列化数据
         serializer = self.get_serializer(page, many=True)
 
-        # 构造缓存key
-        cache_key = f"song_list_api:{query}:{page_num}:{page_size}:{ordering}:{'-'.join(styles)}:{'-'.join(tags)}:{'-'.join(languages)}"
-
-        # 尝试缓存结果，处理Redis连接异常
+        # 缓存完整的分页结果，处理Redis连接异常
+        cache_payload = {
+            "results": serializer.data,
+            "total": paginator.count,
+            "page": page.number,
+            "page_size": page_size,
+        }
         try:
-            cache.set(cache_key, serializer.data, 600)  # 缓存10分钟
+            cache.set(cache_key, cache_payload, 600)  # 缓存10分钟
         except Exception as e:
             logger.warning(f"Cache set failed: {e}")
 

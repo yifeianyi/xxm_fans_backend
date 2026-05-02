@@ -6,7 +6,7 @@ from rest_framework import generics
 from rest_framework.views import APIView
 from core.responses import success_response, paginated_response
 from core.exceptions import SongNotFoundException
-from ..models import SongRecord
+from ..models import SongRecord, Song
 from .serializers import SongRecordSerializer
 from django.core.cache import cache
 from datetime import datetime

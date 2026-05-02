@@ -4,7 +4,7 @@
 from rest_framework.decorators import api_view
 from core.responses import success_response
 from core.exceptions import SongNotFoundException
-from ..models import Song, Style, Tag, SongStyle
+from ..models import Song, Style, Tag, SongStyle, SongRecord
 from django.db.models import Count
 from django.core.cache import cache
 from datetime import datetime, timedelta
@@ -103,12 +103,22 @@ def top_songs_api(request):
         qs = qs.filter(records__performed_at__gte=since)
     # annotate 统计演唱次数
     qs = qs.annotate(recent_count=Count('records')).order_by('-recent_count', '-last_performed')[:limit]
+
+    # 强制求值获取前 limit 首歌曲的 ID 列表
+    top_songs = list(qs)
+    song_ids = [s.id for s in top_songs]
+
+    # 批量获取每首歌的最新记录（2条SQL，与limit无关）
+    latest_records_map = {}
+    for record in SongRecord.objects.filter(song_id__in=song_ids).order_by('-performed_at'):
+        if record.song_id not in latest_records_map:
+            latest_records_map[record.song_id] = record
+
     result = []
-    for s in qs:
-        # 获取最新演唱记录的封面缩略图
-        latest_record = s.records.order_by('-performed_at').first()
+    for s in top_songs:
+        latest_record = latest_records_map.get(s.id)
         cover_url = latest_record.get_cover_thumbnail_url() if latest_record else None
-        
+
         result.append({
             'id': s.id,
             'song_name': s.song_name,
@@ -118,7 +128,7 @@ def top_songs_api(request):
             'last_perform': s.last_performed,
             'cover_url': cover_url,
         })
-    
+
     return success_response(data=result, message="获取排行榜成功")
 
 
