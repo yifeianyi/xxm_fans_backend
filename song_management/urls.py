@@ -25,6 +25,7 @@ urlpatterns = [
 
     # 排行榜和随机
     path('top_songs/', top_songs_api, name='top-songs'),
+    path('top-songs/', top_songs_api, name='top-songs-kebab'),
     path('random-song/', random_song_api, name='random-song'),
 
     # 原唱作品

@@ -31,6 +31,7 @@ urlpatterns = [
     path('api/data-analytics/', include('data_analytics.urls')),  # data_analytics 应用路由
     path('api/site-settings/', include('site_settings.urls')),  # site_settings 应用路由
     path('api/fansDIY/', include('fansDIY.urls')),
+    path('api/fans-diy/', include(('fansDIY.urls', 'fansDIY'), namespace='fans_diy_kebab')),
     path('api/gallery/', include('gallery.urls')),  # gallery 应用路由
     path('api/', include('livestream.api.urls')),  # livestream 应用路由
     # 保持API兼容性：冰洁和乐游API都指向songlist应用
