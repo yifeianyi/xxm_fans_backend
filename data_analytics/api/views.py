@@ -507,3 +507,26 @@ def account_detail(request, account_id):
             message=f"获取账号详情失败：{str(e)}",
             status_code=500
         )
+
+
+# ==================== 作品深度观测 API 视图 ====================
+
+class WorkTimelineView(generics.RetrieveAPIView):
+    """
+    获取作品时间线数据（发布后一周 + 按天聚合）
+    """
+    serializer_class = None
+
+    def get(self, request, platform, work_id):
+        try:
+            timeline = AnalyticsService.get_work_timeline(
+                platform=platform,
+                work_id=work_id
+            )
+            from .serializers import WorkTimelineSerializer
+            serializer = WorkTimelineSerializer(timeline)
+            return success_response(data=serializer.data)
+        except InvalidParameterException as e:
+            return error_response(message=str(e), status_code=404)
+        except Exception as e:
+            return error_response(message=f"获取作品时间线失败：{str(e)}", status_code=500)

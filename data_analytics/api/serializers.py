@@ -201,3 +201,23 @@ class YearsSubmissionOverviewResponseSerializer(serializers.Serializer):
     platform = serializers.CharField(allow_null=True)
     years = YearStatsSerializer(many=True)
     summary = YearsSummarySerializer()
+
+
+# ==================== 作品深度观测序列化器 ====================
+
+class TimelinePointSerializer(serializers.Serializer):
+    """时间线数据点序列化器"""
+    time = serializers.CharField()
+    view_count = serializers.IntegerField(min_value=0)
+    like_count = serializers.IntegerField(min_value=0)
+    coin_count = serializers.IntegerField(min_value=0)
+    favorite_count = serializers.IntegerField(min_value=0)
+    danmaku_count = serializers.IntegerField(min_value=0)
+    comment_count = serializers.IntegerField(min_value=0)
+
+
+class WorkTimelineSerializer(serializers.Serializer):
+    """作品时间线响应序列化器"""
+    has_week_data = serializers.BooleanField()
+    week_series = TimelinePointSerializer(many=True)
+    daily_series = TimelinePointSerializer(many=True)

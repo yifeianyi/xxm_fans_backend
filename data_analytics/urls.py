@@ -10,6 +10,7 @@ from .api.views import (
     WorkMetricsSummaryView,
     PlatformStatisticsView,
     TopWorksView,
+    WorkTimelineView,
     monthly_submission_stats,
     monthly_submission_records,
     years_submission_overview,
@@ -28,6 +29,7 @@ urlpatterns = [
     # 作品指标
     path('works/<str:platform>/<str:work_id>/metrics/', WorkMetricsHourListView.as_view(), name='work-metrics'),
     path('works/<str:platform>/<str:work_id>/metrics/summary/', WorkMetricsSummaryView, name='work-metrics-summary'),
+    path('works/<str:platform>/<str:work_id>/timeline/', WorkTimelineView.as_view(), name='work-timeline'),
 
     # 平台统计
     path('platform/<str:platform>/statistics/', PlatformStatisticsView, name='platform-statistics'),

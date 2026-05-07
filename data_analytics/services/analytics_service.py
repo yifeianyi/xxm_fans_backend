@@ -319,3 +319,86 @@ class AnalyticsService:
                 })
 
         return result
+
+    @staticmethod
+    @cache_result(timeout=300, key_prefix="work_timeline")
+    def get_work_timeline(platform: str, work_id: str) -> Dict[str, Any]:
+        """
+        获取作品时间线数据（发布后一周 + 按天聚合）
+
+        Args:
+            platform: 平台
+            work_id: 作品ID
+
+        Returns:
+            时间线数据：has_week_data, week_series, daily_series
+        """
+        try:
+            work = WorkStatic.objects.get(platform=platform, work_id=work_id)
+        except WorkStatic.DoesNotExist:
+            raise InvalidParameterException(f"作品不存在: {platform}/{work_id}")
+
+        # 获取全部小时级数据，按 crawl_time 正序排列
+        metrics = list(WorkMetricsHour.objects.filter(
+            platform=platform,
+            work_id=work_id
+        ).order_by('crawl_time').values(
+            'crawl_time',
+            'view_count',
+            'like_count',
+            'coin_count',
+            'favorite_count',
+            'danmaku_count',
+            'comment_count',
+        ))
+
+        if not metrics:
+            return {
+                'has_week_data': False,
+                'week_series': [],
+                'daily_series': [],
+            }
+
+        publish_time = work.publish_time
+        if publish_time is None:
+            publish_time = metrics[0]['crawl_time']
+
+        week_end = publish_time + timedelta(days=7)
+
+        # tag1: 发布后一周内的原始小时级数据
+        week_series = []
+        for m in metrics:
+            if m['crawl_time'] <= week_end:
+                week_series.append({
+                    'time': m['crawl_time'].strftime('%Y-%m-%d %H:%M'),
+                    'view_count': m['view_count'],
+                    'like_count': m['like_count'],
+                    'coin_count': m['coin_count'],
+                    'favorite_count': m['favorite_count'],
+                    'danmaku_count': m['danmaku_count'],
+                    'comment_count': m['comment_count'],
+                })
+
+        has_week_data = len(week_series) > 0
+
+        # tag2: 按天聚合，每天取 crawl_time 最晚的一条记录
+        daily_map: Dict[str, Dict[str, Any]] = {}
+        for m in metrics:
+            day_key = m['crawl_time'].strftime('%Y-%m-%d')
+            daily_map[day_key] = {
+                'time': day_key,
+                'view_count': m['view_count'],
+                'like_count': m['like_count'],
+                'coin_count': m['coin_count'],
+                'favorite_count': m['favorite_count'],
+                'danmaku_count': m['danmaku_count'],
+                'comment_count': m['comment_count'],
+            }
+
+        daily_series = [daily_map[k] for k in sorted(daily_map.keys())]
+
+        return {
+            'has_week_data': has_week_data,
+            'week_series': week_series,
+            'daily_series': daily_series,
+        }
