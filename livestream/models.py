@@ -21,7 +21,14 @@ class Livestream(models.Model):
         help_text='直播简介或描述'
     )
 
-    # B站视频信息
+    # B站直播信息
+    room_id = models.CharField(
+        max_length=20,
+        blank=True,
+        default='',
+        verbose_name='B站直播间房间号',
+        help_text='B站直播间房间号，用于关联粉丝出勤数据'
+    )
     bvid = models.CharField(
         max_length=20,
         blank=True,

@@ -55,6 +55,7 @@ INSTALLED_APPS = [
     'gallery',  # 图集管理应用
     'livestream',  # 直播日历应用
     'moments',  # 动态管理应用（微博+B站动态）
+    'livefans',  # 粉丝直播出勤数据
     'rest_framework',
     # 'drf_yasg',
 ]
@@ -287,4 +288,6 @@ LIVESTREAM_CONFIG = {
     # 年份范围限制
     'MIN_YEAR': 2019,
     'MAX_YEAR': 2030,
+    # B站直播间房间号
+    'BILIBILI_LIVE_ROOM_ID': '8777',
 }

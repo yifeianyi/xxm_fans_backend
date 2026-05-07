@@ -159,3 +159,85 @@ class BilibiliAPIClient:
                 print(f"获取 {bvid} 信息失败: {e.message}")
                 result[bvid] = None
         return result
+
+    def get_room_info(self, room_id: int) -> Dict[str, Any]:
+        """
+        获取直播间基本信息
+        :param room_id: 直播间ID
+        :return: 直播间信息字典
+        """
+        url = f"{self.BASE_URL}/xlive/web-room/v1/index/getInfoByRoom"
+        params = {"room_id": room_id}
+        data = self._make_request(url, params)
+        room_info = data["data"]["room_info"]
+        return {
+            "room_id": room_info.get("room_id"),
+            "uid": room_info.get("uid"),
+            "title": room_info.get("title"),
+            "live_status": room_info.get("live_status"),
+            "online": room_info.get("online"),
+            "cover": room_info.get("cover"),
+        }
+
+    def get_guard_list(
+        self, room_id: int, page: int = 1, page_size: int = 29
+    ) -> Dict[str, Any]:
+        """
+        获取大航海（舰长）列表
+        :param room_id: 直播间ID
+        :param page: 页码
+        :param page_size: 每页数量
+        :return: 包含 guard_list 和 total 的字典
+        """
+        url = f"{self.BASE_URL}/xlive/app-room/v2/guardTab/topList"
+        params = {
+            "room_id": room_id,
+            "page": page,
+            "page_size": page_size,
+        }
+        data = self._make_request(url, params)
+        guard_data = data["data"]
+        return {
+            "list": [
+                {
+                    "uid": g.get("uid"),
+                    "username": g.get("username"),
+                    "face": g.get("face"),
+                    "guard_level": g.get("guard_level"),
+                }
+                for g in guard_data.get("list", [])
+            ],
+            "total": guard_data.get("info", {}).get("num", 0),
+        }
+
+    def get_gift_rank(
+        self, room_id: int, page: int = 1, page_size: int = 20
+    ) -> Dict[str, Any]:
+        """
+        获取礼物排行榜
+        :param room_id: 直播间ID
+        :param page: 页码
+        :param page_size: 每页数量
+        :return: 包含 gift_list 和 total 的字典
+        """
+        url = f"{self.BASE_URL}/xlive/revenue/v1/giftStream/getGiftTop"
+        params = {
+            "room_id": room_id,
+            "page": page,
+            "page_size": page_size,
+        }
+        data = self._make_request(url, params)
+        gift_data = data["data"]
+        return {
+            "list": [
+                {
+                    "uid": g.get("uid"),
+                    "username": g.get("uname"),
+                    "face": g.get("face"),
+                    "gift_count": g.get("gift_num"),
+                    "score": g.get("score"),
+                }
+                for g in gift_data.get("list", [])
+            ],
+            "total": gift_data.get("total_num", 0),
+        }
