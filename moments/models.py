@@ -55,6 +55,12 @@ class Moment(models.Model):
         verbose_name='B站BV号',
         help_text='当来源为B站且动态包含视频时，保存视频的BV号'
     )
+    video_url = models.URLField(
+        blank=True,
+        default='',
+        verbose_name='视频直链',
+        help_text='视频直链地址（如微博MP4），前端用video标签播放'
+    )
     created_at = models.DateTimeField(
         auto_now_add=True,
         verbose_name='抓取时间'

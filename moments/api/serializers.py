@@ -8,6 +8,6 @@ class MomentSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'source', 'source_id', 'content', 'images',
             'publish_time', 'like_count', 'comment_count', 'share_count',
-            'source_url', 'video_bvid', 'created_at'
+            'source_url', 'video_bvid', 'video_url', 'created_at'
         ]
         read_only_fields = ['id', 'created_at']
