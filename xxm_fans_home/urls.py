@@ -34,6 +34,7 @@ urlpatterns = [
     path('api/fans-diy/', include(('fansDIY.urls', 'fansDIY'), namespace='fans_diy_kebab')),
     path('api/gallery/', include('gallery.urls')),  # gallery 应用路由
     path('api/', include('livestream.api.urls')),  # livestream 应用路由
+    path('api/', include('moments.urls')),  # moments 应用路由（微博+B站动态）
     # 保持API兼容性：冰洁和乐游API都指向songlist应用
     path('api/youyou/', include('songlist.urls')),
     path('api/bingjie/', include('songlist.urls')),

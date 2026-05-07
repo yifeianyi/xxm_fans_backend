@@ -49,6 +49,11 @@ class ThumbnailGenerator:
             'keep_aspect_ratio': True,
             'thumbnail_dir': 'cloud_picture/thumbnails/',
         },
+        'moments': {
+            'thumbnail_size': (300, 300),  # 保持宽高比
+            'keep_aspect_ratio': True,
+            'thumbnail_dir': 'moments/thumbnails/',
+        },
     }
 
     QUALITY = 85  # 图片质量

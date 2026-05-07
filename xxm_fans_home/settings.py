@@ -54,6 +54,7 @@ INSTALLED_APPS = [
     'site_settings',  # 网站设置应用 - 从 main 拆分出来
     'gallery',  # 图集管理应用
     'livestream',  # 直播日历应用
+    'moments',  # 动态管理应用（微博+B站动态）
     'rest_framework',
     # 'drf_yasg',
 ]
@@ -264,6 +265,16 @@ LOGGING = {
     },
 }
 
+
+# Email 配置（用于 Cookie 过期通知）
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = os.getenv('EMAIL_HOST', 'smtp.qq.com')
+EMAIL_PORT = int(os.getenv('EMAIL_PORT', 587))
+EMAIL_USE_TLS = os.getenv('EMAIL_USE_TLS', 'True').lower() == 'true'
+EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER', '')
+EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD', '')
+DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', EMAIL_HOST_USER)
+ADMIN_EMAIL = os.getenv('ADMIN_EMAIL', '')
 
 # 直播日历配置
 LIVESTREAM_CONFIG = {
