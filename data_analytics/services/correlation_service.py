@@ -14,11 +14,29 @@ class CorrelationService:
         end_date = timezone.now().replace(hour=0, minute=0, second=0, microsecond=0)
         start_date = end_date - timedelta(days=days - 1)
 
-        window_works = WorkStatic.objects.filter(
+        account = Account.objects.filter(id=account_id, is_active=True).first()
+        if not account:
+            return {'timeline': [], 'works': []}
+
+        all_other_names = list(
+            Account.objects.filter(is_active=True).exclude(id=account_id).values_list('name', flat=True)
+        )
+
+        is_primary = account_id == Account.objects.filter(is_active=True).order_by('id').first().id
+
+        works_query = WorkStatic.objects.filter(
             is_valid=True,
             publish_time__gte=start_date,
             publish_time__lte=end_date,
-        ).order_by('publish_time')
+        )
+
+        if is_primary:
+            if all_other_names:
+                works_query = works_query.exclude(author__in=all_other_names)
+        else:
+            works_query = works_query.filter(author=account.name)
+
+        window_works = works_query.order_by('publish_time')
 
         works_info = []
         work_ids = []
