@@ -29,6 +29,11 @@ class FanProfile(models.Model):
         default='',
         verbose_name='头像URL'
     )
+    fan_badge_level = models.IntegerField(
+        default=0,
+        verbose_name='粉丝勋章等级',
+        help_text='B站粉丝勋章等级，0表示无勋章'
+    )
     first_seen_at = models.DateTimeField(
         null=True,
         blank=True,

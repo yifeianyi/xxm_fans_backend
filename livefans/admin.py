@@ -4,7 +4,7 @@ from .models import FanProfile, LiveAttendance
 
 @admin.register(FanProfile)
 class FanProfileAdmin(admin.ModelAdmin):
-    list_display = ('username', 'bilibili_uid', 'platform', 'first_seen_at', 'created_at')
+    list_display = ('username', 'bilibili_uid', 'fan_badge_level', 'platform', 'first_seen_at', 'created_at')
     list_filter = ('platform',)
     search_fields = ('username', 'bilibili_uid')
     readonly_fields = ('created_at', 'updated_at')
