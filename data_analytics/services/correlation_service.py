@@ -22,7 +22,8 @@ class CorrelationService:
             Account.objects.filter(is_active=True).exclude(id=account_id).values_list('name', flat=True)
         )
 
-        is_primary = account_id == Account.objects.filter(is_active=True).order_by('id').first().id
+        primary = Account.objects.filter(is_active=True).order_by('id').first()
+        is_primary = primary is not None and account_id == primary.id
 
         works_query = WorkStatic.objects.filter(
             is_valid=True,

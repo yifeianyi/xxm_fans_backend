@@ -1,3 +1,4 @@
+import logging
 import os
 import requests
 from pathlib import Path
@@ -7,9 +8,13 @@ from django.core.files.storage import default_storage
 
 from core.thumbnail_generator import ThumbnailGenerator
 
+logger = logging.getLogger(__name__)
+
 
 class ImageService:
     DOWNLOAD_TIMEOUT = 15
+    MAX_FILE_SIZE = 10 * 1024 * 1024  # 10 MB
+    ALLOWED_CONTENT_TYPES = {'image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/bmp'}
 
     @classmethod
     def download_and_generate_thumbnails(cls, source, source_id, image_urls):
@@ -39,7 +44,7 @@ class ImageService:
                         'thumbnail_url': thumbnail_url,
                     })
             except Exception as e:
-                print(f"下载图片失败 [{source}:{source_id}] idx={idx}: {e}")
+                logger.warning("下载图片失败 [%s:%s] idx=%d: %s", source, source_id, idx, e)
 
         return result
 
@@ -55,21 +60,38 @@ class ImageService:
             response = requests.get(url, timeout=cls.DOWNLOAD_TIMEOUT, stream=True)
             response.raise_for_status()
 
-            ext = cls._get_extension(url, response.headers.get('content-type', ''))
+            # 校验 Content-Type 是否为图片
+            content_type = response.headers.get('content-type', '').split(';')[0].strip().lower()
+            if content_type not in cls.ALLOWED_CONTENT_TYPES:
+                logger.warning("跳过非图片响应 [%s] content-type=%s", url, content_type)
+                return None
+
+            ext = cls._get_extension(url, content_type)
+            if ext == 'svg':
+                logger.warning("跳过 SVG 文件 [%s]（安全策略禁止）", url)
+                return None
+
             filename = f'{source}_{source_id}_{idx}.{ext}'
             relative_path = f'moments/{source}/{filename}'
 
             full_path = os.path.join(default_storage.location, relative_path)
             os.makedirs(os.path.dirname(full_path), exist_ok=True)
 
+            downloaded_size = 0
             with open(full_path, 'wb') as f:
                 for chunk in response.iter_content(chunk_size=8192):
                     f.write(chunk)
+                    downloaded_size += len(chunk)
+                    if downloaded_size > cls.MAX_FILE_SIZE:
+                        f.close()
+                        os.remove(full_path)
+                        logger.warning("图片过大，已跳过 [%s] size=%d", url, downloaded_size)
+                        return None
 
             return relative_path
 
         except Exception as e:
-            print(f"下载图片异常 [{url}]: {e}")
+            logger.warning("下载图片异常 [%s]: %s", url, e)
             return None
 
     @classmethod

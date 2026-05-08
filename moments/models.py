@@ -1,4 +1,5 @@
 from django.db import models
+from core.crypto_utils import encrypt, decrypt
 
 
 class MomentSource(models.TextChoices):
@@ -133,3 +134,16 @@ class PlatformCookie(models.Model):
         status = '有效' if self.is_valid else '已过期'
         platform_label = '微博' if self.platform == 'weibo' else 'B站'
         return f'[{platform_label}] {status}'
+
+    def save(self, *args, **kwargs):
+        if self.cookie_string and not self.cookie_string.startswith('gAAAAA'):
+            self.cookie_string = encrypt(self.cookie_string)
+        super().save(*args, **kwargs)
+
+    def get_cookie_string(self):
+        if not self.cookie_string:
+            return ''
+        try:
+            return decrypt(self.cookie_string)
+        except Exception:
+            return self.cookie_string

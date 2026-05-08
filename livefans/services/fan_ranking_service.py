@@ -1,3 +1,4 @@
+from django.core.cache import cache
 from django.db.models import Count, Sum, Q, F
 from django.db.models.functions import Cast, Coalesce
 from django.db.models import FloatField, IntegerField
@@ -11,6 +12,7 @@ class FanRankingService:
 
     RANKING_START_YEAR = 2026
     ROOM_ID = '8777'
+    RANK_CACHE_TTL = 300
 
     @classmethod
     def _get_bilibili_livestreams(cls, year: Optional[int] = None):
@@ -170,16 +172,11 @@ class FanRankingService:
         return rank_map
 
     @classmethod
-    def search_fans(
-        cls,
-        query: str,
-        page: int = 1,
-        page_size: int = 20
-    ) -> Tuple[list, int]:
-        """搜索粉丝（按用户名或UID），返回年度+综合排名数据"""
-        year = cls.RANKING_START_YEAR
-        overall_livestreams = cls.get_total_livestream_count()
-        year_livestreams = cls.get_total_livestream_count(year)
+    def _get_cached_rank_maps(cls, year):
+        cache_key = 'livefans:rank_maps'
+        cached = cache.get(cache_key)
+        if cached is not None:
+            return cached
 
         year_attendance_ranked = (
             FanProfile.objects
@@ -220,6 +217,31 @@ class FanRankingService:
             .order_by('-overall_attended')
         )
         overall_attendance_rank_map = cls._build_rank_map(overall_attendance_ranked)
+
+        rank_maps = {
+            'year_attendance': year_attendance_rank_map,
+            'year_danmaku': year_danmaku_rank_map,
+            'overall_attendance': overall_attendance_rank_map,
+        }
+        cache.set(cache_key, rank_maps, cls.RANK_CACHE_TTL)
+        return rank_maps
+
+    @classmethod
+    def search_fans(
+        cls,
+        query: str,
+        page: int = 1,
+        page_size: int = 20
+    ) -> Tuple[list, int]:
+        """搜索粉丝（按用户名或UID），返回年度+综合排名数据"""
+        year = cls.RANKING_START_YEAR
+        overall_livestreams = cls.get_total_livestream_count()
+        year_livestreams = cls.get_total_livestream_count(year)
+
+        rank_maps = cls._get_cached_rank_maps(year)
+        year_attendance_rank_map = rank_maps['year_attendance']
+        year_danmaku_rank_map = rank_maps['year_danmaku']
+        overall_attendance_rank_map = rank_maps['overall_attendance']
 
         queryset = (
             FanProfile.objects

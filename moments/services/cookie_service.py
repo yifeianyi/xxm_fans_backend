@@ -13,7 +13,7 @@ class CookieService:
             platform=platform,
             is_valid=True
         ).first()
-        return cookie.cookie_string if cookie else None
+        return cookie.get_cookie_string() if cookie else None
 
     @classmethod
     def mark_expired(cls, platform):
