@@ -530,3 +530,37 @@ class WorkTimelineView(generics.RetrieveAPIView):
             return error_response(message=str(e), status_code=404)
         except Exception as e:
             return error_response(message=f"获取作品时间线失败：{str(e)}", status_code=500)
+
+
+# ==================== 增长关联性 API 视图 ====================
+
+@api_view(['GET'])
+def CorrelationView(request):
+    """
+    获取增长关联性数据
+
+    GET /api/data-analytics/correlation/?account_id=1&days=90
+
+    Query Parameters:
+        account_id: 账号 ID（必填）
+        days: 查询天数，默认 90
+    """
+    from ..services.correlation_service import CorrelationService
+
+    try:
+        account_id = request.query_params.get('account_id')
+        if not account_id:
+            return error_response(message="参数错误：account_id 为必填项", status_code=400)
+
+        days = int(request.query_params.get('days', 90))
+        account_id = int(account_id)
+        if days < 1 or days > 365:
+            return error_response(message="参数错误：days 必须在 1-365 之间", status_code=400)
+
+        data = CorrelationService.get_correlation_data(account_id, days)
+        return success_response(data=data)
+
+    except ValueError as e:
+        return error_response(message=f"参数错误：{str(e)}", status_code=400)
+    except Exception as e:
+        return error_response(message=f"获取关联性数据失败：{str(e)}", status_code=500)

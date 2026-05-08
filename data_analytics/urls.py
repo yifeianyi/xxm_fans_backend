@@ -11,6 +11,7 @@ from .api.views import (
     PlatformStatisticsView,
     TopWorksView,
     WorkTimelineView,
+    CorrelationView,
     monthly_submission_stats,
     monthly_submission_records,
     years_submission_overview,
@@ -47,4 +48,7 @@ urlpatterns = [
     path('followers/accounts/', accounts_list, name='accounts-list'),
     path('followers/accounts/data/', accounts_data, name='accounts-data'),
     path('followers/accounts/<int:account_id>/', account_detail, name='account-detail'),
+
+    # 增长关联性分析
+    path('correlation/', CorrelationView, name='correlation'),
 ]
