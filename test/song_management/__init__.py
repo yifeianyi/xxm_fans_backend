@@ -8,6 +8,13 @@ from .test_views import (
 )
 from .test_serializers import SongSerializerTest
 from .test_models import SongModelIndexTest, SongRecordIndexDocsTest
+from .test_likes import (
+    ToggleLikeTest,
+    LikeStatusTest,
+    RateLimitTest,
+    RecordListViewLikeDataTest,
+    ToggleLikeInvalidInputTest,
+)
 
 __all__ = [
     'SongListCacheTest',
@@ -16,4 +23,9 @@ __all__ = [
     'SongSerializerTest',
     'SongModelIndexTest',
     'SongRecordIndexDocsTest',
+    'ToggleLikeTest',
+    'LikeStatusTest',
+    'RateLimitTest',
+    'RecordListViewLikeDataTest',
+    'ToggleLikeInvalidInputTest',
 ]
