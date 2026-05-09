@@ -2,6 +2,7 @@ from datetime import datetime, timedelta
 from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
+from song_management.api.like_views import get_client_like_identifier
 from song_management.models import Song, SongRecord, SongRecordLike
 
 
@@ -80,6 +81,35 @@ class ToggleLikeTest(TestCase):
         self.assertTrue(data['liked'])
         self.assertEqual(data['like_count'], 2)
 
+    def test_like_identifier_is_hashed_before_storage(self):
+        self.client.post(
+            reverse('song_management:toggle-like'),
+            data={'song_record_id': self.record.id},
+            content_type='application/json',
+            REMOTE_ADDR='10.0.0.1'
+        )
+
+        like = SongRecordLike.objects.get(song_record_id=self.record.id)
+        self.assertNotEqual(like.ip_address, '10.0.0.1')
+        self.assertEqual(len(like.ip_address), 64)
+
+    def test_legacy_raw_ip_like_can_be_unliked(self):
+        SongRecordLike.objects.create(
+            song_record_id=self.record.id,
+            ip_address='10.0.0.1',
+        )
+
+        response = self.client.post(
+            reverse('song_management:toggle-like'),
+            data={'song_record_id': self.record.id},
+            content_type='application/json',
+            REMOTE_ADDR='10.0.0.1'
+        )
+
+        data = response.json()
+        self.assertFalse(data['liked'])
+        self.assertEqual(data['like_count'], 0)
+
 
 class LikeStatusTest(TestCase):
     def setUp(self):
@@ -146,6 +176,25 @@ class LikeStatusTest(TestCase):
             content_type='application/json'
         )
         self.assertEqual(response.status_code, 400)
+
+    def test_status_rejects_too_many_ids(self):
+        ids = ','.join(str(i) for i in range(1, 102))
+        response = self.client.get(reverse('song_management:like-status') + f'?ids={ids}')
+        self.assertEqual(response.status_code, 400)
+
+    def test_status_supports_hashed_identifier(self):
+        request = type('Request', (), {'META': {'REMOTE_ADDR': '10.0.0.1'}})()
+        SongRecordLike.objects.create(
+            song_record_id=self.r1.id,
+            ip_address=get_client_like_identifier(request),
+        )
+
+        response = self.client.get(
+            reverse('song_management:like-status') + f'?ids={self.r1.id}',
+            REMOTE_ADDR='10.0.0.1'
+        )
+
+        self.assertTrue(response.json()['data'][str(self.r1.id)]['user_liked'])
 
 
 class RateLimitTest(TestCase):
@@ -271,3 +320,11 @@ class ToggleLikeInvalidInputTest(TestCase):
             content_type='application/json'
         )
         self.assertEqual(response.status_code, 400)
+
+    def test_nonexistent_record_id(self):
+        response = self.client.post(
+            reverse('song_management:toggle-like'),
+            data={'song_record_id': 999999},
+            content_type='application/json'
+        )
+        self.assertEqual(response.status_code, 404)
