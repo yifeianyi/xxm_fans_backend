@@ -56,11 +56,15 @@ class SiteSettingsAdmin(admin.ModelAdmin):
     list_display = ['id', 'artist_name', 'favicon_preview', 'artist_avatar_preview', 'artist_birthday', 'artist_constellation', 'artist_location', 'created_at', 'updated_at']
     list_filter = ['created_at', 'updated_at']
     search_fields = ['artist_name', 'artist_location']
-    readonly_fields = ['favicon_preview', 'artist_avatar_preview', 'created_at', 'updated_at']
+    readonly_fields = ['favicon_preview', 'artist_avatar_preview', 'background_image_preview', 'created_at', 'updated_at']
 
     fieldsets = (
         ('基础设置', {
             'fields': ('favicon', 'favicon_preview')
+        }),
+        ('网站背景', {
+            'fields': ('background_image', 'background_image_preview', 'background_active'),
+            'description': '上传背景图后勾选"启用背景图"即可在网站全局显示'
         }),
         ('艺人信息', {
             'fields': ('artist_name', 'artist_avatar', 'artist_avatar_preview', 'artist_birthday', 'artist_constellation', 'artist_location')
@@ -90,6 +94,13 @@ class SiteSettingsAdmin(admin.ModelAdmin):
             return mark_safe(f'<img src="{obj.artist_avatar.url}" style="height:80px;width:80px;object-fit:cover;border-radius:8px;" />')
         return '-'
     artist_avatar_preview.short_description = '当前头像预览'
+
+    def background_image_preview(self, obj):
+        """背景图预览"""
+        if obj.background_image:
+            return mark_safe(f'<img src="{obj.background_image.url}" style="max-height:150px;max-width:400px;object-fit:contain;border-radius:8px;" />')
+        return '-'
+    background_image_preview.short_description = '当前背景图预览'
 
 
 @admin.register(Recommendation)
