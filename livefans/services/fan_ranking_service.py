@@ -1,5 +1,5 @@
-from django.db.models import Count, Sum, Q, F
-from django.db.models.functions import Cast, Coalesce
+from django.db.models import Count, Sum, Q, F, Window
+from django.db.models.functions import Cast, Coalesce, DenseRank
 from django.db.models import FloatField, IntegerField
 from ..models import FanProfile, LiveAttendance
 from livestream.models import Livestream
@@ -21,11 +21,11 @@ class FanRankingService:
 
     @classmethod
     def _get_bilibili_livestreams(cls, year: Optional[int] = None):
-        """获取B站直播场次，仅2026年及之后"""
+        """获取B站直播场次（仅统计有BV号的有效录播），2026年及之后"""
         qs = Livestream.objects.filter(
             is_active=True
         ).exclude(
-            Q(room_id='') | Q(room_id__isnull=True)
+            Q(room_id='') | Q(room_id__isnull=True) | Q(bvid__isnull=True) | Q(bvid='')
         ).filter(date__year__gte=cls.RANKING_START_YEAR)
         if year and year >= cls.RANKING_START_YEAR:
             qs = qs.filter(date__year=year)
@@ -45,71 +45,55 @@ class FanRankingService:
         page: int = 1,
         page_size: int = 20
     ) -> Tuple[list, int]:
-        """
-        出勤率排名
-        出勤率 = 该用户 is_attended=True 的直播数 / 统计期内总直播数 × 100%
-        同一排名允许多人并列
-        """
+        """出勤率 = is_attended=True 的直播数 / 统计期内总直播数 × 100%"""
         total_livestreams = cls.get_total_livestream_count(year)
         if total_livestreams == 0:
             return [], 0
 
         attendance_filter = Q(attendances__is_attended=True)
+        danmaku_year_filter = Q() if not year else Q(attendances__livestream__date__year=year)
         if year:
             attendance_filter &= Q(attendances__livestream__date__year=year)
 
-        queryset = (
+        base_qs = (
             FanProfile.objects
             .annotate(
-                attended_count=Count(
-                    'attendances',
-                    filter=attendance_filter
-                )
-            )
-            .annotate(
+                attended_count=Count('attendances', filter=attendance_filter),
                 total_danmaku=Coalesce(
-                    Sum(
-                        'attendances__danmaku_count',
-                        filter=Q(attendances__is_attended=True)
-                        & (Q(attendances__livestream__date__year=year) if year else Q())
-                    ),
-                    0
-                )
-            )
-            .annotate(
+                    Sum('attendances__danmaku_count',
+                        filter=Q(attendances__is_attended=True) & danmaku_year_filter),
+                    0,
+                ),
                 attendance_rate=Cast(
                     F('attended_count') * 100.0 / total_livestreams,
-                    FloatField()
-                )
+                    FloatField(),
+                ),
+                _rank=Window(
+                    expression=DenseRank(),
+                    order_by='-attendance_rate'
+                ),
             )
             .filter(attended_count__gt=0)
-            .order_by('-attendance_rate')
+            .only('bilibili_uid', 'username', 'avatar_url')
         )
 
-        total = queryset.count()
+        total = base_qs.count()
         start = (page - 1) * page_size
-        profiles = queryset[start:start + page_size]
+        profiles = base_qs[start:start + page_size]
 
-        result = []
-        current_rank = 0
-        last_rate = None
-
-        for idx, profile in enumerate(profiles, start=start):
-            rate = round(profile.attendance_rate, 2)
-            if rate != last_rate:
-                current_rank = idx + 1
-                last_rate = rate
-
-            result.append({
-                'rank': current_rank,
-                'uid': profile.bilibili_uid,
-                'username': profile.username,
-                'avatar_url': profile.avatar_url or '',
-                'attendance_rate': rate,
-                'attended_count': profile.attended_count,
+        result = [
+            {
+                'rank': p._rank,
+                'uid': p.bilibili_uid,
+                'username': p.username,
+                'avatar_url': p.avatar_url or '',
+                'attendance_rate': round(p.attendance_rate, 2),
+                'attended_count': p.attended_count,
                 'total_livestreams': total_livestreams,
-                'total_danmaku': profile.total_danmaku,
-            })
+                'total_danmaku': p.total_danmaku,
+            }
+            for p in profiles
+        ]
 
         return result, total
 
@@ -120,15 +104,12 @@ class FanRankingService:
         page: int = 1,
         page_size: int = 20
     ) -> Tuple[list, int]:
-        """
-        弹幕排名
-        按弹幕数量降序排列，同一排名只有一个人
-        """
+        """按弹幕数量降序排列"""
         danmaku_filter = Q(attendances__danmaku_count__gt=0)
         if year:
             danmaku_filter &= Q(attendances__livestream__date__year=year)
 
-        queryset = (
+        base_qs = (
             FanProfile.objects
             .annotate(
                 total_danmaku=Coalesce(
@@ -137,17 +118,16 @@ class FanRankingService:
                 )
             )
             .filter(total_danmaku__gt=0)
-            .order_by('-total_danmaku')
+            .only('bilibili_uid', 'username', 'avatar_url')
         )
 
-        total = queryset.count()
+        all_danmaku_sum = (
+            base_qs.aggregate(s=Coalesce(Sum('total_danmaku'), 0))['s']
+        )
 
-        all_danmaku_sum = queryset.aggregate(
-            s=Coalesce(Sum('total_danmaku'), 0)
-        )['s']
-
+        total = base_qs.count()
         start = (page - 1) * page_size
-        profiles = queryset[start:start + page_size]
+        profiles = base_qs.order_by('-total_danmaku')[start:start + page_size]
 
         result = []
         for idx, profile in enumerate(profiles, start=start):
@@ -210,6 +190,7 @@ class FanRankingService:
                 )
             )
             .filter(year_attended__gt=0)
+            .only('bilibili_uid')
             .order_by('-year_attended')
         )
         year_attendance_rank_map = cls._build_rank_map(year_attendance_ranked)
@@ -224,6 +205,7 @@ class FanRankingService:
                 )
             )
             .filter(year_danmaku__gt=0)
+            .only('bilibili_uid')
             .order_by('-year_danmaku')
         )
         year_danmaku_rank_map = cls._build_rank_map(year_danmaku_ranked)
@@ -237,6 +219,7 @@ class FanRankingService:
                 )
             )
             .filter(overall_attended__gt=0)
+            .only('bilibili_uid')
             .order_by('-overall_attended')
         )
         overall_attendance_rank_map = cls._build_rank_map(overall_attendance_ranked)
@@ -256,52 +239,40 @@ class FanRankingService:
         page: int = 1,
         page_size: int = 20
     ) -> Tuple[list, int]:
-        """搜索粉丝（按用户名或UID），返回年度+综合排名数据"""
         year = cls.RANKING_START_YEAR
         overall_livestreams = cls.get_total_livestream_count()
         year_livestreams = cls.get_total_livestream_count(year)
 
         rank_maps = cls._get_cached_rank_maps(year)
-        year_attendance_rank_map = rank_maps['year_attendance']
-        year_danmaku_rank_map = rank_maps['year_danmaku']
-        overall_attendance_rank_map = rank_maps['overall_attendance']
 
-        queryset = (
+        base_qs = (
             FanProfile.objects
-            .annotate(
-                overall_attended=Count(
-                    'attendances',
-                    filter=Q(attendances__is_attended=True)
-                )
-            )
-            .annotate(
-                overall_danmaku=Coalesce(
-                    Sum('attendances__danmaku_count'),
-                    0
-                )
-            )
-            .annotate(
-                year_attended=Count(
-                    'attendances',
-                    filter=Q(attendances__is_attended=True, attendances__livestream__date__year=year)
-                )
-            )
-            .annotate(
-                year_danmaku=Coalesce(
-                    Sum('attendances__danmaku_count',
-                        filter=Q(attendances__livestream__date__year=year)),
-                    0
-                )
-            )
             .filter(
                 Q(username__icontains=query) | Q(bilibili_uid__icontains=query)
             )
+            .annotate(
+                overall_attended=Count(
+                    'attendances',
+                    filter=Q(attendances__is_attended=True),
+                ),
+                overall_danmaku=Coalesce(Sum('attendances__danmaku_count'), 0),
+                year_attended=Count(
+                    'attendances',
+                    filter=Q(attendances__is_attended=True, attendances__livestream__date__year=year),
+                ),
+                year_danmaku=Coalesce(
+                    Sum('attendances__danmaku_count',
+                        filter=Q(attendances__livestream__date__year=year)),
+                    0,
+                ),
+            )
+            .only('bilibili_uid', 'username', 'avatar_url', 'fan_badge_level')
             .order_by('-overall_attended')
         )
 
-        total = queryset.count()
+        total = base_qs.count()
         start = (page - 1) * page_size
-        profiles = queryset[start:start + page_size]
+        profiles = base_qs[start:start + page_size]
 
         result = []
         for p in profiles:
@@ -312,29 +283,30 @@ class FanRankingService:
                 'avatar_url': p.avatar_url or '',
                 'fan_badge_level': p.fan_badge_level,
                 'year_attendance_rate': round(p.year_attended * 100.0 / year_livestreams, 2) if year_livestreams > 0 else 0,
-                'year_attendance_rank': year_attendance_rank_map.get(uid),
+                'year_attendance_rank': rank_maps['year_attendance'].get(uid),
                 'year_danmaku_count': p.year_danmaku,
-                'year_danmaku_rank': year_danmaku_rank_map.get(uid),
+                'year_danmaku_rank': rank_maps['year_danmaku'].get(uid),
                 'overall_attendance_rate': round(p.overall_attended * 100.0 / overall_livestreams, 2) if overall_livestreams > 0 else 0,
-                'overall_attendance_rank': overall_attendance_rank_map.get(uid),
+                'overall_attendance_rank': rank_maps['overall_attendance'].get(uid),
             })
 
         return result, total
 
     @classmethod
     def get_fan_profile(cls, uid: str) -> Optional[dict]:
-        """获取粉丝详情（含各场直播记录）"""
         try:
             profile = (
                 FanProfile.objects
                 .prefetch_related('attendances__livestream')
+                .only('bilibili_uid', 'username', 'avatar_url', 'first_seen_at')
                 .get(bilibili_uid=uid)
             )
         except FanProfile.DoesNotExist:
             return None
 
         total_livestreams = cls._get_bilibili_livestreams().count()
-        attended_count = profile.attendances.filter(is_attended=True).count()
+        attendances = list(profile.attendances.order_by('-livestream__date').select_related('livestream'))
+        attended_count = sum(1 for a in attendances if a.is_attended)
 
         attendance_records = [
             {
@@ -348,7 +320,7 @@ class FanRankingService:
                 'has_guard': a.has_guard,
                 'watch_duration_minutes': a.watch_duration_minutes,
             }
-            for a in profile.attendances.select_related('livestream').order_by('-livestream__date')
+            for a in attendances
         ]
 
         return {
@@ -359,7 +331,7 @@ class FanRankingService:
             'attended_count': attended_count,
             'total_livestreams': total_livestreams,
             'attendance_rate': round(attended_count * 100.0 / total_livestreams, 2) if total_livestreams > 0 else 0,
-            'total_danmaku': sum(a.danmaku_count for a in profile.attendances.all()),
+            'total_danmaku': sum(a.danmaku_count for a in attendances),
             'records': attendance_records,
         }
 
