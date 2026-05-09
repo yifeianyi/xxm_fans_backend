@@ -9,7 +9,8 @@ class CorrelationService:
     @staticmethod
     def get_correlation_data(
         account_id: int,
-        days: int = 90
+        days: int = 90,
+        work_limit: int = 10
     ) -> Dict:
         end_date = timezone.now().replace(hour=0, minute=0, second=0, microsecond=0)
         start_date = end_date - timedelta(days=days - 1)
@@ -67,7 +68,7 @@ class CorrelationService:
 
         return {
             'timeline': timeline,
-            'works': works_info,
+            'works': sorted(works_info, key=lambda w: w['publishTime'], reverse=True)[:work_limit],
         }
 
     @staticmethod
