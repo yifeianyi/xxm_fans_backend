@@ -3,7 +3,7 @@ from django.db import models
 
 class SongRecordLike(models.Model):
     song_record_id = models.IntegerField(db_index=True)
-    ip_address = models.CharField(max_length=45)
+    ip_address = models.CharField(max_length=64)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
