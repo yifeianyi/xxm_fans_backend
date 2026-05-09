@@ -1,3 +1,4 @@
+from django.core.cache import cache
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from django.http import HttpResponse, FileResponse
@@ -22,13 +23,19 @@ logger = logging.getLogger(__name__)
 @api_view(['GET'])
 def gallery_tree(request):
     """获取图集树结构"""
+    cache_key = "gallery_tree"
     try:
-        # 优化: 一次性获取所有活跃图集，避免递归查询数据库
+        cached = cache.get(cache_key)
+        if cached is not None:
+            return success_response(cached, '获取图集树成功（缓存）')
+    except Exception as e:
+        logger.warning(f"Cache get failed for gallery tree: {e}")
+
+    try:
         all_galleries = list(
             Gallery.objects.filter(is_active=True).order_by('sort_order', 'id')
         )
-        
-        # 构建父子关系映射
+
         children_map = {}
         for gallery in all_galleries:
             if gallery.parent_id:
@@ -48,16 +55,19 @@ def gallery_tree(request):
                 'created_at': gallery.created_at.isoformat() if gallery.created_at else None,
             }
 
-            # 从内存映射中获取子图集，避免数据库查询
             children = children_map.get(gallery.id, [])
             if children:
                 data['children'] = [build_tree(child) for child in children]
 
             return data
 
-        # 仅获取根图集进行遍历
         root_galleries = [g for g in all_galleries if g.parent_id is None]
         tree = [build_tree(gallery) for gallery in root_galleries]
+
+        try:
+            cache.set(cache_key, tree, 600)
+        except Exception as e:
+            logger.warning(f"Cache set failed for gallery tree: {e}")
 
         return success_response(tree, '获取图集树成功')
     except Exception as e:

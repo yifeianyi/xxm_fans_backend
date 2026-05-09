@@ -82,9 +82,6 @@ def tag_list_api(request):
 
 @api_view(['GET'])
 def top_songs_api(request):
-    """
-    获取热歌榜
-    """
     range_map = {
         'all': None,
         '1m': 30,
@@ -96,19 +93,25 @@ def top_songs_api(request):
     }
     range_key = request.GET.get('range', 'all')
     days = range_map.get(range_key, None)
-    limit = int(request.GET.get('limit', 10))  # 新增limit参数，默认10
+    limit = int(request.GET.get('limit', 10))
+
+    cache_key = f"top_songs:{range_key}:{limit}"
+    try:
+        cached = cache.get(cache_key)
+        if cached is not None:
+            return success_response(data=cached, message="获取排行榜成功（缓存）")
+    except Exception as e:
+        logger.warning(f"Cache get failed for top songs: {e}")
+
     qs = Song.objects.all()
     if days:
         since = datetime.now().date() - timedelta(days=days)
         qs = qs.filter(records__performed_at__gte=since)
-    # annotate 统计演唱次数
     qs = qs.annotate(recent_count=Count('records')).order_by('-recent_count', '-last_performed')[:limit]
 
-    # 强制求值获取前 limit 首歌曲的 ID 列表
     top_songs = list(qs)
     song_ids = [s.id for s in top_songs]
 
-    # 批量获取每首歌的最新记录（2条SQL，与limit无关）
     latest_records_map = {}
     for record in SongRecord.objects.filter(song_id__in=song_ids).order_by('-performed_at'):
         if record.song_id not in latest_records_map:
@@ -128,6 +131,11 @@ def top_songs_api(request):
             'last_perform': s.last_performed,
             'cover_url': cover_url,
         })
+
+    try:
+        cache.set(cache_key, result, 300)
+    except Exception as e:
+        logger.warning(f"Cache set failed for top songs: {e}")
 
     return success_response(data=result, message="获取排行榜成功")
 

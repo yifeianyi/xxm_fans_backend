@@ -27,6 +27,7 @@ class WorkMetricsHour(models.Model):
             models.Index(fields=['platform', 'work_id']),
             models.Index(fields=['crawl_time']),
             models.Index(fields=['session_id']),
+            models.Index(fields=['platform', 'work_id', 'crawl_time']),
         ]
 
     def __str__(self):

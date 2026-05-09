@@ -1,7 +1,11 @@
+from django.core.cache import cache
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from core.responses import success_response, error_response, paginated_response
 from ..services.fan_ranking_service import FanRankingService
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class AttendanceRankingView(APIView):
@@ -16,9 +20,25 @@ class AttendanceRankingView(APIView):
             page_size = int(request.query_params.get('page_size', 20))
             page_size = min(page_size, 100)
 
+            cache_key = f"attendance_ranking:{year}:{page}:{page_size}"
+            try:
+                cached = cache.get(cache_key)
+                if cached is not None:
+                    return paginated_response(
+                        data=cached['data'], total=cached['total'],
+                        page=cached['page'], page_size=cached['page_size']
+                    )
+            except Exception as e:
+                logger.warning(f"Cache get failed: {e}")
+
             result, total = FanRankingService.get_attendance_ranking(
                 year=year, page=page, page_size=page_size
             )
+            try:
+                cache.set(cache_key, {'data': result, 'total': total, 'page': page, 'page_size': page_size}, 300)
+            except Exception as e:
+                logger.warning(f"Cache set failed: {e}")
+
             return paginated_response(
                 data=result, total=total, page=page, page_size=page_size
             )
@@ -40,9 +60,25 @@ class DanmakuRankingView(APIView):
             page_size = int(request.query_params.get('page_size', 20))
             page_size = min(page_size, 100)
 
+            cache_key = f"danmaku_ranking:{year}:{page}:{page_size}"
+            try:
+                cached = cache.get(cache_key)
+                if cached is not None:
+                    return paginated_response(
+                        data=cached['data'], total=cached['total'],
+                        page=cached['page'], page_size=cached['page_size']
+                    )
+            except Exception as e:
+                logger.warning(f"Cache get failed: {e}")
+
             result, total = FanRankingService.get_danmaku_ranking(
                 year=year, page=page, page_size=page_size
             )
+            try:
+                cache.set(cache_key, {'data': result, 'total': total, 'page': page, 'page_size': page_size}, 300)
+            except Exception as e:
+                logger.warning(f"Cache set failed: {e}")
+
             return paginated_response(
                 data=result, total=total, page=page, page_size=page_size
             )

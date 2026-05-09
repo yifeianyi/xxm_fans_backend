@@ -31,8 +31,7 @@ class SongListView(generics.ListAPIView):
             'song_tags__tag'
         )
 
-        # 添加调试信息
-        logger.info(f"请求参数: {self.request.query_params}")
+        logger.debug(f"请求参数: {self.request.query_params}")
 
         # 处理搜索查询
         query = self.request.query_params.get("q", "")
@@ -60,7 +59,7 @@ class SongListView(generics.ListAPIView):
                 styles = style_raw.split(',')
         styles = [s.strip() for s in styles if s.strip()]
 
-        logger.info(f"曲风筛选条件: {styles}")
+        logger.debug(f"曲风筛选条件: {styles}")
 
         if styles:
             style_filter = Q()
@@ -76,7 +75,7 @@ class SongListView(generics.ListAPIView):
                 tags = tags_raw.split(',')
         tags = [tag.strip() for tag in tags if tag.strip()]
 
-        logger.info(f"标签筛选条件: {tags}")
+        logger.debug(f"标签筛选条件: {tags}")
 
         if tags:
             tag_filter = Q()
