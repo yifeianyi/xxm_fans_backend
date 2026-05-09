@@ -1,5 +1,5 @@
 from django.contrib import admin
-from site_settings.models import SiteSettings, Recommendation
+from site_settings.models import SiteSettings, Recommendation, EmailConfig
 
 
 @admin.register(SiteSettings)
@@ -53,3 +53,14 @@ class RecommendationAdmin(admin.ModelAdmin):
         updated = queryset.update(is_active=False)
         self.message_user(request, f'成功停用 {updated} 条推荐语。')
     deactivate_recommendations.short_description = '停用选中的推荐语'
+
+
+@admin.register(EmailConfig)
+class EmailConfigAdmin(admin.ModelAdmin):
+    list_display = ['id', 'smtp_host', 'smtp_port', 'smtp_username', 'admin_email', 'updated_at']
+    readonly_fields = ['created_at', 'updated_at']
+
+    def has_add_permission(self, request):
+        if EmailConfig.objects.exists():
+            return False
+        return super().has_add_permission(request)
