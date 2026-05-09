@@ -6,6 +6,7 @@ class SiteSettingsSerializer(serializers.ModelSerializer):
     """网站设置序列化器"""
     favicon_url = serializers.SerializerMethodField()
     artist_avatar_url = serializers.SerializerMethodField()
+    background_image_url = serializers.SerializerMethodField()
 
     class Meta:
         model = SiteSettings
@@ -28,6 +29,9 @@ class SiteSettingsSerializer(serializers.ModelSerializer):
             'qq_music_url',
             'xiaohongshu_url',
             'douyin_url',
+            'background_image',
+            'background_image_url',
+            'background_active',
             'created_at',
             'updated_at',
         ]
@@ -40,6 +44,10 @@ class SiteSettingsSerializer(serializers.ModelSerializer):
     def get_artist_avatar_url(self, obj):
         """获取艺人头像URL"""
         return obj.artist_avatar_url()
+
+    def get_background_image_url(self, obj):
+        """获取背景图URL"""
+        return obj.background_image_url()
 
 
 class MilestoneSerializer(serializers.ModelSerializer):

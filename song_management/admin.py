@@ -633,7 +633,7 @@ class SongAdmin(admin.ModelAdmin):
 class SongRecordAdmin(admin.ModelAdmin):
     """演唱记录管理"""
     form = SongRecordForm
-    list_display = ("song", "performed_at", "url", "cover_url", "cover_thumb", "notes")
+    list_display = ("song", "performed_at", "like_count", "url", "cover_url", "cover_thumb", "notes")
     change_list_template = 'admin/songrecord_change_list.html'
     search_fields = ["song__song_name", "notes"]
     list_filter = ["performed_at", "song__song_name"]
@@ -652,6 +652,23 @@ class SongRecordAdmin(admin.ModelAdmin):
         if obj:
             return ["cover_thumb", "cover_thumb_large"]
         return ["cover_thumb"]
+
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        from .models.like import SongRecordLike
+        from django.db.models import Count, Subquery, OuterRef, IntegerField
+        like_subquery = SongRecordLike.objects.filter(
+            song_record_id=OuterRef('id')
+        ).values('song_record_id').annotate(
+            cnt=Count('id')
+        ).values('cnt')[:1]
+        return qs.annotate(_like_count=Subquery(like_subquery, output_field=IntegerField()))
+
+    def like_count(self, obj):
+        count = getattr(obj, '_like_count', None)
+        return count if count is not None else 0
+    like_count.short_description = '点赞数'
+    like_count.admin_order_field = '_like_count'
 
     def get_urls(self):
         urls = super().get_urls()

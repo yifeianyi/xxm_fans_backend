@@ -47,27 +47,20 @@ class SettingsService:
             raise DatabaseException(f"创建网站设置失败: {str(e)}")
 
     @staticmethod
-    def update_site_settings(settings_id: int, favicon: Optional[str] = None) -> SiteSettings:
+    def update_site_settings(settings_id: int, favicon: Optional[str] = None,
+                              background_image=None, background_active: Optional[bool] = None) -> SiteSettings:
         """
         更新网站设置
-
-        Args:
-            settings_id: 设置ID
-            favicon: favicon文件路径
-
-        Returns:
-            SiteSettings: 更新后的网站设置对象
-
-        Raises:
-            ValidationException: 设置不存在时抛出
-            DatabaseException: 更新失败时抛出
         """
         try:
             settings = SiteSettings.objects.get(id=settings_id)
             if favicon is not None:
                 settings.favicon = favicon
+            if background_image is not None:
+                settings.background_image = background_image
+            if background_active is not None:
+                settings.background_active = background_active
             settings.save()
-            # 清除缓存
             SettingsService.get_site_settings.cache_clear()
             return settings
         except ObjectDoesNotExist:

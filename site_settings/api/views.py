@@ -63,7 +63,9 @@ class SiteSettingsView(APIView):
 
             updated_settings = SettingsService.update_site_settings(
                 settings_id=settings.id,
-                favicon=request.data.get('favicon')
+                favicon=request.data.get('favicon'),
+                background_image=request.data.get('background_image'),
+                background_active=request.data.get('background_active'),
             )
             serializer = SiteSettingsSerializer(updated_settings)
             return updated_response(data=serializer.data, message="更新网站设置成功")
