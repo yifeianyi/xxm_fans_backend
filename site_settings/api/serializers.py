@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from site_settings.models import SiteSettings, Recommendation, Milestone
+from site_settings.models import SiteSettings, Recommendation, Milestone, EmailConfig
 
 
 class SiteSettingsSerializer(serializers.ModelSerializer):
@@ -86,3 +86,17 @@ class RecommendationSerializer(serializers.ModelSerializer):
             required=False,
             queryset=Song.objects.all()
         )
+
+
+class EmailConfigSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = EmailConfig
+        fields = [
+            'id', 'smtp_host', 'smtp_port', 'smtp_use_tls',
+            'smtp_username', 'smtp_password', 'admin_email',
+            'from_email', 'created_at', 'updated_at'
+        ]
+        read_only_fields = ['id', 'created_at', 'updated_at']
+        extra_kwargs = {
+            'smtp_password': {'write_only': True}
+        }

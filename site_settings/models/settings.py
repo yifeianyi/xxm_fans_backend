@@ -93,3 +93,23 @@ class Milestone(models.Model):
 
     def __str__(self):
         return f"{self.date} - {self.title}"
+
+
+class EmailConfig(models.Model):
+    """邮箱配置模型（单例，用于 SMTP 邮件发送）"""
+    smtp_host = models.CharField(max_length=200, default='smtp.qq.com', verbose_name='SMTP服务器')
+    smtp_port = models.IntegerField(default=587, verbose_name='SMTP端口')
+    smtp_use_tls = models.BooleanField(default=True, verbose_name='使用TLS')
+    smtp_username = models.CharField(max_length=200, blank=True, default='', verbose_name='发件邮箱')
+    smtp_password = models.CharField(max_length=200, blank=True, default='', verbose_name='SMTP授权码')
+    admin_email = models.EmailField(max_length=200, blank=True, default='', verbose_name='管理员邮箱')
+    from_email = models.EmailField(max_length=200, blank=True, default='', verbose_name='发件人地址')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = '邮箱配置'
+        verbose_name_plural = '邮箱配置'
+
+    def __str__(self):
+        return f"邮箱配置 ({self.smtp_username or '未配置'})"

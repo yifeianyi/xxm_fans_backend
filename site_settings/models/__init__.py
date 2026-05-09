@@ -1,6 +1,6 @@
-from .settings import SiteSettings, Recommendation, Milestone
+from .settings import SiteSettings, Recommendation, Milestone, EmailConfig
 
 # 导入信号处理器
 from . import signals
 
-__all__ = ['SiteSettings', 'Recommendation', 'Milestone']
+__all__ = ['SiteSettings', 'Recommendation', 'Milestone', 'EmailConfig']

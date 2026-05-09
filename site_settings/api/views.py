@@ -8,9 +8,9 @@ from rest_framework import status
 from core.responses import success_response, error_response, created_response, updated_response
 from core.exceptions import ValidationException, DatabaseException
 
-from site_settings.models import SiteSettings, Recommendation, Milestone
+from site_settings.models import SiteSettings, Recommendation, Milestone, EmailConfig
 from site_settings.services import SettingsService, RecommendationService, MilestoneService
-from site_settings.api.serializers import SiteSettingsSerializer, RecommendationSerializer, MilestoneSerializer
+from site_settings.api.serializers import SiteSettingsSerializer, RecommendationSerializer, MilestoneSerializer, EmailConfigSerializer
 
 
 class SiteSettingsView(APIView):
@@ -525,3 +525,61 @@ Disallow: /
 Sitemap: https://www.xxm8777.cn/sitemap.xml
 """
         return HttpResponse(content, content_type='text/plain')
+
+
+class EmailConfigView(APIView):
+
+    def get(self, request):
+        try:
+            config, _ = EmailConfig.objects.get_or_create()
+            serializer = EmailConfigSerializer(config)
+            return success_response(data=serializer.data, message="获取邮箱配置成功")
+        except Exception as e:
+            return error_response(message=str(e), status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    def put(self, request):
+        try:
+            config, _ = EmailConfig.objects.get_or_create()
+            serializer = EmailConfigSerializer(config, data=request.data, partial=True)
+            if not serializer.is_valid():
+                return error_response(message=serializer.errors, status_code=status.HTTP_400_BAD_REQUEST)
+            serializer.save()
+            return success_response(data=serializer.data, message="邮箱配置已更新")
+        except Exception as e:
+            return error_response(message=str(e), status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    def post(self, request):
+        from django.core.mail import send_mail, get_connection
+        from django.core.mail.backends.smtp import EmailBackend
+
+        smtp_host = request.data.get('smtp_host', 'smtp.qq.com')
+        smtp_port = int(request.data.get('smtp_port', 587))
+        smtp_use_tls = request.data.get('smtp_use_tls', True)
+        smtp_username = request.data.get('smtp_username', '')
+        smtp_password = request.data.get('smtp_password', '')
+        admin_email = request.data.get('admin_email', '')
+
+        if not smtp_username or not smtp_password:
+            return error_response(message="发件邮箱和SMTP授权码不能为空", status_code=status.HTTP_400_BAD_REQUEST)
+        if not admin_email:
+            return error_response(message="管理员邮箱不能为空", status_code=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            connection = EmailBackend(
+                host=smtp_host,
+                port=smtp_port,
+                username=smtp_username,
+                password=smtp_password,
+                use_tls=smtp_use_tls,
+                fail_silently=False,
+            )
+            send_mail(
+                subject='[小满虫之家] 邮箱配置测试',
+                message='恭喜！邮箱配置成功，SMTP 邮件发送功能正常工作。\n\n-- 小满虫之家自动通知系统',
+                from_email=smtp_username,
+                recipient_list=[admin_email],
+                connection=connection,
+            )
+            return success_response(message="测试邮件发送成功")
+        except Exception as e:
+            return error_response(message=f"测试邮件发送失败: {str(e)}", status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)

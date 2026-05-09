@@ -5,6 +5,7 @@ from site_settings.api.views import (
     RecommendationDetailView,
     MilestoneListView,
     MilestoneDetailView,
+    EmailConfigView,
 )
 
 app_name = 'site_settings'
@@ -23,4 +24,7 @@ urlpatterns = [
     # 里程碑
     path('milestones/', MilestoneListView.as_view(), name='milestone-list'),
     path('milestones/<int:pk>/', MilestoneDetailView.as_view(), name='milestone-detail'),
+
+    # 邮箱配置
+    path('email-config/', EmailConfigView.as_view(), name='email-config'),
 ]

@@ -268,7 +268,7 @@ LOGGING = {
 
 
 # Email 配置（用于 Cookie 过期通知）
-EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_BACKEND = 'xxm_fans_home.email_backend.DatabaseEmailBackend'
 EMAIL_HOST = os.getenv('EMAIL_HOST', 'smtp.qq.com')
 EMAIL_PORT = int(os.getenv('EMAIL_PORT', 587))
 EMAIL_USE_TLS = os.getenv('EMAIL_USE_TLS', 'True').lower() == 'true'
