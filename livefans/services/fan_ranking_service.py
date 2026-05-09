@@ -1,10 +1,15 @@
-from django.core.cache import cache
 from django.db.models import Count, Sum, Q, F
 from django.db.models.functions import Cast, Coalesce
 from django.db.models import FloatField, IntegerField
 from ..models import FanProfile, LiveAttendance
 from livestream.models import Livestream
 from typing import Optional, Tuple
+
+try:
+    from django.core.cache import cache
+    CACHE_AVAILABLE = True
+except ImportError:
+    CACHE_AVAILABLE = False
 
 
 class FanRankingService:
@@ -172,9 +177,27 @@ class FanRankingService:
         return rank_map
 
     @classmethod
+    def _cache_get(cls, key):
+        if not CACHE_AVAILABLE:
+            return None
+        try:
+            return cache.get(key)
+        except Exception:
+            return None
+
+    @classmethod
+    def _cache_set(cls, key, value, ttl):
+        if not CACHE_AVAILABLE:
+            return
+        try:
+            cache.set(key, value, ttl)
+        except Exception:
+            pass
+
+    @classmethod
     def _get_cached_rank_maps(cls, year):
         cache_key = 'livefans:rank_maps'
-        cached = cache.get(cache_key)
+        cached = cls._cache_get(cache_key)
         if cached is not None:
             return cached
 
@@ -223,7 +246,7 @@ class FanRankingService:
             'year_danmaku': year_danmaku_rank_map,
             'overall_attendance': overall_attendance_rank_map,
         }
-        cache.set(cache_key, rank_maps, cls.RANK_CACHE_TTL)
+        cls._cache_set(cache_key, rank_maps, cls.RANK_CACHE_TTL)
         return rank_maps
 
     @classmethod
@@ -364,3 +387,12 @@ class FanRankingService:
             'total_danmaku': total_danmaku,
             'fans_label': '出勤粉丝',
         }
+
+    @classmethod
+    def invalidate_rank_cache(cls):
+        if not CACHE_AVAILABLE:
+            return
+        try:
+            cache.delete('livefans:rank_maps')
+        except Exception:
+            pass
