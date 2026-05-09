@@ -35,11 +35,13 @@ class SongRecordListView(generics.ListAPIView):
             .values_list('song_record_id', 'count')
         )
 
-        x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
-        ip = x_forwarded_for.split(',')[0].strip() if x_forwarded_for else request.META.get('REMOTE_ADDR', '')
+        from .like_views import _get_client_identifier_candidates
+
         user_likes = set(
-            SongRecordLike.objects.filter(song_record_id__in=record_ids, ip_address=ip)
-            .values_list('song_record_id', flat=True)
+            SongRecordLike.objects.filter(
+                song_record_id__in=record_ids,
+                ip_address__in=_get_client_identifier_candidates(request),
+            ).values_list('song_record_id', flat=True)
         )
 
         for record in results:
@@ -55,7 +57,10 @@ class SongRecordListView(generics.ListAPIView):
         page_size = int(request.GET.get("page_size", 20))
         sort_by = request.GET.get("sort_by", "time")
 
-        cache_key = f"song_records:{song_id}:{page_num}:{page_size}:{sort_by}"
+        from .like_views import get_client_like_identifier
+
+        client_like_identifier = get_client_like_identifier(request)
+        cache_key = f"song_records:{song_id}:{page_num}:{page_size}:{sort_by}:{client_like_identifier}"
 
         try:
             cached_data = cache.get(cache_key)
