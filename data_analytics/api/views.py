@@ -22,12 +22,13 @@ class WorkStaticListView(generics.ListAPIView):
     """
     serializer_class = WorkStaticSerializer
     pagination_class = None
+    MAX_LIMIT = 200
 
     def get_queryset(self):
         platform = self.request.query_params.get("platform")
         is_valid = self.request.query_params.get("is_valid")
-        limit = int(self.request.query_params.get("limit", 100))
-        offset = int(self.request.query_params.get("offset", 0))
+        limit = min(int(self.request.query_params.get("limit", 100)), self.MAX_LIMIT)
+        offset = max(int(self.request.query_params.get("offset", 0)), 0)
 
         queryset = WorkStatic.objects.all()
 
@@ -76,12 +77,15 @@ class WorkMetricsHourListView(generics.ListAPIView):
     """
     serializer_class = WorkMetricsHourSerializer
     pagination_class = None
+    MAX_LIMIT = 500
 
     def get_queryset(self):
         platform = self.kwargs['platform']
         work_id = self.kwargs['work_id']
         start_time = self.request.query_params.get("start_time")
         end_time = self.request.query_params.get("end_time")
+        limit = min(int(self.request.query_params.get("limit", 100)), self.MAX_LIMIT)
+        offset = max(int(self.request.query_params.get("offset", 0)), 0)
 
         queryset = WorkMetricsHour.objects.filter(
             platform=platform,
@@ -96,7 +100,7 @@ class WorkMetricsHourListView(generics.ListAPIView):
 
         queryset = queryset.order_by('crawl_time')
 
-        return queryset
+        return queryset[offset:offset + limit]
 
     def list(self, request, *args, **kwargs):
         queryset = self.get_queryset()
@@ -539,11 +543,12 @@ def CorrelationView(request):
     """
     获取增长关联性数据
 
-    GET /api/data-analytics/correlation/?account_id=1&days=90
+    GET /api/data-analytics/correlation/?account_id=1&days=90&work_limit=5
 
     Query Parameters:
         account_id: 账号 ID（必填）
         days: 查询天数，默认 90
+        work_limit: 返回作品数量上限，默认 10
     """
     from ..services.correlation_service import CorrelationService
 
@@ -553,11 +558,12 @@ def CorrelationView(request):
             return error_response(message="参数错误：account_id 为必填项", status_code=400)
 
         days = int(request.query_params.get('days', 90))
+        work_limit = int(request.query_params.get('work_limit', 10))
         account_id = int(account_id)
         if days < 1 or days > 365:
             return error_response(message="参数错误：days 必须在 1-365 之间", status_code=400)
 
-        data = CorrelationService.get_correlation_data(account_id, days)
+        data = CorrelationService.get_correlation_data(account_id, days, work_limit)
         return success_response(data=data)
 
     except ValueError as e:
