@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django import forms
 from django.utils.safestring import mark_safe
-from site_settings.models import SiteSettings, Recommendation, Milestone
+from site_settings.models import SiteSettings, Recommendation, Milestone, EmailConfig
 
 
 class SiteSettingsForm(forms.ModelForm):
@@ -133,3 +133,14 @@ class MilestoneAdmin(admin.ModelAdmin):
     search_fields = ['title', 'description']
     ordering = ['-date', 'display_order']
     readonly_fields = ['created_at']
+
+
+@admin.register(EmailConfig)
+class EmailConfigAdmin(admin.ModelAdmin):
+    list_display = ['id', 'smtp_host', 'smtp_port', 'smtp_username', 'admin_email', 'updated_at']
+    readonly_fields = ['created_at', 'updated_at']
+
+    def has_add_permission(self, request):
+        if EmailConfig.objects.exists():
+            return False
+        return super().has_add_permission(request)
