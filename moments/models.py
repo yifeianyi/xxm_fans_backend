@@ -1,5 +1,8 @@
+import logging
 from django.db import models
 from core.crypto_utils import encrypt, decrypt
+
+logger = logging.getLogger(__name__)
 
 
 class MomentSource(models.TextChoices):
@@ -85,14 +88,9 @@ class Moment(models.Model):
 
 
 class PlatformCookie(models.Model):
-    PLATFORM_CHOICES = [
-        ('weibo', '微博'),
-        ('bilibili', 'B站'),
-    ]
-
     platform = models.CharField(
         max_length=20,
-        choices=PLATFORM_CHOICES,
+        choices=MomentSource.choices,
         unique=True,
         verbose_name='平台',
         help_text='Cookie 对应的平台'
@@ -146,4 +144,5 @@ class PlatformCookie(models.Model):
         try:
             return decrypt(self.cookie_string)
         except Exception:
-            return self.cookie_string
+            logger.warning("Cookie 解密失败 platform=%s，返回空字符串", self.platform)
+            return ''

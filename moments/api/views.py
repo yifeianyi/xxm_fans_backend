@@ -11,8 +11,20 @@ from .serializers import MomentSerializer
 @api_view(['GET'])
 def moment_list_api(request):
     source = request.GET.get('source', '').strip()
-    page_num = int(request.GET.get('page', 1))
-    page_size = int(request.GET.get('limit', 20))
+
+    try:
+        page_num = int(request.GET.get('page', 1))
+    except (ValueError, TypeError):
+        page_num = 1
+
+    try:
+        page_size = int(request.GET.get('limit', 20))
+    except (ValueError, TypeError):
+        page_size = 20
+
+    # 限制最大页面大小，防止一次查询过多
+    page_size = min(page_size, 100)
+    page_num = max(page_num, 1)
 
     queryset = Moment.objects.all()
     if source in ('weibo', 'bilibili'):
