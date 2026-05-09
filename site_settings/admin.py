@@ -139,8 +139,25 @@ class MilestoneAdmin(admin.ModelAdmin):
 class EmailConfigAdmin(admin.ModelAdmin):
     list_display = ['id', 'smtp_host', 'smtp_port', 'smtp_username', 'admin_email', 'updated_at']
     readonly_fields = ['created_at', 'updated_at']
+    exclude = ['smtp_password']
 
     def has_add_permission(self, request):
         if EmailConfig.objects.exists():
             return False
         return super().has_add_permission(request)
+
+    def get_form(self, request, obj=None, **kwargs):
+        form = super().get_form(request, obj, **kwargs)
+        form.base_fields['smtp_password'] = forms.CharField(
+            required=False,
+            widget=forms.PasswordInput(render_value=True),
+            label='SMTP授权码',
+            help_text='留空则不修改'
+        )
+        return form
+
+    def save_model(self, request, obj, form, change):
+        raw = form.cleaned_data.get('smtp_password', '')
+        if raw:
+            obj.set_password(raw)
+        super().save_model(request, obj, form, change)

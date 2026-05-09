@@ -1,4 +1,8 @@
 from django.db import models
+from django.core.exceptions import ValidationError
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class Recommendation(models.Model):
@@ -101,7 +105,33 @@ class EmailConfig(models.Model):
     smtp_port = models.IntegerField(default=587, verbose_name='SMTP端口')
     smtp_use_tls = models.BooleanField(default=True, verbose_name='使用TLS')
     smtp_username = models.CharField(max_length=200, blank=True, default='', verbose_name='发件邮箱')
-    smtp_password = models.CharField(max_length=200, blank=True, default='', verbose_name='SMTP授权码')
+    smtp_password = models.CharField(max_length=300, blank=True, default='', verbose_name='SMTP授权码')
+
+    _plain_password = None
+
+    def set_password(self, raw_password):
+        if raw_password:
+            from core.crypto_utils import encrypt
+            self.smtp_password = encrypt(raw_password)
+        else:
+            self.smtp_password = ''
+
+    def get_password(self):
+        if self._plain_password is not None:
+            return self._plain_password
+        if self.smtp_password:
+            try:
+                from core.crypto_utils import decrypt
+                return decrypt(self.smtp_password)
+            except Exception:
+                return self.smtp_password
+        return ''
+
+    def save(self, *args, **kwargs):
+        if self._plain_password is not None:
+            self.set_password(self._plain_password)
+            self._plain_password = None
+        super().save(*args, **kwargs)
     admin_email = models.EmailField(max_length=200, blank=True, default='', verbose_name='管理员邮箱')
     from_email = models.EmailField(max_length=200, blank=True, default='', verbose_name='发件人地址')
     created_at = models.DateTimeField(auto_now_add=True)

@@ -89,6 +89,8 @@ class RecommendationSerializer(serializers.ModelSerializer):
 
 
 class EmailConfigSerializer(serializers.ModelSerializer):
+    smtp_password = serializers.CharField(write_only=True, required=False, allow_blank=True)
+
     class Meta:
         model = EmailConfig
         fields = [
@@ -97,6 +99,19 @@ class EmailConfigSerializer(serializers.ModelSerializer):
             'from_email', 'created_at', 'updated_at'
         ]
         read_only_fields = ['id', 'created_at', 'updated_at']
-        extra_kwargs = {
-            'smtp_password': {'write_only': True}
-        }
+
+    def validate_smtp_port(self, value):
+        if not 1 <= value <= 65535:
+            raise serializers.ValidationError('端口号必须在 1-65535 之间')
+        return value
+
+    def validate_admin_email(self, value):
+        if value and '@' not in value:
+            raise serializers.ValidationError('请输入有效的邮箱地址')
+        return value
+
+    def update(self, instance, validated_data):
+        raw_password = validated_data.pop('smtp_password', None)
+        if raw_password:
+            instance.set_password(raw_password)
+        return super().update(instance, validated_data)

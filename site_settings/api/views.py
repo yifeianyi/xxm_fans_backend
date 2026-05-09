@@ -549,7 +549,10 @@ class EmailConfigView(APIView):
             return error_response(message=str(e), status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     def post(self, request):
-        from django.core.mail import send_mail, get_connection
+        if not request.user.is_authenticated:
+            return error_response(message="请先登录", status_code=status.HTTP_401_UNAUTHORIZED)
+
+        from django.core.mail import send_mail
         from django.core.mail.backends.smtp import EmailBackend
 
         smtp_host = request.data.get('smtp_host', 'smtp.qq.com')
