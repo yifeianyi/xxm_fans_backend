@@ -543,12 +543,11 @@ def CorrelationView(request):
     """
     获取增长关联性数据
 
-    GET /api/data-analytics/correlation/?account_id=1&days=90&work_limit=5
+    GET /api/data-analytics/correlation/?account_id=1&days=90
 
     Query Parameters:
         account_id: 账号 ID（必填）
         days: 查询天数，默认 90
-        work_limit: 返回作品数量上限，默认 10
     """
     from ..services.correlation_service import CorrelationService
 
@@ -558,12 +557,11 @@ def CorrelationView(request):
             return error_response(message="参数错误：account_id 为必填项", status_code=400)
 
         days = int(request.query_params.get('days', 90))
-        work_limit = int(request.query_params.get('work_limit', 10))
         account_id = int(account_id)
         if days < 1 or days > 365:
             return error_response(message="参数错误：days 必须在 1-365 之间", status_code=400)
 
-        data = CorrelationService.get_correlation_data(account_id, days, work_limit)
+        data = CorrelationService.get_correlation_data(account_id, days)
         return success_response(data=data)
 
     except ValueError as e:
