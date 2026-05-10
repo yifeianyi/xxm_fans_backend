@@ -56,15 +56,19 @@ class SiteSettingsAdmin(admin.ModelAdmin):
     list_display = ['id', 'artist_name', 'favicon_preview', 'artist_avatar_preview', 'artist_birthday', 'artist_constellation', 'artist_location', 'created_at', 'updated_at']
     list_filter = ['created_at', 'updated_at']
     search_fields = ['artist_name', 'artist_location']
-    readonly_fields = ['favicon_preview', 'artist_avatar_preview', 'background_image_preview', 'created_at', 'updated_at']
+    readonly_fields = ['favicon_preview', 'artist_avatar_preview', 'head_background_image_preview', 'contain_background_image_preview', 'created_at', 'updated_at']
 
     fieldsets = (
         ('基础设置', {
             'fields': ('favicon', 'favicon_preview')
         }),
-        ('网站背景', {
-            'fields': ('background_image', 'background_image_preview', 'background_active'),
-            'description': '上传背景图后勾选"启用背景图"即可在网站全局显示'
+        ('顶部背景图（导航栏下方）', {
+            'fields': ('head_background_image', 'head_background_image_preview', 'head_background_active'),
+            'description': '上传后勾选启用，图片紧贴导航栏下方显示，随页面滚动'
+        }),
+        ('页面背景图（整体背景）', {
+            'fields': ('contain_background_image', 'contain_background_image_preview', 'contain_background_active'),
+            'description': '上传后勾选启用，作为页面整体背景，位于内容下方'
         }),
         ('艺人信息', {
             'fields': ('artist_name', 'artist_avatar', 'artist_avatar_preview', 'artist_birthday', 'artist_constellation', 'artist_location')
@@ -95,12 +99,17 @@ class SiteSettingsAdmin(admin.ModelAdmin):
         return '-'
     artist_avatar_preview.short_description = '当前头像预览'
 
-    def background_image_preview(self, obj):
-        """背景图预览"""
-        if obj.background_image:
-            return mark_safe(f'<img src="{obj.background_image.url}" style="max-height:150px;max-width:400px;object-fit:contain;border-radius:8px;" />')
+    def head_background_image_preview(self, obj):
+        if obj.head_background_image:
+            return mark_safe(f'<img src="{obj.head_background_image.url}" style="max-height:150px;max-width:400px;object-fit:contain;border-radius:8px;" />')
         return '-'
-    background_image_preview.short_description = '当前背景图预览'
+    head_background_image_preview.short_description = '当前顶部背景图'
+
+    def contain_background_image_preview(self, obj):
+        if obj.contain_background_image:
+            return mark_safe(f'<img src="{obj.contain_background_image.url}" style="max-height:150px;max-width:400px;object-fit:contain;border-radius:8px;" />')
+        return '-'
+    contain_background_image_preview.short_description = '当前页面背景图'
 
 
 @admin.register(Recommendation)

@@ -3,10 +3,10 @@ from site_settings.models import SiteSettings, Recommendation, Milestone, EmailC
 
 
 class SiteSettingsSerializer(serializers.ModelSerializer):
-    """网站设置序列化器"""
     favicon_url = serializers.SerializerMethodField()
     artist_avatar_url = serializers.SerializerMethodField()
-    background_image_url = serializers.SerializerMethodField()
+    head_background_image_url = serializers.SerializerMethodField()
+    contain_background_image_url = serializers.SerializerMethodField()
 
     class Meta:
         model = SiteSettings
@@ -29,25 +29,28 @@ class SiteSettingsSerializer(serializers.ModelSerializer):
             'qq_music_url',
             'xiaohongshu_url',
             'douyin_url',
-            'background_image',
-            'background_image_url',
-            'background_active',
+            'head_background_image',
+            'head_background_image_url',
+            'head_background_active',
+            'contain_background_image',
+            'contain_background_image_url',
+            'contain_background_active',
             'created_at',
             'updated_at',
         ]
         read_only_fields = ['id', 'created_at', 'updated_at']
 
     def get_favicon_url(self, obj):
-        """获取favicon URL"""
         return obj.favicon_url()
 
     def get_artist_avatar_url(self, obj):
-        """获取艺人头像URL"""
         return obj.artist_avatar_url()
 
-    def get_background_image_url(self, obj):
-        """获取背景图URL"""
-        return obj.background_image_url()
+    def get_head_background_image_url(self, obj):
+        return obj.head_background_image_url()
+
+    def get_contain_background_image_url(self, obj):
+        return obj.contain_background_image_url()
 
 
 class MilestoneSerializer(serializers.ModelSerializer):

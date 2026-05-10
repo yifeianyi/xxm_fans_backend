@@ -59,13 +59,21 @@ class SiteSettings(models.Model):
     xiaohongshu_url = models.URLField(max_length=500, blank=True, verbose_name="小红书链接")
     douyin_url = models.URLField(max_length=500, blank=True, verbose_name="抖音链接")
 
-    background_image = models.ImageField(
+    head_background_image = models.ImageField(
         upload_to='settings/',
         blank=True,
         null=True,
-        verbose_name="网站背景图"
+        verbose_name="顶部背景图"
     )
-    background_active = models.BooleanField(default=False, verbose_name="启用背景图")
+    head_background_active = models.BooleanField(default=False, verbose_name="启用顶部背景图")
+
+    contain_background_image = models.ImageField(
+        upload_to='settings/',
+        blank=True,
+        null=True,
+        verbose_name="页面背景图"
+    )
+    contain_background_active = models.BooleanField(default=False, verbose_name="启用页面背景图")
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -89,10 +97,14 @@ class SiteSettings(models.Model):
             return self.artist_avatar.url
         return None
 
-    def background_image_url(self):
-        """返回背景图的URL路径"""
-        if self.background_image:
-            return self.background_image.url
+    def head_background_image_url(self):
+        if self.head_background_image:
+            return self.head_background_image.url
+        return None
+
+    def contain_background_image_url(self):
+        if self.contain_background_image:
+            return self.contain_background_image.url
         return None
 
 

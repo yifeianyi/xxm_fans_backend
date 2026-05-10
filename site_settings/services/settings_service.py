@@ -48,18 +48,20 @@ class SettingsService:
 
     @staticmethod
     def update_site_settings(settings_id: int, favicon: Optional[str] = None,
-                              background_image=None, background_active: Optional[bool] = None) -> SiteSettings:
-        """
-        更新网站设置
-        """
+                              head_background_image=None, head_background_active: Optional[bool] = None,
+                              contain_background_image=None, contain_background_active: Optional[bool] = None) -> SiteSettings:
         try:
             settings = SiteSettings.objects.get(id=settings_id)
             if favicon is not None:
                 settings.favicon = favicon
-            if background_image is not None:
-                settings.background_image = background_image
-            if background_active is not None:
-                settings.background_active = background_active
+            if head_background_image is not None:
+                settings.head_background_image = head_background_image
+            if head_background_active is not None:
+                settings.head_background_active = head_background_active
+            if contain_background_image is not None:
+                settings.contain_background_image = contain_background_image
+            if contain_background_active is not None:
+                settings.contain_background_active = contain_background_active
             settings.save()
             SettingsService.get_site_settings.cache_clear()
             return settings
