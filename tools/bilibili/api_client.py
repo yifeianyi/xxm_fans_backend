@@ -22,22 +22,26 @@ class BilibiliAPIClient:
         self,
         timeout: int = DEFAULT_TIMEOUT,
         retry_times: int = DEFAULT_RETRY_TIMES,
-        retry_delay: int = DEFAULT_RETRY_DELAY
+        retry_delay: int = DEFAULT_RETRY_DELAY,
+        cookie: str = "",
     ):
         """
         初始化API客户端
         :param timeout: 请求超时时间（秒）
         :param retry_times: 重试次数
         :param retry_delay: 重试延迟（秒）
+        :param cookie: B站登录 Cookie 字符串（可选，某些API需要登录态）
         """
         self.timeout = timeout
         self.retry_times = retry_times
         self.retry_delay = retry_delay
-        
+
         self.headers = {
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
-            "Referer": "https://www.bilibili.com"
+            "Referer": "https://www.bilibili.com",
         }
+        if cookie:
+            self.headers["Cookie"] = cookie
 
     def _make_request(
         self,
@@ -180,18 +184,20 @@ class BilibiliAPIClient:
         }
 
     def get_guard_list(
-        self, room_id: int, page: int = 1, page_size: int = 29
+        self, room_id: int, ruid: int, page: int = 1, page_size: int = 29
     ) -> Dict[str, Any]:
         """
         获取大航海（舰长）列表
         :param room_id: 直播间ID
+        :param ruid: 主播B站UID
         :param page: 页码
         :param page_size: 每页数量
         :return: 包含 guard_list 和 total 的字典
         """
-        url = f"{self.BASE_URL}/xlive/app-room/v2/guardTab/topList"
+        url = "https://api.live.bilibili.com/xlive/app-room/v2/guardTab/topList"
         params = {
-            "room_id": room_id,
+            "roomid": room_id,
+            "ruid": ruid,
             "page": page,
             "page_size": page_size,
         }
@@ -204,6 +210,9 @@ class BilibiliAPIClient:
                     "username": g.get("username"),
                     "face": g.get("face"),
                     "guard_level": g.get("guard_level"),
+                    "accompany": g.get("accompany", 0),
+                    "medal_name": g.get("medal_info", {}).get("medal_name", ""),
+                    "medal_level": g.get("medal_info", {}).get("medal_level", 0),
                 }
                 for g in guard_data.get("list", [])
             ],
@@ -220,7 +229,7 @@ class BilibiliAPIClient:
         :param page_size: 每页数量
         :return: 包含 gift_list 和 total 的字典
         """
-        url = f"{self.BASE_URL}/xlive/revenue/v1/giftStream/getGiftTop"
+        url = "https://api.live.bilibili.com/xlive/revenue/v1/giftStream/getGiftTop"
         params = {
             "room_id": room_id,
             "page": page,

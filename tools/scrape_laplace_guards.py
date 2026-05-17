@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 """
-Scrape all 大航海 (guards) user data from laplace.live for a given Bilibili UID.
-Saves: avatar URL, user ID, username, fan badge level, guard type.
+Scrape all 大航海 (guards) user data from Bilibili official API.
+Saves: avatar URL, user ID, username, fan badge level, guard type, days.
 
-API: https://workers.vrp.moe/bilibili/live-guards/{uid}?p={page}
+API: https://api.live.bilibili.com/xlive/app-room/v2/guardTab/topList
 
-Guard Level mapping (laplace.live API):
+Guard Level mapping (Bilibili API):
   1 = 总督 (Governor)
   2 = 提督 (Admiral)
   3 = 舰长 (Captain)
@@ -26,13 +26,19 @@ GUARD_LEVEL_MAP = {
     3: "舰长",
 }
 
-API_BASE = "https://workers.vrp.moe/bilibili/live-guards"
-REQUEST_DELAY = 0.3
+API_URL = "https://api.live.bilibili.com/xlive/app-room/v2/guardTab/topList"
+PAGE_SIZE = 29
+REQUEST_DELAY = 0.5
 
-def fetch_page(uid: int, page: int, timeout: int = 15) -> dict:
-    """Fetch a single page of guard data."""
-    url = f"{API_BASE}/{uid}?p={page}"
-    resp = requests.get(url, timeout=timeout)
+HEADERS = {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+    "Referer": "https://live.bilibili.com",
+}
+
+
+def fetch_page(room_id: int, ruid: int, page: int, timeout: int = 15) -> dict:
+    params = {"roomid": room_id, "ruid": ruid, "page": page, "page_size": PAGE_SIZE}
+    resp = requests.get(API_URL, params=params, headers=HEADERS, timeout=timeout)
     resp.raise_for_status()
     data = resp.json()
     if data.get("code") != 0:
@@ -41,7 +47,6 @@ def fetch_page(uid: int, page: int, timeout: int = 15) -> dict:
 
 
 def parse_guard(item: dict) -> dict:
-    """Parse a single guard item into a flat dict."""
     medal = item.get("medal_info", {})
     return {
         "uid": item["uid"],
@@ -55,30 +60,25 @@ def parse_guard(item: dict) -> dict:
     }
 
 
-def scrape_all_guards(uid: int, output_dir: str = None) -> list[dict]:
-    """Scrape all pages of guard data for a given UID."""
+def scrape_all_guards(room_id: int, ruid: int, output_dir: str = None) -> list[dict]:
     if output_dir is None:
         output_dir = Path(__file__).parent
 
-    # Fetch first page to get metadata
-    print(f"Fetching page 1 for UID {uid}...")
-    page1 = fetch_page(uid, 1)
+    print(f"Fetching page 1 for room_id={room_id}, ruid={ruid}...")
+    page1 = fetch_page(room_id, ruid, 1)
     total = page1["info"]["num"]
     total_pages = page1["info"]["page"]
     print(f"Total guards: {total}, Total pages: {total_pages}")
 
-    all_guards = []
-    for item in page1["list"]:
-        all_guards.append(parse_guard(item))
+    all_guards = [parse_guard(item) for item in page1["list"]]
 
-    # Fetch remaining pages
     for page in range(2, total_pages + 1):
         print(f"Fetching page {page}/{total_pages}...", end=" ")
         try:
-            data = fetch_page(uid, page)
-            for item in data["list"]:
-                all_guards.append(parse_guard(item))
-            print(f"OK ({len(data['list'])} items)")
+            data = fetch_page(room_id, ruid, page)
+            items = [parse_guard(item) for item in data["list"]]
+            all_guards.extend(items)
+            print(f"OK ({len(items)} items)")
         except Exception as e:
             print(f"FAILED: {e}", file=sys.stderr)
         time.sleep(REQUEST_DELAY)
@@ -86,13 +86,12 @@ def scrape_all_guards(uid: int, output_dir: str = None) -> list[dict]:
     return all_guards
 
 
-def save_results(guards: list[dict], uid: int, output_dir: str):
-    """Save results to JSON and print summary."""
+def save_results(guards: list[dict], ruid: int, output_dir: str):
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    json_path = os.path.join(output_dir, f"laplace_guards_{uid}_{timestamp}.json")
+    json_path = os.path.join(output_dir, f"laplace_guards_{ruid}_{timestamp}.json")
 
     result = {
-        "uid": uid,
+        "ruid": ruid,
         "scraped_at": datetime.now().isoformat(),
         "total": len(guards),
         "guards": guards,
@@ -103,7 +102,6 @@ def save_results(guards: list[dict], uid: int, output_dir: str):
 
     print(f"\nSaved {len(guards)} guards to {json_path}")
 
-    # Summary stats
     guard_types = {}
     for g in guards:
         gt = g["guard_type"]
@@ -118,15 +116,24 @@ def save_results(guards: list[dict], uid: int, output_dir: str):
 
 
 def main():
-    uid = int(sys.argv[1]) if len(sys.argv) > 1 else 37754047
-    output_dir = sys.argv[2] if len(sys.argv) > 2 else str(Path(__file__).parent)
+    if len(sys.argv) >= 3:
+        room_id = int(sys.argv[1])
+        ruid = int(sys.argv[2])
+    elif len(sys.argv) >= 2:
+        ruid = int(sys.argv[1])
+        room_id = 8777  # default for 咻咻满
+    else:
+        room_id = 8777
+        ruid = 37754047
 
-    print(f"Scraping guards for UID {uid}...")
+    output_dir = sys.argv[-1] if len(sys.argv) >= 4 and os.path.isdir(sys.argv[-1]) else str(Path(__file__).parent)
+
+    print(f"Scraping guards: room_id={room_id}, ruid={ruid}")
     print(f"Output directory: {output_dir}")
     print()
 
-    guards = scrape_all_guards(uid, output_dir)
-    save_results(guards, uid, output_dir)
+    guards = scrape_all_guards(room_id, ruid, output_dir)
+    save_results(guards, ruid, output_dir)
 
     return guards
 
