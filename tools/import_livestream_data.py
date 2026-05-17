@@ -48,7 +48,7 @@ def import_livestream_data(json_file_path: str):
         describe = item.get('describe', '')
         duration = item.get('duration', 0)
         duration_formatted = item.get('duration_formatted', '')
-        parts = item.get('parts', 1)
+        replay_url = item.get('replay_url') or (f'https://www.bilibili.com/video/{bvid}' if bvid else '')
         danmaku_count = item.get('danmaku_count', 0)
 
         # 解析日期
@@ -59,33 +59,30 @@ def import_livestream_data(json_file_path: str):
             skipped_count += 1
             continue
 
-        # 检查是否已存在
-        try:
-            livestream = Livestream.objects.get(date=date_obj)
-            # 更新现有记录
-            livestream.bvid = bvid
+        # 同一天多场兼容：按 date+bvid 定位记录（无 bvid 时按 date+title）
+        lookup = {'date': date_obj, 'bvid': bvid} if bvid else {'date': date_obj, 'title': title}
+        livestream = Livestream.objects.filter(**lookup).first()
+        if livestream:
             livestream.title = title
             livestream.summary = describe
             livestream.duration_seconds = duration
             livestream.duration_formatted = duration_formatted
-            livestream.parts = parts
+            livestream.replay_url = replay_url
             livestream.danmaku_count = str(danmaku_count) if danmaku_count else 'N/A'
-            # 生成 live_moment 目录路径
             livestream.live_moment = f'/gallery/LiveMoment/{date_obj.year}/{date_obj.month:02d}/{date_obj.day:02d}/'
             livestream.save()
             updated_count += 1
             print(f"✓ 更新: {date_str} - {title}")
-        except Livestream.DoesNotExist:
-            # 创建新记录
+        else:
             live_moment = f'/gallery/LiveMoment/{date_obj.year}/{date_obj.month:02d}/{date_obj.day:02d}/'
             Livestream.objects.create(
                 date=date_obj,
                 bvid=bvid,
+                replay_url=replay_url,
                 title=title,
                 summary=describe,
                 duration_seconds=duration,
                 duration_formatted=duration_formatted,
-                parts=parts,
                 danmaku_count=str(danmaku_count) if danmaku_count else 'N/A',
                 live_moment=live_moment,
             )

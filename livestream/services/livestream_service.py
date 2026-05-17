@@ -10,6 +10,7 @@ from ..exceptions import (
 )
 import json
 import logging
+import re
 
 logger = logging.getLogger('livestream')
 
@@ -118,7 +119,8 @@ class LivestreamService:
                 is_active=True
             ).order_by('-date')
 
-            if db_livestreams.exists():
+            db_livestreams = list(db_livestreams)
+            if db_livestreams:
                 # 使用数据库数据
                 for livestream in db_livestreams:
                     livestreams.append(livestream.to_dict(include_details=include_details))
@@ -132,12 +134,12 @@ class LivestreamService:
         return livestreams
 
     @classmethod
-    def get_livestream_by_date(cls, date_str: str):
+    def get_livestream_detail(cls, identifier: str):
         """
-        获取指定日期的直播记录
+        获取直播记录详情（优先按 ID，其次兼容按日期）
 
         Args:
-            date_str: 日期字符串 (YYYY-MM-DD)
+            identifier: 直播记录 ID（主路径）或日期字符串（兼容路径）
 
         Returns:
             dict: 直播记录详情，如果不存在返回 None
@@ -145,11 +147,23 @@ class LivestreamService:
         Raises:
             ParameterValidationError: 参数验证失败
         """
-        # 日期格式验证
+        if identifier.isdigit():
+            livestream = Livestream.objects.filter(id=int(identifier), is_active=True).first()
+            if not livestream:
+                return None
+
+            same_day_lives = Livestream.objects.filter(
+                date=livestream.date,
+                is_active=True
+            ).order_by('start_time', 'sort_order', 'id')
+            return cls._build_livestream_detail_from_queryset(livestream, same_day_lives)
+
+        # 兼容旧路径：按日期查询，可能同一天多场，返回第一条（按开始时间和排序）
+        date_str = identifier
         if not cls.validate_date(date_str):
-            error_msg = f'日期格式验证失败: {date_str}，期望格式: YYYY-MM-DD'
+            error_msg = f'直播记录标识无效: {identifier}，应为 ID 或 YYYY-MM-DD'
             logger.warning(error_msg)
-            raise ParameterValidationError(error_msg, field_name='date')
+            raise ParameterValidationError(error_msg, field_name='identifier')
 
         try:
             date_obj = datetime.strptime(date_str, '%Y-%m-%d').date()
@@ -166,14 +180,64 @@ class LivestreamService:
 
         try:
             # 优先从 Livestream 模型获取数据
-            livestream = Livestream.objects.get(date=date_obj, is_active=True)
-            return livestream.to_dict(include_details=True)
-        except Livestream.DoesNotExist:
+            same_day_lives = Livestream.objects.filter(
+                date=date_obj,
+                is_active=True
+            ).order_by('start_time', 'sort_order', 'id')
+            livestream = same_day_lives.first()
+            if livestream:
+                return cls._build_livestream_detail_from_queryset(livestream, same_day_lives)
             # Fallback: 从 JSON 文件获取数据
             return cls._get_livestream_from_json(date_str)
         except Exception as e:
             logger.error(f'获取单日直播记录失败: {e}', exc_info=True)
             raise
+
+    @staticmethod
+    def _extract_recording_title(livestream: Livestream, index: int, total: int, url: str) -> str:
+        """为录播按钮生成稳定、可读的标题。"""
+        page_match = re.search(r'[?&]p=(\d+)', url)
+        page_label = f"P{page_match.group(1)}" if page_match else ''
+        base_title = (livestream.title or '').strip()
+
+        if total == 1:
+            return base_title or '直播回放'
+
+        if base_title:
+            return f'{base_title} {page_label}'.strip()
+
+        return page_label or f'录像 {index}'
+
+    @classmethod
+    def _build_recordings(cls, livestreams):
+        """按同一天所有记录生成完整录像列表。"""
+        recordings = []
+        seen_urls = set()
+        livestreams = list(livestreams)
+
+        for index, livestream in enumerate(livestreams, start=1):
+            replay_url = livestream.get_bilibili_url()
+            if not replay_url or replay_url in seen_urls:
+                continue
+
+            seen_urls.add(replay_url)
+            recordings.append({
+                'title': cls._extract_recording_title(livestream, index, len(livestreams), replay_url),
+                'url': replay_url,
+            })
+
+        return recordings
+
+    @classmethod
+    def _build_livestream_detail_from_queryset(cls, primary_livestream: Livestream, livestreams):
+        """聚合同一天的多条记录，返回一个详情对象。"""
+        detail = primary_livestream.to_dict(include_details=True)
+        detail['recordings'] = cls._build_recordings(livestreams)
+
+        if detail['recordings']:
+            detail['replayUrl'] = detail['recordings'][0]['url']
+
+        return detail
 
     @classmethod
     def _get_livestreams_from_json(cls, year: int, month: int, include_details: bool = False):
@@ -181,20 +245,13 @@ class LivestreamService:
         livestreams = []
         live_data = cls._load_live_data()
 
-        month_data = [
-            item for item in live_data
-            if cls._parse_date(item.get('date', ''))
-            and cls._parse_date(item['date']).year == year
-            and cls._parse_date(item['date']).month == month
-        ]
+        month_data = []
+        for item in live_data:
+            parsed_date = cls._parse_date(item.get('date', ''))
+            if parsed_date and parsed_date.year == year and parsed_date.month == month:
+                month_data.append((item, parsed_date))
 
-        for item in month_data:
-            date_str = item.get('date', '')
-            date_obj = cls._parse_date(date_str)
-
-            if not date_obj:
-                continue
-
+        for item, date_obj in month_data:
             livestream = cls._build_livestream_from_json(date_obj, item, include_details=include_details)
             if livestream:
                 livestreams.append(livestream)
@@ -269,7 +326,9 @@ class LivestreamService:
         summary = live_item.get('describe', f'{date_str} 的精彩直播时刻')
         duration = live_item.get('duration_formatted', 'N/A')
         bvid = live_item.get('bvid', '')
-        parts = live_item.get('parts', 1)
+        replay_url = live_item.get('replay_url', '') or live_item.get('replayUrl', '')
+        if not replay_url and bvid:
+            replay_url = f'https://www.bilibili.com/video/{bvid}'
 
         # 基础信息
         result = {
@@ -283,19 +342,30 @@ class LivestreamService:
             'endTime': 'N/A',
             'duration': duration,
             'bvid': bvid,
-            'parts': parts,
+            'replayUrl': replay_url,
         }
 
         # 只有在需要时才加载详细信息
         if include_details:
+            recordings = []
+            parts = int(live_item.get('parts') or 1)
+            if replay_url:
+                if parts > 1 and bvid:
+                    recordings = [{
+                        'title': f'录像 P{part}',
+                        'url': f'https://www.bilibili.com/video/{bvid}?p={part}'
+                    } for part in range(1, parts + 1)]
+                else:
+                    recordings = [{
+                        'title': title or '直播回放',
+                        'url': replay_url,
+                    }]
+
             # 获取当日歌切（演唱记录）
             song_cuts = cls._get_song_cuts_by_date(date)
 
             # 获取当日截图（从 LiveMoment 目录，包含缩略图）
             screenshots_with_thumbnails = cls._get_screenshots_by_date(date)
-
-            # 生成完整的 recordings 数组
-            recordings = cls._generate_recordings(bvid, title, parts)
 
             # 优先使用演唱记录的封面缩略图，其次使用截图缩略图
             cover_url = cls._get_first_song_cover_thumbnail(date)
@@ -303,7 +373,7 @@ class LivestreamService:
                 cover_url = screenshots_with_thumbnails[0]['thumbnailUrl']
 
             result.update({
-                'recordings': recordings,  # 后端生成的完整视频链接列表
+                'recordings': recordings,
                 'songCuts': song_cuts,
                 'screenshots': screenshots_with_thumbnails,  # 包含缩略图的数组
                 'danmakuCloudUrl': '',
@@ -367,28 +437,6 @@ class LivestreamService:
             'url': record.url or '',
             'coverThumbnailUrl': record.get_cover_thumbnail_url() or '',
         } for record in song_records]
-
-    @staticmethod
-    def _generate_recordings(bvid: str, title: str, parts: int):
-        """生成分段视频列表（包含完整的视频链接）"""
-        if not bvid:
-            return []
-
-        recordings = []
-
-        if parts == 1:
-            recordings.append({
-                'title': title,
-                'url': f'https://www.bilibili.com/video/{bvid}'
-            })
-        else:
-            for i in range(1, parts + 1):
-                recordings.append({
-                    'title': f'{title} - P{i}',
-                    'url': f'https://www.bilibili.com/video/{bvid}?p={i}'
-                })
-
-        return recordings
 
     @staticmethod
     def _validate_path(base_dir: str, requested_path: str) -> bool:

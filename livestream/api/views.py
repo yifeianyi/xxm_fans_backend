@@ -3,7 +3,7 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from core.responses import success_response, error_response
 from ..services.livestream_service import LivestreamService
-from ..exceptions import FileReadError
+from ..exceptions import FileReadError, ParameterValidationError
 import logging
 
 logger = logging.getLogger(__name__)
@@ -60,6 +60,8 @@ class LivestreamListView(APIView):
             )
         except ValueError:
             return error_response(message='参数格式错误')
+        except ParameterValidationError as e:
+            return error_response(message=e.message)
         except FileReadError:
             return success_response(
                 data=[],
@@ -70,11 +72,11 @@ class LivestreamListView(APIView):
 
 
 class LivestreamDetailView(APIView):
-    """获取指定日期的直播记录详情（包含所有详细信息）"""
+    """获取指定直播记录详情（主路径按ID，兼容按日期）"""
 
-    def get(self, request, date_str, *args, **kwargs):
+    def get(self, request, identifier, *args, **kwargs):
         try:
-            livestream = LivestreamService.get_livestream_by_date(date_str)
+            livestream = LivestreamService.get_livestream_detail(identifier)
 
             if not livestream:
                 return success_response(
@@ -92,5 +94,7 @@ class LivestreamDetailView(APIView):
                 data=None,
                 message='该日期无直播记录'
             )
+        except ParameterValidationError as e:
+            return error_response(message=e.message)
         except Exception as e:
             return error_response(message=f'获取直播详情失败: {str(e)}')

@@ -186,7 +186,7 @@ class LivestreamAdmin(admin.ModelAdmin):
         'created_at'
     ]
     list_filter = ['is_active', 'date']
-    search_fields = ['title', 'summary', 'bvid']
+    search_fields = ['title', 'summary', 'bvid', 'replay_url']
     date_hierarchy = 'date'
     ordering = ['-date']
     change_list_template = 'admin/livestream_change_list.html'
@@ -198,7 +198,7 @@ class LivestreamAdmin(admin.ModelAdmin):
             'fields': ('date', 'title', 'summary', 'live_moment', 'is_active', 'sort_order')
         }),
         ('B站视频信息', {
-            'fields': ('bvid', 'duration_seconds', 'duration_formatted', 'parts')
+            'fields': ('bvid', 'replay_url', 'duration_seconds', 'duration_formatted')
         }),
         ('统计数据', {
             'fields': ('view_count', 'danmaku_count')
@@ -518,7 +518,7 @@ class LivestreamAdmin(admin.ModelAdmin):
 
             existing.title = bv_info['title']
             existing.summary = bv_info['summary']
-            existing.parts = bv_info['total_parts']
+            existing.replay_url = f'https://www.bilibili.com/video/{bv_info["bvid"]}'
             existing.duration_seconds = bv_info['total_duration_seconds']
             existing.duration_formatted = bv_info['duration_formatted']
             
@@ -541,7 +541,7 @@ class LivestreamAdmin(admin.ModelAdmin):
                 title=bv_info['title'],
                 summary=bv_info['summary'],
                 bvid=bv_info['bvid'],
-                parts=bv_info['total_parts'],
+                replay_url=f'https://www.bilibili.com/video/{bv_info["bvid"]}',
                 duration_seconds=bv_info['total_duration_seconds'],
                 duration_formatted=bv_info['duration_formatted'],
                 cover_url=cover_path or '',

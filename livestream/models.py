@@ -6,7 +6,6 @@ class Livestream(models.Model):
 
     # 基础信息
     date = models.DateField(
-        unique=True,
         verbose_name='直播日期',
         help_text='直播日期，格式：YYYY-MM-DD'
     )
@@ -35,6 +34,13 @@ class Livestream(models.Model):
         null=True,
         verbose_name='B站视频BV号',
         help_text='B站视频的BV号'
+    )
+    replay_url = models.CharField(
+        max_length=500,
+        blank=True,
+        default='',
+        verbose_name='直播回放地址',
+        help_text='完整回放地址，如：https://www.bilibili.com/video/BVxxxx/?p=3'
     )
     duration_seconds = models.IntegerField(
         blank=True,
@@ -146,30 +152,11 @@ class Livestream(models.Model):
 
     def get_bilibili_url(self):
         """获取 B站视频 URL"""
+        if self.replay_url:
+            return self.replay_url
         if self.bvid:
             return f'https://www.bilibili.com/video/{self.bvid}'
         return ''
-
-    def _generate_recordings(self):
-        """生成分段视频列表（包含完整的视频链接）"""
-        if not self.bvid:
-            return []
-
-        recordings = []
-
-        if self.parts == 1:
-            recordings.append({
-                'title': self.title,
-                'url': f'https://www.bilibili.com/video/{self.bvid}'
-            })
-        else:
-            for i in range(1, self.parts + 1):
-                recordings.append({
-                    'title': f'{self.title} - P{i}',
-                    'url': f'https://www.bilibili.com/video/{self.bvid}?p={i}'
-                })
-
-        return recordings
 
     def get_song_cuts(self):
         """获取当日歌切列表"""
@@ -227,7 +214,7 @@ class Livestream(models.Model):
 
         # 基础信息
         result = {
-            'id': self.date.strftime('%Y-%m-%d'),
+            'id': str(self.id),
             'date': self.date.strftime('%Y-%m-%d'),
             'title': self.title,
             'summary': self.summary or f'{self.date} 的精彩直播时刻',
@@ -237,7 +224,7 @@ class Livestream(models.Model):
             'endTime': self.end_time.strftime('%H:%M') if self.end_time else 'N/A',
             'duration': self.duration_formatted or 'N/A',
             'bvid': self.bvid or '',
-            'parts': self.parts,
+            'replayUrl': self.get_bilibili_url(),
         }
 
         # 只有在需要时才加载详细信息
@@ -248,9 +235,6 @@ class Livestream(models.Model):
                 self.live_moment
             )
 
-            # 生成完整的 recordings 数组（包含完整视频链接）
-            recordings = self._generate_recordings()
-
             # 优先使用数据库中的封面URL，再fallback到演唱记录封面或截图缩略图
             cover_url = self.cover_url if self.cover_url else ''
             if not cover_url:
@@ -259,7 +243,6 @@ class Livestream(models.Model):
                 cover_url = screenshots_with_thumbnails[0]['thumbnailUrl']
 
             result.update({
-                'recordings': recordings,  # 后端生成的完整视频链接列表
                 'songCuts': self.get_song_cuts(),
                 'screenshots': screenshots_with_thumbnails,  # 现在返回包含缩略图的数组
                 'danmakuCloudUrl': self.danmaku_cloud_url or '',
