@@ -7,4 +7,5 @@ urlpatterns = [
     path('search/', views.FanSearchView.as_view(), name='fans-search'),
     path('profile/<str:uid>/', views.FanProfileView.as_view(), name='fans-profile'),
     path('stats/', views.FansStatsView.as_view(), name='fans-stats'),
+    path('guards/', views.GuardListView.as_view(), name='fans-guards'),
 ]

@@ -145,3 +145,65 @@ class LiveAttendance(models.Model):
 
     def __str__(self):
         return f'{self.fan.username} @ {self.livestream.date}'
+
+
+class Guard(models.Model):
+    """大航海（舰长/提督/总督）用户数据"""
+
+    uid = models.BigIntegerField(
+        unique=True,
+        verbose_name='用户UID'
+    )
+    username = models.CharField(
+        max_length=100,
+        verbose_name='用户名'
+    )
+    face = models.CharField(
+        max_length=500,
+        blank=True,
+        default='',
+        verbose_name='头像URL'
+    )
+    guard_level = models.IntegerField(
+        verbose_name='大航海级别',
+        help_text='1=总督, 2=提督, 3=舰长'
+    )
+    guard_type = models.CharField(
+        max_length=20,
+        verbose_name='大航海类型'
+    )
+    medal_name = models.CharField(
+        max_length=50,
+        blank=True,
+        default='',
+        verbose_name='粉丝牌名称'
+    )
+    medal_level = models.IntegerField(
+        default=0,
+        verbose_name='粉丝牌等级'
+    )
+    accompany = models.IntegerField(
+        default=0,
+        verbose_name='陪伴天数'
+    )
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name='创建时间'
+    )
+    updated_at = models.DateTimeField(
+        auto_now=True,
+        verbose_name='更新时间'
+    )
+
+    class Meta:
+        db_table = 'livefans_guard'
+        verbose_name = '大航海用户'
+        verbose_name_plural = '大航海用户'
+        ordering = ['guard_level', '-medal_level']
+        indexes = [
+            models.Index(fields=['guard_level']),
+            models.Index(fields=['uid']),
+        ]
+
+    def __str__(self):
+        return f'{self.username} - {self.guard_type}'
