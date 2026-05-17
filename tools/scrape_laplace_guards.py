@@ -1,9 +1,12 @@
 #!/usr/bin/env python3
 """
 Scrape all 大航海 (guards) user data from Bilibili official API.
+Uses v1 API for page 1 (includes top3 expired governors), v2 for subsequent pages.
 Saves: avatar URL, user ID, username, fan badge level, guard type, days.
 
-API: https://api.live.bilibili.com/xlive/app-room/v2/guardTab/topList
+API:
+  v1: https://api.live.bilibili.com/xlive/app-room/v1/guardTab/topList
+  v2: https://api.live.bilibili.com/xlive/app-room/v2/guardTab/topList
 
 Guard Level mapping (Bilibili API):
   1 = 总督 (Governor)
@@ -20,13 +23,10 @@ from pathlib import Path
 
 import requests
 
-GUARD_LEVEL_MAP = {
-    1: "总督",
-    2: "提督",
-    3: "舰长",
-}
+GUARD_LEVEL_MAP = {1: "总督", 2: "提督", 3: "舰长"}
 
-API_URL = "https://api.live.bilibili.com/xlive/app-room/v2/guardTab/topList"
+API_V1 = "https://api.live.bilibili.com/xlive/app-room/v1/guardTab/topList"
+API_V2 = "https://api.live.bilibili.com/xlive/app-room/v2/guardTab/topList"
 PAGE_SIZE = 29
 REQUEST_DELAY = 0.5
 
@@ -36,9 +36,24 @@ HEADERS = {
 }
 
 
-def fetch_page(room_id: int, ruid: int, page: int, timeout: int = 15) -> dict:
-    params = {"roomid": room_id, "ruid": ruid, "page": page, "page_size": PAGE_SIZE}
-    resp = requests.get(API_URL, params=params, headers=HEADERS, timeout=timeout)
+def _load_cookie():
+    """Try to load Bilibili cookie from Django DB."""
+    try:
+        import django
+        os.environ.setdefault("DJANGO_SETTINGS_MODULE", "xxm_fans_home.settings")
+        sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
+        django.setup()
+        from moments.services.cookie_service import CookieService
+        cookie = CookieService.get_cookie("bilibili")
+        if cookie:
+            return cookie
+    except Exception:
+        pass
+    return ""
+
+
+def _fetch(api_url: str, params: dict, timeout: int = 15) -> dict:
+    resp = requests.get(api_url, params=params, headers=HEADERS, timeout=timeout)
     resp.raise_for_status()
     data = resp.json()
     if data.get("code") != 0:
@@ -64,19 +79,45 @@ def scrape_all_guards(room_id: int, ruid: int, output_dir: str = None) -> list[d
     if output_dir is None:
         output_dir = Path(__file__).parent
 
+    # Load cookie for authenticated API access
+    cookie = _load_cookie()
+    if cookie:
+        HEADERS["Cookie"] = cookie
+        print("Using authenticated cookie")
+
+    # Page 1: use v1 to get top3 (expired governors), v2 for full list with medal_info
     print(f"Fetching page 1 for room_id={room_id}, ruid={ruid}...")
-    page1 = fetch_page(room_id, ruid, 1)
-    total = page1["info"]["num"]
-    total_pages = page1["info"]["page"]
+    page1_v1 = _fetch(API_V1, {"roomid": room_id, "ruid": ruid, "page": 1, "page_size": PAGE_SIZE})
+    page1_v2 = _fetch(API_V2, {"roomid": room_id, "ruid": ruid, "page": 1, "page_size": PAGE_SIZE})
+    total = page1_v2["info"]["num"]
+    total_pages = page1_v2["info"]["page"]
     print(f"Total guards: {total}, Total pages: {total_pages}")
 
-    all_guards = [parse_guard(item) for item in page1["list"]]
+    seen_uids = set()
+    all_guards = []
 
+    # Process top3 from v1 (expired governors not in v2 list)
+    for item in page1_v1.get("top3", []):
+        if item["uid"] not in seen_uids:
+            seen_uids.add(item["uid"])
+            all_guards.append(parse_guard(item))
+
+    # Process v2 list (has medal_info + accompany)
+    for item in page1_v2.get("list", []):
+        if item["uid"] not in seen_uids:
+            seen_uids.add(item["uid"])
+            all_guards.append(parse_guard(item))
+
+    # Remaining pages: v2 API
     for page in range(2, total_pages + 1):
         print(f"Fetching page {page}/{total_pages}...", end=" ")
         try:
-            data = fetch_page(room_id, ruid, page)
-            items = [parse_guard(item) for item in data["list"]]
+            data = _fetch(API_V2, {"roomid": room_id, "ruid": ruid, "page": page, "page_size": PAGE_SIZE})
+            items = []
+            for item in data["list"]:
+                if item["uid"] not in seen_uids:
+                    seen_uids.add(item["uid"])
+                    items.append(parse_guard(item))
             all_guards.extend(items)
             print(f"OK ({len(items)} items)")
         except Exception as e:
@@ -121,7 +162,7 @@ def main():
         ruid = int(sys.argv[2])
     elif len(sys.argv) >= 2:
         ruid = int(sys.argv[1])
-        room_id = 8777  # default for 咻咻满
+        room_id = 8777
     else:
         room_id = 8777
         ruid = 37754047
@@ -134,7 +175,6 @@ def main():
 
     guards = scrape_all_guards(room_id, ruid, output_dir)
     save_results(guards, ruid, output_dir)
-
     return guards
 
 
